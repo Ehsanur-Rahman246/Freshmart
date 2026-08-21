@@ -1,2 +1,443 @@
+/* =========================================================
+   FRESH MART
+   Farmer's Marketplace Design System
+
+   Tailwind CSS 4
+   daisyUI 5
+   Font: Nunito
+   ========================================================= */
+
+
+/* =========================================================
+   FONT
+   ========================================================= */
+
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap");
+
 @import "tailwindcss";
-@plugin "daisyui";
+
+
+/* =========================================================
+   DAISYUI
+   ========================================================= */
+
+@plugin "daisyui" {
+  themes: freshmart --default;
+}
+
+@plugin "daisyui/theme" {
+  name: "freshmart";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  /* -------------------------------------------------------
+     TYPOGRAPHY
+     ------------------------------------------------------- */
+
+  font-family:
+    "Nunito",
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+
+  /* -------------------------------------------------------
+     SURFACES
+     ------------------------------------------------------- */
+
+  --color-base-100: hsl(40 30% 93%);
+  --color-base-200: hsl(40 30% 96%);
+  --color-base-300: hsl(40 30% 98%);
+  --color-base-content: hsl(25 30% 7%);
+
+
+  /* -------------------------------------------------------
+     BRAND
+     ------------------------------------------------------- */
+
+  --color-primary: #45a15c;
+  --color-primary-content: #ffffff;
+
+  --color-secondary: #d89b3c;
+  --color-secondary-content: hsl(25 30% 7%);
+
+  --color-accent: #7bc481;
+  --color-accent-content: hsl(25 30% 7%);
+
+
+  /* -------------------------------------------------------
+     NEUTRAL
+     ------------------------------------------------------- */
+
+  --color-neutral: hsl(25 30% 7%);
+  --color-neutral-content: hsl(40 30% 98%);
+
+
+  /* -------------------------------------------------------
+     SEMANTIC COLORS
+     ------------------------------------------------------- */
+
+  --color-success: #2f7d3b;
+  --color-success-content: #ffffff;
+
+  --color-info: #1f6db5;
+  --color-info-content: #ffffff;
+
+  --color-warning: #9a6b00;
+  --color-warning-content: #ffffff;
+
+  --color-error: #c53030;
+  --color-error-content: #ffffff;
+
+
+  /* -------------------------------------------------------
+     COMPONENT SHAPE
+     ------------------------------------------------------- */
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.625rem;
+  --radius-box: 0.875rem;
+
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+
+  --border: 1px;
+
+  --depth: 0;
+  --noise: 0;
+}
+
+
+/* =========================================================
+   TAILWIND 4 DESIGN TOKENS
+   ========================================================= */
+
+@theme {
+
+  /* -------------------------------------------------------
+     FONT FAMILY
+     ------------------------------------------------------- */
+
+  --font-sans:
+    "Nunito",
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+
+  /* -------------------------------------------------------
+     FONT WEIGHTS
+     ------------------------------------------------------- */
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+
+  /* -------------------------------------------------------
+     TYPE SCALE
+     ------------------------------------------------------- */
+
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
+
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.75rem;
+
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.75rem;
+
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 2rem;
+
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 2.25rem;
+
+  --text-4xl: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+
+  --text-5xl: 3rem;
+  --text-5xl--line-height: 1.1;
+
+  --text-6xl: 3.75rem;
+  --text-6xl--line-height: 1.05;
+
+
+  /* -------------------------------------------------------
+     LETTER SPACING
+     ------------------------------------------------------- */
+
+  --tracking-tighter: -0.025em;
+  --tracking-tight: -0.015em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.015em;
+  --tracking-wider: 0.025em;
+
+
+  /* -------------------------------------------------------
+     CUSTOM COLORS
+     ------------------------------------------------------- */
+
+  /* Text */
+  --color-muted: hsl(25 30% 37%);
+  --color-muted-light: hsl(25 20% 52%);
+
+  /* Borders */
+  --color-border: hsl(35 20% 84%);
+  --color-border-light: hsl(35 20% 89%);
+
+
+  /* -------------------------------------------------------
+     BRAND VARIANTS
+     ------------------------------------------------------- */
+
+  --color-primary-hover: #388d4e;
+  --color-primary-active: #2f7d43;
+  --color-primary-soft: #e1f1e4;
+
+  --color-secondary-hover: #c88a2d;
+  --color-secondary-active: #b97b24;
+  --color-secondary-soft: #faecd5;
+
+  --color-accent-soft: #e5f4e7;
+
+
+  /* -------------------------------------------------------
+     SEMANTIC SOFT COLORS
+     ------------------------------------------------------- */
+
+  --color-success-soft: #ddf1e0;
+  --color-info-soft: #dcecf9;
+  --color-warning-soft: #fff0c7;
+  --color-error-soft: #f9dede;
+
+
+  /* -------------------------------------------------------
+     ADDITIONAL COLORS
+     ------------------------------------------------------- */
+
+  --color-orange: #c45f00;
+  --color-orange-content: #ffffff;
+  --color-orange-soft: #fce5cf;
+
+  --color-cyan: #087f8c;
+  --color-cyan-content: #ffffff;
+  --color-cyan-soft: #d9f1f3;
+
+  --color-purple: #71328f;
+  --color-purple-content: #ffffff;
+  --color-purple-soft: #ebddf2;
+
+
+  /* -------------------------------------------------------
+     UI STATES
+     ------------------------------------------------------- */
+
+  --color-focus: #45a15c;
+
+  --color-disabled: hsl(25 10% 70%);
+  --color-disabled-bg: hsl(40 15% 89%);
+
+  --color-overlay: hsl(25 30% 7% / 0.5);
+}
+
+
+/* =========================================================
+   GLOBAL TYPOGRAPHY
+   ========================================================= */
+
+@layer base {
+
+  html {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.5;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+
+    font-family: var(--font-sans);
+    font-weight: 400;
+    line-height: 1.5;
+
+    background-color: var(--color-base-100);
+    color: var(--color-base-content);
+
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /*
+   * Headings
+   *
+   * Nunito looks best with stronger weights on headings.
+   * Tight line-height prevents large headings from feeling loose.
+   */
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin: 0;
+    color: var(--color-base-content);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+  }
+
+  h1 {
+    font-weight: 800;
+  }
+
+  h2 {
+    font-weight: 800;
+  }
+
+  h3 {
+    font-weight: 700;
+  }
+
+  h4,
+  h5,
+  h6 {
+    font-weight: 700;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  strong,
+  b {
+    font-weight: 700;
+  }
+
+  small {
+    font-size: 0.875rem;
+  }
+}
+
+
+/* =========================================================
+   CUSTOM UTILITIES
+   ========================================================= */
+
+
+/* ---------------------------------------------------------
+   TEXT
+   --------------------------------------------------------- */
+
+@utility text-muted {
+  color: var(--color-muted);
+}
+
+@utility text-muted-light {
+  color: var(--color-muted-light);
+}
+
+
+/* ---------------------------------------------------------
+   BORDERS
+   --------------------------------------------------------- */
+
+@utility border-theme {
+  border-color: var(--color-border);
+}
+
+@utility border-theme-light {
+  border-color: var(--color-border-light);
+}
+
+
+/* ---------------------------------------------------------
+   BRAND SOFT BACKGROUNDS
+   --------------------------------------------------------- */
+
+@utility bg-primary-soft {
+  background-color: var(--color-primary-soft);
+}
+
+@utility bg-secondary-soft {
+  background-color: var(--color-secondary-soft);
+}
+
+@utility bg-accent-soft {
+  background-color: var(--color-accent-soft);
+}
+
+
+/* ---------------------------------------------------------
+   SEMANTIC SOFT BACKGROUNDS
+   --------------------------------------------------------- */
+
+@utility bg-success-soft {
+  background-color: var(--color-success-soft);
+}
+
+@utility bg-info-soft {
+  background-color: var(--color-info-soft);
+}
+
+@utility bg-warning-soft {
+  background-color: var(--color-warning-soft);
+}
+
+@utility bg-error-soft {
+  background-color: var(--color-error-soft);
+}
+
+@utility bg-orange-soft {
+  background-color: var(--color-orange-soft);
+}
+
+@utility bg-cyan-soft {
+  background-color: var(--color-cyan-soft);
+}
+
+@utility bg-purple-soft {
+  background-color: var(--color-purple-soft);
+}
+
+
+/* ---------------------------------------------------------
+   OVERLAY
+   --------------------------------------------------------- */
+
+@utility bg-overlay {
+  background-color: var(--color-overlay);
+}

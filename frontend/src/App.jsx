@@ -1,11 +1,7 @@
-import React from 'react'
+import AppRoutes from "./AppRoutes";
 
-const App = () => {
-  return (
-    <div><button className="btn btn-primary">
-        Test Button
-      </button></div>
-  )
+function App() {
+  return <AppRoutes />;
 }
 
-export default App
+export default App;
