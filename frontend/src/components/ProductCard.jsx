@@ -9,7 +9,7 @@ import { FaCartShopping } from "react-icons/fa6";
         <div className="flex flex-row items-center pb-2 ml-1 gap-0.5">
           <CiLocationOn className="text-[12px] text-muted" />
           <p className="text-[12px] text-muted">{src}</p>
-          <Badge className="size-4 ml-auto mr-1"/>
+          <Badge className="size-4 ml-auto mr-1 text-muted"/>
         </div>
         <p className="font-medium pb-2.5 ml-1 text-3xl"><sup>&#2547;</sup>{price}<span className="text-muted"> / kg</span></p>
         <div className="flex gap-2 mt-auto">

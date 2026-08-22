@@ -82,43 +82,32 @@ function Sidebar({ mobileOpen, setMobileOpen }) {
 
   return (
     <>
-      {/* =========================
-          MOBILE OVERLAY
-      ========================= */}
+      {/* Overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px] lg:hidden"
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px]"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
-      {/* =========================
-          SIDEBAR
-      ========================= */}
+      {/* Sidebar */}
       <aside
         className={`
-          fixed inset-y-0 left-0 z-50
+          fixed inset-y-0 right-0 z-50
           flex w-[260px] flex-col
-          border-r border-theme-light
+          border-l border-theme-light
           bg-white
 
           transition-transform duration-300 ease-in-out
 
-          lg:sticky
-          lg:top-0
-          lg:h-screen
-          lg:translate-x-0
-
           ${
             mobileOpen
               ? "translate-x-0"
-              : "-translate-x-full"
+              : "translate-x-full"
           }
         `}
       >
-        {/* =========================
-            LOGO
-        ========================= */}
+        {/* Logo */}
         <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-theme-light px-6">
           <NavLink
             to="/"
@@ -142,20 +131,18 @@ function Sidebar({ mobileOpen, setMobileOpen }) {
             </div>
           </NavLink>
 
-          {/* Mobile Close */}
+          {/* Close */}
           <button
             type="button"
             onClick={() => setMobileOpen(false)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition hover:bg-primary-soft hover:text-primary lg:hidden"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition hover:bg-primary-soft hover:text-primary"
             aria-label="Close sidebar"
           >
             <FiX size={19} />
           </button>
         </div>
 
-        {/* =========================
-            NAVIGATION
-        ========================= */}
+        {/* Navigation */}
         <div className="flex-1 overflow-y-auto px-4 py-6">
           {menuItems.map((section) => (
             <div
@@ -177,9 +164,7 @@ function Sidebar({ mobileOpen, setMobileOpen }) {
                       key={item.name}
                       to={item.path}
                       end={item.end}
-                      onClick={() =>
-                        setMobileOpen(false)
-                      }
+                      onClick={() => setMobileOpen(false)}
                       className={({ isActive }) =>
                         `
                         group relative flex items-center
@@ -199,7 +184,7 @@ function Sidebar({ mobileOpen, setMobileOpen }) {
                         <>
                           {/* Active Indicator */}
                           {isActive && (
-                            <span className="absolute left-0 top-1/2 h-7 w-[3px] -translate-y-1/2 rounded-r-full bg-primary" />
+                            <span className="absolute right-0 top-1/2 h-7 w-[3px] -translate-y-1/2 rounded-l-full bg-primary" />
                           )}
 
                           {/* Icon */}
@@ -240,11 +225,10 @@ function Sidebar({ mobileOpen, setMobileOpen }) {
           ))}
         </div>
 
-        {/* =========================
-            USER CARD
-        ========================= */}
+        {/* User Card */}
         <div className="border-t border-theme-light p-4">
           <div className="mb-3 flex items-center gap-3 rounded-xl bg-primary-soft p-3">
+
             {/* Avatar */}
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white">
               JD

@@ -1,9 +1,28 @@
-import SellerHome from "./farmer/SellerHome"
+import { useState } from "react";
+import CutomerNavbar from "../components/CutomerNavBar";
+import HomeNavbar from "../components/HomeNavbar";
+import SellerNavbar from "../components/SellerNavbar";
+import Listings from "./farmer/Listings";
 
 const Home = () => {
-  return (
-    <div>Home</div>
-  )
-}
+  const [showListings, setShowListings] = useState(false);
 
-export default Home
+  return (
+    <>
+      <CutomerNavbar />
+      <HomeNavbar />
+
+      <SellerNavbar
+        onListingsClick={() => setShowListings(true)}
+      />
+
+      {showListings && (
+        <Listings
+          onClose={() => setShowListings(false)}
+        />
+      )}
+    </>
+  );
+};
+
+export default Home;
