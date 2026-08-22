@@ -1,8 +1,8 @@
- 
+import SellerHome from "./farmer/SellerHome"
 
 const Home = () => {
   return (
-    <div>Home</div>
+    <SellerHome/>
   )
 }
 
