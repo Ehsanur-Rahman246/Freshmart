@@ -2,7 +2,7 @@ import SellerHome from "./farmer/SellerHome"
 
 const Home = () => {
   return (
-    <SellerHome/>
+    <div>Home</div>
   )
 }
 
