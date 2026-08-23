@@ -95,7 +95,8 @@ const AppRoutes = () => {
 
       {/* ================= CUSTOMER ROUTES ================= */}
 
-      <Route element={<ProtectedRoute role="customer" />}>
+      {/* element={<ProtectedRoute role="customer" />} */}
+      <Route>
         <Route path="/customer" element={<CustomerLayout />}>
 
           <Route index element={<CustomerDashboard />} />

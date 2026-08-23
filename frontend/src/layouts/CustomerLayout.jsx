@@ -1,6 +1,12 @@
+import CutomerNavbar from "../components/CutomerNavBar"
+import Marketplace from "../pages/Marketplace"
+
 const CustomerLayout = () => {
   return (
-    <div>CustomerLayout</div>
+    <>
+    <CutomerNavbar/>
+    <Marketplace/>
+    </>
   )
 }
 

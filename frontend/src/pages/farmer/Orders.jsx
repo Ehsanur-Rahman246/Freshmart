@@ -1,6 +1,4 @@
 import React, { useMemo, useState } from "react";
-import SellerNavbar from "../../components/SellerNavbar";
-import Listings from "./Listings";
 
 import {
   FiSearch,
@@ -294,10 +292,6 @@ export default function Orders() {
 
           Existing SellerNavbar component
       =================================================== */}
-
-      <SellerNavbar
-        onListingsClick={() => setShowListings(true)}
-      />
       
       {/* ===================================================
           PAGE CONTENT

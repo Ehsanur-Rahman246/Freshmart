@@ -1,6 +1,7 @@
 import { FiCreditCard, FiPackage, FiShoppingBag } from "react-icons/fi";
 
-const SellerNavbar = ({ onListingsClick }) => {
+const SellerNavbar = ({ onListingsClick, onOrdersClick }) => {
+
   return (
     <nav className="navbar bg-base-100 px-4 sm:px-6 lg:px-10 border-b border-theme-light">
 
@@ -30,6 +31,7 @@ const SellerNavbar = ({ onListingsClick }) => {
         {/* Orders */}
         <button
           type="button"
+          onClick={onOrdersClick}
           className="btn btn-sm border-theme bg-base-200 text-base-content hover:border-primary hover:bg-primary-soft"
         >
           <FiShoppingBag size={16} />
