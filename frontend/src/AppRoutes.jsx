@@ -35,7 +35,7 @@ import CustomerNotifications from "./pages/customer/Notifications";
 import CustomerProfile from "./pages/customer/Profile";
 
 // Farmer Pages
-import FarmerDashboard from "./pages/farmer/Dashboard";
+import FarmerDashboard from "./pages/farmer/FarmerDashboard";
 import Listings from "./pages/farmer/Listings";
 import AddProduct from "./pages/farmer/AddProduct";
 import EditProduct from "./pages/farmer/EditProduct";
