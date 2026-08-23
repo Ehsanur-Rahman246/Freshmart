@@ -1,6 +1,25 @@
+import SellerNavbar from "../components/SellerNavbar"
+import FarmerDashboard from "../pages/farmer/FarmerDashboard"
+import Footer from "../components/Footer"
+import Listings from "../pages/farmer/Listings"
+import { useState } from "react"
+
 const FarmerLayout = () => {
+    const [showListings, setShowListings] = useState(false);
   return (
-    <div>FarmerLayout</div>
+    <>
+      <SellerNavbar
+        onListingsClick={() => setShowListings(true)}
+      />
+
+      {showListings && (
+        <Listings
+          onClose={() => setShowListings(false)}
+        />
+      )}
+      <FarmerDashboard/>
+      <Footer/>
+    </>
   )
 }
 
