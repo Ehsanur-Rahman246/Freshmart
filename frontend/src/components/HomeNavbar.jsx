@@ -1,3 +1,5 @@
+import { Link } from "react-router";
+
 const HomeNavbar = () => {
   return (
     <nav className="navbar bg-base-100 px-4 sm:px-6 lg:px-10 border-b border-theme-light">
@@ -7,11 +9,11 @@ const HomeNavbar = () => {
       {/* Actions */}
       <div className="flex items-center gap-2 sm:gap-3">
         <button className="btn btn-ghost font-semibold">
-          Sign In
+          <Link to={"/login"}>Sign In</Link>
         </button>
 
         <button className="btn btn-primary font-bold px-5">
-          Get Started
+          <Link to={"/register"}>Get Started</Link>
         </button>
       </div>
     </nav>

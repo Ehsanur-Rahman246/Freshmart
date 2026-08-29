@@ -1,6 +1,12 @@
+import CutomerNavbar from "../components/CustomerNavbar"
+import Footer from "../components/Footer"
+
 const CustomerLayout = () => {
   return (
-    <div>CustomerLayout</div>
+    <>
+      <CutomerNavbar/>
+      <Footer/>
+    </>
   )
 }
 

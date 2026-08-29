@@ -36,7 +36,7 @@ const CutomerNavbar = () => {
               className="btn btn-ghost btn-circle text-2xl"
               aria-label="Menu"
             >
-              <FiMenu className="text-primary-active" />
+              <FiMenu className="text-primary" />
             </button>
           </div>
 
@@ -57,7 +57,7 @@ const CutomerNavbar = () => {
                 aria-label="Cart"
                 onClick={() => setSearchActive(!searchActive)}
             >
-                <FaSearch className="text-primary-active" />
+                <FaSearch className="text-primary" />
             </button>
           </div>  
 
@@ -67,7 +67,7 @@ const CutomerNavbar = () => {
                 className="btn btn-ghost btn-circle text-2xl"
                 aria-label="Cart"
             >
-                <FaCartShopping className="text-primary-active" />
+                <FaCartShopping className="text-primary" />
             </button>
           </div>
 
@@ -77,7 +77,7 @@ const CutomerNavbar = () => {
                 className="btn btn-ghost btn-circle text-2xl"
                 aria-label="Notifications"
             >
-                <IoNotifications className="text-primary-active" />
+                <IoNotifications className="text-primary" />
             </button>
           </div>
 
@@ -87,7 +87,7 @@ const CutomerNavbar = () => {
                 className="btn btn-ghost btn-circle text-2xl"
                 aria-label="Profile"
             >
-                <FaUserCircle className="text-primary-active" />
+                <FaUserCircle className="text-primary" />
             </button>
           </div>
         </div>

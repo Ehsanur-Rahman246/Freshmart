@@ -96,7 +96,8 @@ const AppRoutes = () => {
 
       {/* ================= CUSTOMER ROUTES ================= */}
 
-      <Route element={<ProtectedRoute role="customer" />}>
+      {/* element={<ProtectedRoute role="customer" />} */}
+      <Route>
         <Route path="/customer" element={<CustomerLayout />}>
 
           <Route index element={<CustomerDashboard />} />
@@ -144,7 +145,8 @@ const AppRoutes = () => {
 
       {/* ================= FARMER ROUTES ================= */}
 
-      <Route element={<ProtectedRoute role="farmer" />}>
+      {/* element={<ProtectedRoute role="farmer" />} */}
+      <Route>
         <Route path="/farmer" element={<FarmerLayout />}>
 
           <Route index element={<FarmerDashboard />} />
@@ -188,8 +190,9 @@ const AppRoutes = () => {
 
 
       {/* ================= ADMIN ROUTES ================= */}
-
-      <Route element={<ProtectedRoute role="admin" />}>
+      
+      {/* element={<ProtectedRoute role="admin" />} */}
+      <Route>
         <Route path="/admin" element={<AdminLayout />}>
 
           <Route index element={<AdminDashboard />} />
