@@ -40,7 +40,10 @@ const Footer = () => {
   return (
     <footer className="footer footer-center bg-base-content text-base-100 px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
       <aside>
-        <div className="logo">FreshMart</div>
+        <div className="flex flex-1 items-center align-middle"> 
+          <img src="/logo.png" alt="Logo" className="w-7 h-7 mr-3" />
+          <div className="logo">FreshMart</div>
+        </div>
 
         <p className="text-sm sm:text-base text-base-100/70">
           Fresh Roots, Fair Prices.

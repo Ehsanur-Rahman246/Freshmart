@@ -4,7 +4,10 @@ const HomeNavbar = () => {
   return (
     <nav className="navbar bg-base-100 px-4 sm:px-6 lg:px-10 border-b border-theme-light">
       {/* Logo */}
-      <div className="logo flex-1">FreshMart</div>
+      <div className="flex flex-1 items-center align-middle"> 
+        <img src="/logo.png" alt="Logo" className="w-7 h-7 mr-3" />
+        <div className="logo max-sm:hidden">FreshMart</div>
+      </div>
 
       {/* Actions */}
       <div className="flex items-center gap-2 sm:gap-3">

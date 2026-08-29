@@ -41,7 +41,10 @@ const CutomerNavbar = () => {
           </div>
 
         {/* Logo */}
-        <div className="logo flex-1">FreshMart</div>
+        <div className="flex flex-1 items-center align-middle"> 
+          <img src="/logo.png" alt="Logo" className="w-7 h-7 mr-3" />
+          <div className="logo max-sm:hidden">FreshMart</div>
+        </div>
 
         {/* Actions */}
         <div className="flex-1 flex justify-end items-center gap-1 sm:gap-2">
