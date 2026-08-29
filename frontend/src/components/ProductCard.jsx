@@ -1,9 +1,13 @@
 import { CiLocationOn } from "react-icons/ci";
 import { BsThreeDots } from "react-icons/bs";
-import { FaCartShopping } from "react-icons/fa6";
+import { FaCartShopping, FaHeart } from "react-icons/fa6";
+import { useState } from "react";
+import { Link } from "react-router";
  
- const ProductCard = ({image, name, src, price, badge: Badge}) => {
+ const ProductCard = ({id, image, name, src, price, badge: Badge}) => {
+  const [favorites, setFavorites] = useState(false);
    return (
+    <Link to={`/products/${id}`}>
     <div className="w-[calc((100vw-28px)/2)] max-w-50 h-70 flex flex-col bg-base-300 rounded-[10px] shadow-md transition-[transform,box-shadow] duration-300 ease-out hover:-translate-y-1.5 hover:[box-shadow:0_14px_30px_color-mix(in_srgb,var(--color-primary)_30%,transparent)] p-1 text-left overflow-hidden">
       <div className="relative">
       <img
@@ -11,8 +15,12 @@ import { FaCartShopping } from "react-icons/fa6";
         alt={name}
         className="w-full h-30 object-cover rounded-tl-md rounded-tr-md"
       />
-
-    </div>
+      <button
+       onClick={() => setFavorites(!favorites)}
+       className="absolute right-0 top-0 btn btn-ghost btn-circle">
+        <FaHeart className={`text-2xl ${favorites ? "text-red-400" : "text-white"}`}/>
+      </button>
+      </div>
 
       <div className="flex items-center ml-1 gap-0.5 min-w-0">
         <p className="pt-2 ml-1 text-2xl truncate">{name}</p>
@@ -36,6 +44,7 @@ import { FaCartShopping } from "react-icons/fa6";
         </button>
       </div>
     </div>
+    </Link>
    )
  }
  

@@ -1,9 +1,11 @@
-
+import HeroSlider from "../../components/HeroSlider";
 
 const Dashboard = () => {
   return (
-    <div>Dashboard</div>
-  )
-}
+    <div>
+      <HeroSlider />
+    </div>
+  );
+};
 
-export default Dashboard
+export default Dashboard;

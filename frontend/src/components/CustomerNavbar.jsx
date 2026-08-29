@@ -42,7 +42,7 @@ const CutomerNavbar = () => {
 
         {/* Logo */}
         <div className="flex flex-1 items-center align-middle"> 
-          <img src="/logo.png" alt="Logo" className="w-7 h-7 mr-3" />
+          <img src="/logo.png" alt="Logo" className="w-7 h-7 mr-2" />
           <div className="logo max-sm:hidden">FreshMart</div>
         </div>
 
@@ -54,15 +54,13 @@ const CutomerNavbar = () => {
             </div>    
 
         {/* Search Bar */}
-          <div className="tooltip tooltip-bottom sm:hidden" data-tip="Search">
             <button
-                className="btn btn-ghost btn-circle text-2xl"
+                className="btn btn-ghost btn-circle text-2xl sm:hidden"
                 aria-label="Cart"
                 onClick={() => setSearchActive(!searchActive)}
             >
                 <FaSearch className="text-primary" />
             </button>
-          </div>  
 
           {/* Cart */}
           <div className="tooltip tooltip-bottom" data-tip="Cart">

@@ -120,7 +120,7 @@ const FarmerNavbar = () => {
 
       {/* Logo */}
       <div className="flex flex-1 items-center align-middle"> 
-        <img src="/logo.png" alt="Logo" className="w-7 h-7 mr-3" />
+        <img src="/logo.png" alt="Logo" className="w-7 h-7 mr-2" />
         <div className="logo max-sm:hidden">FreshMart</div>
       </div>
 
