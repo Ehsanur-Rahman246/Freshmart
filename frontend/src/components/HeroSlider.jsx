@@ -38,7 +38,7 @@ const HeroSlider = () => {
       eyebrow: "Straight from local farmers",
       title: "Know where your food comes from.",
       description:
-        "Support local growers, discover quality products, and buy with confidence—without the middlemen.",
+        "Support local growers, discover quality products, and buy with confidence.",
     },
   ];
 
@@ -95,8 +95,9 @@ const HeroSlider = () => {
               className="
                 absolute inset-0
                 bg-linear-to-r
-                from-black/85
-                via-black/55
+                from-primary-soft
+                via-primary-soft/55
+                via-45%
                 to-transparent
               "
             />
@@ -122,7 +123,7 @@ const HeroSlider = () => {
                     font-bold
                     uppercase
                     tracking-widest
-                    text-primary
+                    text-primary-active
                     sm:text-base
                   "
                 >
@@ -145,11 +146,12 @@ const HeroSlider = () => {
 
                 <p
                   className="
+                    italic
                     mt-4
                     max-w-lg
                     text-sm
                     leading-relaxed
-                    text-white/90
+                    text-muted
                     sm:text-base
                     md:text-lg
                   "

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FaCartShopping } from "react-icons/fa6";
 import { IoNotifications } from "react-icons/io5";
 import { FaUserCircle, FaSearch } from "react-icons/fa";
@@ -24,10 +24,21 @@ const SearchBar = () => {
 const CutomerNavbar = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchActive, setSearchActive] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 100);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
     <>
-      <nav className="navbar z-55 bg-base-100 px-4 sm:px-6 lg:px-10 border-b border-theme-light">
+      <nav className={`navbar sticky top-0 z-55 px-4 sm:px-6 lg:px-10 transition-all duration-300 ease-in-out ${scrolled ? "bg-primary/30 backdrop-blur-md border-none bg-linear-to-b from-secondary-soft/70 via-secondary-soft/30 via-65% to-transparent" : "bg-base-100"}`}>
 
           <div className="tooltip tooltip-bottom" data-tip="Menu">
             <button

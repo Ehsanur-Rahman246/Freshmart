@@ -7,8 +7,7 @@ import { Link } from "react-router";
  const ProductCard = ({id, image, name, src, price, badge: Badge}) => {
   const [favorites, setFavorites] = useState(false);
    return (
-    <Link to={`/products/${id}`}>
-    <div className="w-[calc((100vw-28px)/2)] max-w-50 h-70 flex flex-col bg-base-300 rounded-[10px] shadow-md transition-[transform,box-shadow] duration-300 ease-out hover:-translate-y-1.5 hover:[box-shadow:0_14px_30px_color-mix(in_srgb,var(--color-primary)_30%,transparent)] p-1 text-left overflow-hidden">
+     <div className="product-card w-[calc((100vw-28px)/2)] max-w-50 h-70 flex flex-col bg-base-300 rounded-[10px] shadow-md transition-[transform,box-shadow] duration-300 ease-out hover:-translate-y-1.5 hover:[box-shadow:0_14px_30px_color-mix(in_srgb,var(--color-primary)_30%,transparent)] p-1 text-left overflow-hidden">
       <div className="relative">
       <img
         src={image}
@@ -39,12 +38,13 @@ import { Link } from "react-router";
           <FaCartShopping className="text-base shrink-0" />
           <span className="truncate text-xs sm:text-sm">Add to cart</span>
         </button>
+    <Link to={`/products/${id}`}>
         <button className="btn btn-square btn-ghost">
           <BsThreeDots />
         </button>
+    </Link>
       </div>
     </div>
-    </Link>
    )
  }
  

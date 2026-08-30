@@ -8,9 +8,9 @@ import heroImage from "../assets/hero.png";
 const ROTATING_WORDS = [
   { text: "priced fairly.", className: "text-primary" },
   { text: "grown nearby.", className: "text-secondary" },
-  { text: "shared locally.", className: "text-accent" },
-  { text: "sold directly.", className: "text-primary" },
-  { text: "loved widely.", className: "text-secondary" },
+  { text: "shared locally.", className: "text-primary" },
+  { text: "sold directly.", className: "text-secondary" },
+  { text: "loved widely.", className: "text-orange-400" },
 ];
 
 const INTERVAL = 3400;
@@ -30,8 +30,8 @@ const HeroSlogan = () => {
     <div className="relative z-10 w-full max-w-2xl">
 
       {/* Eyebrow */}
-      <p className="font-pacifico mb-3 text-sm sm:text-base font-bold uppercase tracking-[0.16em] text-primary-active">
-        Farm-to-customer marketplace
+      <p className="font-pacifico mb-3 text-sm sm:text-base font-bold uppercase tracking-[0.16em] text-primary">
+        --- Farm-to-customer marketplace ---
       </p>
 
       {/* Slogan */}
@@ -61,7 +61,7 @@ const HeroSlogan = () => {
       </h1>
 
       {/* Description */}
-      <p className="mt-6 max-w-xl text-base sm:text-lg leading-relaxed font-medium text-muted">
+      <p className="mt-6 max-w-xl text-base sm:text-lg leading-relaxed font-medium italic text-muted">
         No middlemen marking things up. No mystery about where it came from.
         Just your neighbors' harvest, priced by real supply and demand,
         delivered to your door.
@@ -127,7 +127,7 @@ const Home = () => {
             block
             w-full
             h-auto
-            min-h-[520px]
+            min-h-130
             object-cover
             object-center
           "
@@ -138,10 +138,10 @@ const Home = () => {
           className="
             absolute inset-0
             pointer-events-none
-            bg-gradient-to-r
-            from-[#faecd5]/95
-            via-[#faecd5]/65
-            via-45%
+            bg-linear-to-r
+            from-secondary-soft/95
+            via-secondary-soft/65
+            via-55%
             to-transparent
           "
         />
@@ -152,7 +152,7 @@ const Home = () => {
             absolute inset-x-0 bottom-0
             h-24
             pointer-events-none
-            bg-gradient-to-t
+            bg-linear-to-t
             from-base-100/20
             to-transparent
           "
