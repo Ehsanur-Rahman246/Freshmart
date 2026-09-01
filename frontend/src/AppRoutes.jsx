@@ -17,8 +17,6 @@ import FarmProfile from "./pages/FarmProfile";
 import FarmInfo from "./pages/FarmInfo";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import CustomerRegister from "./pages/CustomerRegister";
-import FarmerRegister from "./pages/FarmerRegister";
 import ForgotPassword from "./pages/ForgotPassword";
 import TermsConditions from "./pages/TermsConditions";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -77,11 +75,7 @@ const AppRoutes = () => {
       <Route path="/farms/:id" element={<FarmProfile />} />
       <Route path="/login" element={<Login />} />
 
-      <Route path="/register">
-        <Route index element={<Register />} />
-        <Route path="customer" element={<CustomerRegister />} />
-        <Route path="farmer" element={<FarmerRegister />} />
-      </Route>
+      <Route path="/register" element={<Register />} />
 
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route
