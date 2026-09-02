@@ -39,6 +39,21 @@ const userSchema = new mongoose.Schema(
       default: true,
     },
 
+    verificationOTP: {
+      type: String,
+      default: null,
+    },
+
+    verificationOTPExpireAt: {
+      type: Date,
+      default: null,
+    },
+
+    isAccountVerified: {
+      type: Boolean,
+      default: false,
+    },
+
     passwordResetOTP: {
       type: String,
       default: null,
