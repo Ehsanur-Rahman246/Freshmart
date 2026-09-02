@@ -13,11 +13,10 @@ import Home from "./pages/Home";
 import About from "./pages/About";
 import Marketplace from "./pages/Marketplace";
 import ProductDetails from "./pages/ProductDetails";
-import FarmerProfile from "./pages/FarmerProfile";
+import FarmProfile from "./pages/FarmProfile";
+import FarmInfo from "./pages/FarmInfo";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import CustomerRegister from "./pages/CustomerRegister";
-import FarmerRegister from "./pages/FarmerRegister";
 import ForgotPassword from "./pages/ForgotPassword";
 import TermsConditions from "./pages/TermsConditions";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -72,15 +71,11 @@ const AppRoutes = () => {
       <Route path="/about" element={<About />} />
       <Route path="/marketplace" element={<Marketplace />} />
       <Route path="/products/:id" element={<ProductDetails />} />
-      <Route path="/farmers/:id" element={<FarmerProfile />} />
-
+      <Route path="/farms" element={<FarmInfo/>} />
+      <Route path="/farms/:id" element={<FarmProfile />} />
       <Route path="/login" element={<Login />} />
 
-      <Route path="/register">
-        <Route index element={<Register />} />
-        <Route path="customer" element={<CustomerRegister />} />
-        <Route path="farmer" element={<FarmerRegister />} />
-      </Route>
+      <Route path="/register" element={<Register />} />
 
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route

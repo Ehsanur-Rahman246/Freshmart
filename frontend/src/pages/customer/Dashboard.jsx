@@ -1,9 +1,13 @@
-
+import HeroSlider from "../../components/HeroSlider";
+import Marketplace from "../Marketplace";
 
 const Dashboard = () => {
   return (
-    <div>Dashboard</div>
-  )
-}
+    <div>
+      <HeroSlider />
+      <Marketplace/>
+    </div>
+  );
+};
 
-export default Dashboard
+export default Dashboard;
