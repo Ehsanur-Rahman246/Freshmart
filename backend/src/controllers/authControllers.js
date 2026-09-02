@@ -2,6 +2,7 @@ import User from "../models/users.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import transporter from "../config/nodemailer.js";
+import Customer from "../models/customers.js";
 
 export const register = async (req, res) => {
   try {
@@ -38,6 +39,13 @@ export const register = async (req, res) => {
       password: hashedPassword,
       role,
     });
+
+    //customer doc
+    if (user.role === "customer") {
+      await Customer.create({
+        user: user._id,
+      });
+    }
 
     const token = jwt.sign(
       {
