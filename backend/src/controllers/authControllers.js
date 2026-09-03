@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import transporter from "../config/nodemailer.js";
 import Customer from "../models/customers.js";
+import Farmer from "../models/farmers.js";
 
 export const register = async (req, res) => {
   try {
@@ -43,6 +44,13 @@ export const register = async (req, res) => {
     //customer doc
     if (user.role === "customer") {
       await Customer.create({
+        user: user._id,
+      });
+    }
+
+    //farmer doc
+    if (user.role === "farmer") {
+      await Farmer.create({
         user: user._id,
       });
     }
