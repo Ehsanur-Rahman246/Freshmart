@@ -12,8 +12,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      lowercase: true,
       trim: true,
+      lowercase: true,
     },
 
     password: {
@@ -21,15 +21,52 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
 
+    phone: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+    },
+
     role: {
       type: String,
       enum: ["customer", "farmer", "admin"],
-      required: true,
+      default: "customer",
+    },
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+
+    verificationOTP: {
+      type: String,
+      default: null,
+    },
+
+    verificationOTPExpireAt: {
+      type: Date,
+      default: null,
+    },
+
+    isAccountVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    passwordResetOTP: {
+      type: String,
+      default: null,
+    },
+
+    passwordResetOTPExpireAt: {
+      type: Date,
+      default: null,
     },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 const User = mongoose.model("User", userSchema);
