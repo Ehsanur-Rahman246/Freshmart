@@ -78,25 +78,33 @@ const farmSchema = new mongoose.Schema(
     ],
 
     products: {
-      allYear: {
-        type: [String],
-        default: [],
-      },
+      allYear: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+        },
+      ],
 
-      winter: {
-        type: [String],
-        default: [],
-      },
+      winter: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+        },
+      ],
 
-      summer: {
-        type: [String],
-        default: [],
-      },
+      summer: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+        },
+      ],
 
-      monsoon: {
-        type: [String],
-        default: [],
-      },
+      monsoon: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+        },
+      ],
     },
   },
   {

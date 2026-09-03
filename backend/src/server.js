@@ -7,6 +7,7 @@ import authRouter from "./routes/authRoutes.js";
 import customerRouter from "./routes/customerRoutes.js";
 import farmerRouter from "./routes/farmerRoutes.js";
 import farmRouter from "./routes/farmRoutes.js";
+import productRouter from "./routes/productRoutes.js";
 
 
 const app = express();
@@ -22,6 +23,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/customer', customerRouter);
 app.use('/api/farmer', farmerRouter);
 app.use('/api/farm', farmRouter); 
+app.use("/api/product", productRouter);
 
 connectDB().then(() => {
     app.listen(PORT, () => {
