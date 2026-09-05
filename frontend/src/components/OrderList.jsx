@@ -84,12 +84,12 @@ const orders = [
 const OrderList = ({ onSelect }) => {
   return (
     <div className="min-h-screen bg-[#f5f5f4] p-4 md:p-6">
-      
-
-      {/* Main */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+
+        {/* Header */}
         <div className="p-4 border-b border-gray-100">
           <div className="flex flex-col md:flex-row md:justify-between gap-3">
+
             <div>
               <h2 className="font-semibold text-sm">
                 Order List
@@ -106,85 +106,106 @@ const OrderList = ({ onSelect }) => {
                 className="border border-gray-200 rounded-lg px-3 h-9 text-xs outline-none w-full md:w-52"
               />
 
-              <button className="border border-gray-200 rounded-lg px-3 text-xs">
+              <button className="border border-gray-200 rounded-lg px-3 text-xs whitespace-nowrap">
                 Export CSV
               </button>
 
-              <button className="border border-gray-200 rounded-lg px-3 text-xs">
+              <button className="border border-gray-200 rounded-lg px-3 text-xs whitespace-nowrap">
                 Saved Views
               </button>
             </div>
+
           </div>
 
           {/* Tabs */}
           <div className="flex gap-6 mt-5 text-xs overflow-x-auto">
-            <span className="font-medium border-b-2 border-gray-800 pb-3">
+
+            <span className="font-medium border-b-2 border-gray-800 pb-3 whitespace-nowrap">
               All 40
             </span>
 
-            <span className="text-gray-400 pb-3">
+            <span className="text-gray-400 pb-3 whitespace-nowrap">
               Completed 31
             </span>
 
-            <span className="text-gray-400 pb-3">
+            <span className="text-gray-400 pb-3 whitespace-nowrap">
               Processed 4
             </span>
 
-            <span className="text-gray-400 pb-3">
+            <span className="text-gray-400 pb-3 whitespace-nowrap">
               Returned 2
             </span>
 
-            <span className="text-gray-400 pb-3">
+            <span className="text-gray-400 pb-3 whitespace-nowrap">
               Cancelled 2
             </span>
+
           </div>
         </div>
 
         {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[850px]">
+
+          <table className="w-full min-w-[900px] table-fixed">
+
+            <colgroup>
+              <col className="w-[14%]" />
+              <col className="w-[25%]" />
+              <col className="w-[25%]" />
+              <col className="w-[12%]" />
+              <col className="w-[10%]" />
+              <col className="w-[14%]" />
+            </colgroup>
+
             <thead>
               <tr className="bg-[#fafafa] text-[10px] text-gray-400">
-                <th className="text-left p-4">
+
+                <th className="text-left p-4 font-medium">
                   Order ID
                 </th>
 
-                <th className="text-left">
+                <th className="text-left font-medium">
                   Product Name
                 </th>
 
-                <th className="text-left">
+                <th className="text-left font-medium">
                   Customer Name
                 </th>
 
-                <th>
+                <th className="text-center font-medium">
                   Quantity
                 </th>
 
-                <th>
+                <th className="text-center font-medium">
                   Total
                 </th>
 
-                <th>
+                <th className="text-center font-medium">
                   Status
                 </th>
+
               </tr>
             </thead>
 
             <tbody>
+
               {orders.map((order) => (
                 <tr
                   key={order.id}
                   onClick={() => onSelect(order)}
                   className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer"
                 >
+
+                  {/* Order ID */}
                   <td className="p-4 text-xs font-medium">
                     {order.id}
                   </td>
 
+                  {/* Product */}
                   <td>
                     <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center">
+
+                      <div className="w-9 h-9 shrink-0 bg-gray-100 rounded-lg flex items-center justify-center">
                         {order.icon}
                       </div>
 
@@ -197,9 +218,11 @@ const OrderList = ({ onSelect }) => {
                           Freshmart Product
                         </p>
                       </div>
+
                     </div>
                   </td>
 
+                  {/* Customer */}
                   <td>
                     <div>
                       <p className="text-xs">
@@ -212,23 +235,30 @@ const OrderList = ({ onSelect }) => {
                     </div>
                   </td>
 
-                  <td className="text-xs">
+                  {/* Quantity */}
+                  <td className="text-xs text-center">
                     {order.quantity}
                   </td>
 
-                  <td className="text-xs font-medium">
+                  {/* Total */}
+                  <td className="text-xs font-medium text-center">
                     {order.total}
                   </td>
 
-                  <td>
-                    <span className="px-2 py-1 rounded-md bg-gray-100 text-[9px]">
+                  {/* Status */}
+                  <td className="text-center">
+                    <span className="inline-block px-2 py-1 rounded-md bg-gray-100 text-[9px]">
                       {order.status}
                     </span>
                   </td>
+
                 </tr>
               ))}
+
             </tbody>
+
           </table>
+
         </div>
       </div>
     </div>
