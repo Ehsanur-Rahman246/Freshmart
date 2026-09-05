@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-
 import Customer from "../models/customers.js";
 import Product from "../models/products.js";
 

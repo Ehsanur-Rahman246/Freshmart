@@ -85,14 +85,6 @@ const orders = [
 ];
 
 const Orders = () => {
-<<<<<<< HEAD
-  return (
-    <div>Orders</div>
-  )
-}
-
-export default Orders
-=======
   const [view, setView] = useState("cards");
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [drawerType, setDrawerType] = useState(1);
@@ -201,4 +193,3 @@ export default Orders
 };
 
 export default Orders;
->>>>>>> e67260d679f826b4499a4fb4fdd6074516ba6da5

@@ -5,6 +5,7 @@ import Product from "../models/products.js";
 import Farmer from "../models/farmers.js";
 import Farm from "../models/farms.js";
 import Zone from "../models/zones.js";
+import generateOrderNumber from "../utils/generateOrderNumber.js";
 
 // ==========================================
 // CREATE ORDER
@@ -118,6 +119,7 @@ export const createOrder = async (req, res) => {
 
     // Shared group ID for all farm orders
     const orderGroup = new mongoose.Types.ObjectId();
+    const orderNumber = await generateOrderNumber();
 
     const createdOrders = [];
 
@@ -195,6 +197,7 @@ export const createOrder = async (req, res) => {
         customer: customer._id,
 
         orderGroup,
+        orderNumber,
 
         farmer: farmer._id,
 
