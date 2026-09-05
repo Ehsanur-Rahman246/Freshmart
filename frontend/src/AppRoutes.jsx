@@ -74,7 +74,6 @@ const AppRoutes = () => {
       <Route path="/farms" element={<FarmInfo/>} />
       <Route path="/farms/:id" element={<FarmProfile />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/test-orders" element={<CustomerOrders />} />
 
       <Route path="/register" element={<Register />} />
 
