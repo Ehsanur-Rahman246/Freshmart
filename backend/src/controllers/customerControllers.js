@@ -74,6 +74,7 @@ export const addAddress = async (req, res) => {
       division,
       district,
       upazila,
+      village,
       address,
       isDefault,
     } = req.body;
@@ -84,6 +85,7 @@ export const addAddress = async (req, res) => {
       !division ||
       !district ||
       !upazila ||
+      !village ||
       !address
     ) {
       return res.status(400).json({
@@ -116,6 +118,7 @@ export const addAddress = async (req, res) => {
       division,
       district,
       upazila,
+      village,
       address,
       isDefault: isDefault === true || customer.addresses.length === 0,
     });
@@ -168,6 +171,7 @@ export const updateAddress = async (req, res) => {
       division,
       district,
       upazila,
+      village,
       address: fullAddress,
       isDefault,
     } = req.body;
@@ -178,6 +182,7 @@ export const updateAddress = async (req, res) => {
     if (division !== undefined) address.division = division;
     if (district !== undefined) address.district = district;
     if (upazila !== undefined) address.upazila = upazila;
+    if (village !== undefined) address.village = village;
     if (fullAddress !== undefined) address.address = fullAddress;
 
     if (isDefault === true) {
