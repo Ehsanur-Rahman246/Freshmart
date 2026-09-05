@@ -1,6 +1,5 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
-import axios from "axios";
 import {
   FiUser,
   FiLock,
@@ -9,9 +8,7 @@ import {
   FiEyeOff,
   FiArrowRight,
 } from "react-icons/fi";
-
-// API base URL
-const API_URL = import.meta.env.VITE_API_URL + "/api/auth";
+import { login } from "../lib/auth";
 
 // Input component
 const Input = ({
@@ -47,16 +44,17 @@ export default function Login() {
 
   // Navigate user after login
   const goToPage = (user) => {
-    localStorage.setItem("userCurrentDetails", JSON.stringify(user));
-    if (user.role === "farmer") {
-      navigate("/home");
-    } else {
-      navigate("/marketplace");
+    if (user.role === "customer") {
+      navigate("/customer");
+    } else if (user.role === "farmer") {
+      navigate("/farmer");
+    } else if (user.role === "admin") {
+      navigate("/admin");
     }
   };
 
   // Login function
-  const login = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
@@ -68,23 +66,17 @@ export default function Login() {
     }
 
     try {
-      const response = await axios.post(
-        `${API_URL}/login`,
-        { email, password },
-        {
-          withCredentials: true,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      const { data } = await login({ email, password });
 
-      if (response.data.success) {
-        const { user } = response.data;
-        localStorage.setItem("userCurrentDetails", JSON.stringify(user));
+      if (data.success) {
+        const { user } = data;
         goToPage(user);
       }
     } catch (error) {
       if (error.response) {
-        setError(error.response.data.message || "Login failed. Please try again.");
+        setError(
+          error.response.data.message || "Login failed. Please try again.",
+        );
       } else if (error.request) {
         setError("Cannot connect to server. Please check your connection.");
       } else {
@@ -104,11 +96,13 @@ export default function Login() {
             <FiUser className="text-2xl text-primary" />
           </div>
           <h1 className="text-2xl font-bold">Welcome Back</h1>
-          <p className="text-muted text-sm mt-1">Login to your FreshMart account</p>
+          <p className="text-muted text-sm mt-1">
+            Login to your FreshMart account
+          </p>
         </div>
 
         {/* Login Form */}
-        <form onSubmit={login} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4">
           <Input
             icon={FiMail}
             type="email"
@@ -155,7 +149,9 @@ export default function Login() {
             disabled={loading}
             className="btn bg-primary text-primary-content w-full py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {loading ? "Logging in..." : (
+            {loading ? (
+              "Logging in..."
+            ) : (
               <>
                 Login
                 <FiArrowRight />

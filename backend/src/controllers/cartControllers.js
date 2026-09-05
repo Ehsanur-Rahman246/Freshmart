@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
-import Customer from "../models/customers.js";
-import Product from "../models/products.js";
+import Customer from "../models/Customer.js";
+import Product from "../models/Product.js";
 
 // ==========================================
 // GET CART

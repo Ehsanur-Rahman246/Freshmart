@@ -1,19 +1,15 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
-import axios from "axios";
 import {
   FiUser,
   FiLock,
-  FiPhone,
   FiMail,
   FiEye,
   FiEyeOff,
   FiArrowLeft,
   FiArrowRight,
 } from "react-icons/fi";
-
-// API base URL
-const API_URL = import.meta.env.VITE_API_URL + "/api/auth";
+import { register } from "../lib/auth";
 
 // Input component
 const Input = ({
@@ -46,17 +42,17 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
 
   // Navigate user after registration
   const goToPage = (user) => {
-    localStorage.setItem("userCurrentDetails", JSON.stringify(user));
-    if (user.role === "farmer") {
-      navigate("/home");
-    } else {
-      navigate("/marketplace");
+    if (user.role === "customer") {
+      navigate("/customer");
+    } else if (user.role === "farmer") {
+      navigate("/farmer");
+    } else if (user.role === "admin") {
+      navigate("/admin");
     }
   };
 
@@ -66,36 +62,25 @@ export default function Register() {
     setError("");
     setLoading(true);
 
-    if (!name || !phone || !email || !password) {
+    if (!name || !email || !password) {
       setError("Please fill in all fields.");
       setLoading(false);
       return;
     }
 
     try {
-      const response = await axios.post(
-        `${API_URL}/register`,
-        {
-          name,
-          email,
-          phone,
-          password,
-          role: type,
-        },
-        {
-          withCredentials: true,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      const { data } = register({ name, email, password, role: type });
 
-      if (response.data.success) {
-        const { user } = response.data;
-        localStorage.setItem("userCurrentDetails", JSON.stringify(user));
+      if (data.success) {
+        const { user } = data;
         goToPage(user);
       }
     } catch (error) {
       if (error.response) {
-        setError(error.response.data.message || "Registration failed. Please try again.");
+        setError(
+          error.response.data.message ||
+            "Registration failed. Please try again.",
+        );
       } else if (error.request) {
         setError("Cannot connect to server. Please check your connection.");
       } else {
@@ -115,7 +100,9 @@ export default function Register() {
             <FiUser className="text-2xl text-primary" />
           </div>
           <h1 className="text-2xl font-bold">Create Account</h1>
-          <p className="text-muted text-sm mt-1">Create your FreshMart account</p>
+          <p className="text-muted text-sm mt-1">
+            Create your FreshMart account
+          </p>
         </div>
 
         {/* Register Form */}
@@ -165,14 +152,6 @@ export default function Register() {
           />
 
           <Input
-            icon={FiPhone}
-            type="tel"
-            placeholder="Phone Number"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-
-          <Input
             icon={FiMail}
             type="email"
             placeholder="Email Address"
@@ -208,7 +187,9 @@ export default function Register() {
             disabled={loading}
             className="btn bg-primary text-primary-content w-full py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {loading ? "Creating Account..." : (
+            {loading ? (
+              "Creating Account..."
+            ) : (
               <>
                 Create Account
                 <FiArrowRight />

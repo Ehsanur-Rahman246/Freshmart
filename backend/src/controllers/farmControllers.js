@@ -1,5 +1,5 @@
-import Farm from "../models/farms.js";
-import Farmer from "../models/farmers.js";
+import Farm from "../models/Farm.js";
+import Farmer from "../models/Farmer.js";
 
 export const createFarm = async (req, res) => {
   try {
@@ -112,15 +112,14 @@ export const getFarmById = async (req, res) => {
   try {
     const { farmId } = req.params;
 
-    const farm = await Farm.findById(farmId)
-      .populate({
-        path: "farmer",
-        select: "profileImage",
-        populate: {
-          path: "user",
-          select: "name",
-        },
-      });
+    const farm = await Farm.findById(farmId).populate({
+      path: "farmer",
+      select: "profileImage",
+      populate: {
+        path: "user",
+        select: "name",
+      },
+    });
 
     if (!farm) {
       return res.status(404).json({

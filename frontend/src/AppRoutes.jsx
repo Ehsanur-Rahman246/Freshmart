@@ -7,6 +7,7 @@ import AdminLayout from "./layouts/AdminLayout";
 
 // Protection
 import ProtectedRoute from "./components/ProtectedRoute";
+import GuestRoute from "./components/GuestRoute";
 
 // Public Pages
 import Home from "./pages/Home";
@@ -73,9 +74,11 @@ const AppRoutes = () => {
       <Route path="/products/:id" element={<ProductDetails />} />
       <Route path="/farms" element={<FarmInfo/>} />
       <Route path="/farms/:id" element={<FarmProfile />} />
-      <Route path="/login" element={<Login />} />
 
-      <Route path="/register" element={<Register />} />
+      <Route element={<GuestRoute/>}>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+      </Route>
 
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route
@@ -89,9 +92,9 @@ const AppRoutes = () => {
 
 
       {/* ================= CUSTOMER ROUTES ================= */}
-       {/* element={<ProtectedRoute role="customer" />} */}
+       {/*  */}
 
-      <Route>
+      <Route element={<ProtectedRoute role="customer" />}>
         <Route path="/customer" element={<CustomerLayout />}>
 
           <Route index element={<CustomerDashboard />} />

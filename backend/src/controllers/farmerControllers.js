@@ -1,4 +1,4 @@
-import Farmer from "../models/farmers.js";
+import Farmer from "../models/Farmer.js";
 
 export const getFarmerProfile = async (req, res) => {
   try {

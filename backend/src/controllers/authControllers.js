@@ -1,9 +1,9 @@
-import User from "../models/users.js";
+import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import transporter from "../config/nodemailer.js";
-import Customer from "../models/customers.js";
-import Farmer from "../models/farmers.js";
+import Customer from "../models/Customer.js";
+import Farmer from "../models/Farmer.js";
 
 export const register = async (req, res) => {
   try {
@@ -13,6 +13,22 @@ export const register = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Name, email, password, and role are required",
+      });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid email address",
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters long",
       });
     }
 
@@ -380,7 +396,9 @@ export const verifyUser = async (req, res) => {
 
 export const checkAuth = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select("-password");
+    const user = await User.findById(req.user.userId).select(
+      "-password -passwordResetOTP -passwordResetOTPExpireAt -verificationOTP -verificationOTPExpireAt",
+    );
 
     if (!user) {
       return res.status(404).json({
@@ -454,14 +472,14 @@ export const sendResetPasswordOtp = async (req, res) => {
   }
 };
 
-export const resetPassword = async (req, res) => {
+export const verifyResetPasswordOtp = async (req, res) => {
   try {
-    const { email, otp, newPassword } = req.body;
+    const { email, otp } = req.body;
 
-    if (!email || !otp || !newPassword) {
+    if (!email || !otp) {
       return res.status(400).json({
         success: false,
-        message: "Email, OTP, and new password are required",
+        message: "Email and OTP are required",
       });
     }
 
@@ -484,6 +502,70 @@ export const resetPassword = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Invalid or expired OTP",
+      });
+    }
+
+    const resetToken = jwt.sign(
+      {
+        userId: user._id,
+        purpose: "passwordReset",
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "10m",
+      },
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP verified successfully",
+      resetToken,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { resetToken, newPassword } = req.body;
+
+    if (!resetToken || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Reset token and new password are required",
+      });
+    }
+
+    let decoded;
+
+    try {
+      decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired reset token",
+      });
+    }
+
+    if (decoded.purpose !== "passwordReset") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid reset token",
+      });
+    }
+
+    const user = await User.findById(decoded.userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
       });
     }
 

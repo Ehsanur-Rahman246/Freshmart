@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router";
 import { checkAuth } from "../lib/auth";
 
-const ProtectedRoute = ({ role }) => {
+const GuestRoute = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
 
@@ -28,15 +28,21 @@ const ProtectedRoute = ({ role }) => {
     return <div>Loading...</div>;
   }
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
+  if (user) {
+    if (user.role === "customer") {
+      return <Navigate to="/customer" replace />;
+    }
 
-  if (role && user.role !== role) {
-    return <Navigate to="/unauthorized" replace />;
+    if (user.role === "farmer") {
+      return <Navigate to="/farmer" replace />;
+    }
+
+    if (user.role === "admin") {
+      return <Navigate to="/admin" replace />;
+    }
   }
 
   return <Outlet />;
 };
 
-export default ProtectedRoute;
+export default GuestRoute;

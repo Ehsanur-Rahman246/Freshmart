@@ -1,4 +1,4 @@
-import OrderCounter from "../models/orderCounter.js";
+import OrderCounter from "../models/OrderCounter.js";
 
 const generateOrderNumber = async () => {
   const counter = await OrderCounter.findOneAndUpdate(

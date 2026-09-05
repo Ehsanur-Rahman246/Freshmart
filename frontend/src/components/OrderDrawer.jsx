@@ -368,7 +368,7 @@ const OrderDrawer = ({ order, type = 1, onClose }) => {
           sm:left-auto
           sm:bottom-auto
           sm:h-screen
-          sm:w-[430px]
+          sm:w-107.5
           sm:rounded-none
         "
       >

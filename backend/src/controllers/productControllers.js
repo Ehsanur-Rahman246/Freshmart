@@ -1,6 +1,6 @@
-import Product from "../models/products.js";
-import Farmer from "../models/farmers.js";
-import Farm from "../models/farms.js";
+import Product from "../models/Product.js";
+import Farmer from "../models/Farmer.js";
+import Farm from "../models/Farm.js";
 
 export const createProduct = async (req, res) => {
   try {

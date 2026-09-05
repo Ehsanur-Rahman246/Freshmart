@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   FiTrendingUp,
   FiTrendingDown,
@@ -45,7 +45,7 @@ const statusColor = {
   Delivered: "var(--color-purple)",
 };
 
-export default function Dashboard() {
+export default function FarmerDashboard() {
   const [showListings, setShowListings] = useState(false);
 
   return (

@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
-import Order from "../models/orders.js";
-import Customer from "../models/customers.js";
-import Product from "../models/products.js";
-import Farmer from "../models/farmers.js";
-import Farm from "../models/farms.js";
-import Zone from "../models/zones.js";
+import Order from "../models/Order.js";
+import Customer from "../models/Customer.js";
+import Product from "../models/Product.js";
+import Farmer from "../models/Farmer.js";
+import Farm from "../models/Farm.js";
+import Zone from "../models/Zone.js";
 import generateOrderNumber from "../utils/generateOrderNumber.js";
 
 // ==========================================

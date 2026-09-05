@@ -146,7 +146,7 @@ const OrderList = ({ onSelect }) => {
         {/* Table */}
         <div className="overflow-x-auto">
 
-          <table className="w-full min-w-[900px] table-fixed">
+          <table className="w-full min-w-225 table-fixed">
 
             <colgroup>
               <col className="w-[14%]" />
