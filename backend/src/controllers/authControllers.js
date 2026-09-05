@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import transporter from "../config/nodemailer.js";
 import Customer from "../models/customers.js";
+import Farmer from "../models/farmers.js";
 
 export const register = async (req, res) => {
   try {
@@ -43,6 +44,13 @@ export const register = async (req, res) => {
     //customer doc
     if (user.role === "customer") {
       await Customer.create({
+        user: user._id,
+      });
+    }
+
+    //farmer doc
+    if (user.role === "farmer") {
+      await Farmer.create({
         user: user._id,
       });
     }
@@ -203,20 +211,18 @@ export const logout = (req, res) => {
   });
 };
 
-export const deleteUserByEmail = async (req, res) => {
+export const deleteAccount = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { password } = req.body;
 
-    if (!email) {
+    if (!password) {
       return res.status(400).json({
         success: false,
-        message: "Email is required",
+        message: "Password is required to delete your account",
       });
     }
 
-    const user = await User.findOneAndDelete({
-      email: email.trim().toLowerCase(),
-    });
+    const user = await User.findById(req.user.userId);
 
     if (!user) {
       return res.status(404).json({
@@ -225,13 +231,36 @@ export const deleteUserByEmail = async (req, res) => {
       });
     }
 
+    const isPasswordCorrect = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordCorrect) {
+      return res.status(401).json({
+        success: false,
+        message: "Incorrect password",
+      });
+    }
+
+    // Also clean up the related profile doc
+    if (user.role === "customer") {
+      await Customer.findOneAndDelete({ user: user._id });
+    } else if (user.role === "farmer") {
+      await Farmer.findOneAndDelete({ user: user._id });
+    }
+
+    await User.findByIdAndDelete(user._id);
+
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
+
     return res.status(200).json({
       success: true,
-      message: "User deleted successfully",
+      message: "Account deleted successfully",
     });
   } catch (error) {
     console.error(error);
-
     return res.status(500).json({
       success: false,
       message: "Internal server error",

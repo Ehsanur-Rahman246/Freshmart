@@ -14,6 +14,11 @@ const farmerSchema = new mongoose.Schema(
       default: null,
     },
 
+    isDemo: {
+      type: Boolean,
+      default: false,
+    },
+
     farms: [
       {
         type: mongoose.Schema.Types.ObjectId,

@@ -1,7 +1,7 @@
 import express from "express";
 import {
   checkAuth,
-  deleteUserByEmail,
+  deleteAccount,
   login,
   logout,
   register,
@@ -10,14 +10,14 @@ import {
   sendVerificationOtp,
   verifyUser,
 } from "../controllers/authControllers.js";
-import userAuth from "../middleware/userAuth.js";
+import userAuth from "../middlewares/userAuth.js";
 
 const authRouter = express.Router();
 
 authRouter.post("/register", register);
 authRouter.post("/login", login);
 authRouter.post("/logout", logout);
-authRouter.delete("/deleteUser", deleteUserByEmail);
+authRouter.delete("/delete-account", userAuth, deleteAccount);
 authRouter.post("/send-verification-otp", userAuth, sendVerificationOtp);
 authRouter.post("/verify-account", userAuth, verifyUser);
 authRouter.get("/check-auth", userAuth, checkAuth);
