@@ -1,16 +1,14 @@
 import express from "express";
-import userAuth from "../middleware/userAuth.js";
-import roleAuth from "../middleware/roleAuth.js";
-import { getFarmerProfile, updateFarmerProfile } from "../controllers/farmerControllers.js";
+import userAuth from "../middlewares/userAuth.js";
+import roleAuth from "../middlewares/roleAuth.js";
+import {
+  getFarmerProfile,
+  updateFarmerProfile,
+} from "../controllers/farmerControllers.js";
 
 const farmerRouter = express.Router();
 
-farmerRouter.get(
-  "/profile",
-  userAuth,
-  roleAuth("farmer"),
-  getFarmerProfile,
-);
+farmerRouter.get("/profile", userAuth, roleAuth("farmer"), getFarmerProfile);
 
 farmerRouter.patch(
   "/profile",

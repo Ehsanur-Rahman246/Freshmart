@@ -1,5 +1,5 @@
-import Farm from "../models/farm.js";
-import Farmer from "../models/farmer.js";
+import Farm from "../models/farms.js";
+import Farmer from "../models/farmers.js";
 
 export const createFarm = async (req, res) => {
   try {
