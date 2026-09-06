@@ -120,7 +120,11 @@ Thank you for joining FreshMart. We look forward to growing together!
       text: emailText,
     };
 
-    await transporter.sendMail(mailOptions);
+    try {
+      await transporter.sendMail(mailOptions);
+    } catch (emailError) {
+      console.error("Welcome email could not be sent:", emailError.message);
+    }
 
     return res.status(201).json({
       success: true,

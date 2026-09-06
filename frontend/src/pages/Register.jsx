@@ -69,7 +69,7 @@ export default function Register() {
     }
 
     try {
-      const { data } = register({ name, email, password, role: type });
+      const { data } = await register({ name, email, password, role: type });
 
       if (data.success) {
         const { user } = data;
