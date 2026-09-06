@@ -6,6 +6,7 @@ import Farmer from "../models/Farmer.js";
 import Farm from "../models/Farm.js";
 import Zone from "../models/Zone.js";
 import generateOrderNumber from "../utils/generateOrderNumber.js";
+import createNotification from "../utils/createNotification.js";
 
 // ==========================================
 // CREATE ORDER
@@ -236,6 +237,15 @@ export const createOrder = async (req, res) => {
         status: "processing",
       });
 
+      await createNotification({
+        recipient: farmer.user,
+        recipientRole: "farmer",
+        type: "orderPlaced",
+        title: "New Order Received",
+        message: `You have received a new order from a customer.`,
+        relatedOrder: order._id,
+      });
+
       createdOrders.push(order);
 
       // Reduce product stock
@@ -448,6 +458,18 @@ export const cancelOrder = async (req, res) => {
 
     await order.save();
 
+    const farmer = await Farmer.findById(order.farmer);
+    if (farmer) {
+      await createNotification({
+        recipient: farmer.user,
+        recipientRole: "farmer",
+        type: "orderCancelled",
+        title: "Order Cancelled",
+        message: "A customer has cancelled an order.",
+        relatedOrder: order._id,
+      });
+    }
+
     // Restore stock
     for (const item of order.items) {
       await Product.updateOne(
@@ -577,6 +599,36 @@ export const updateOrderStatus = async (req, res) => {
     order.status = status;
 
     await order.save();
+
+    const customer = await Customer.findById(order.customer).populate("user");
+    if (customer) {
+      const notificationData = {
+        processing: {
+          type: "orderProcessing",
+          title: "Order Processing",
+          message: "Your order is now being processed by the farmer.",
+        },
+
+        readyForPickup: {
+          type: "readyForPickup",
+          title: "Order Ready for Pickup",
+          message: "Your order has been prepared and is ready for pickup.",
+        },
+      };
+
+      const notificationInfo = notificationData[status];
+
+      if (notificationInfo) {
+        await createNotification({
+          recipient: customer.user._id,
+          recipientRole: "customer",
+          type: notificationInfo.type,
+          title: notificationInfo.title,
+          message: notificationInfo.message,
+          relatedOrder: order._id,
+        });
+      }
+    }
 
     return res.status(200).json({
       success: true,

@@ -10,6 +10,8 @@ import farmRouter from "./routes/farmRoutes.js";
 import productRouter from "./routes/productRoutes.js";
 import cartRouter from "./routes/cartRoutes.js";
 import orderRouter from "./routes/orderRoutes.js";
+import reviewRouter from "./routes/reviewRoutes.js";
+import notificationRouter from "./routes/notificationRoutes.js";
 
 
 const app = express();
@@ -29,6 +31,8 @@ app.use('/api/farm', farmRouter);
 app.use("/api/product", productRouter);
 app.use("/api/cart", cartRouter);
 app.use("/api/orders", orderRouter);
+app.use("/api/reviews", reviewRouter);
+app.use("/api/notifications", notificationRouter);
 
 connectDB().then(() => {
     app.listen(PORT, () => {

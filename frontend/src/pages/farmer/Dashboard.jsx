@@ -9,8 +9,6 @@ import {
   FiX,
   FiPackage,
 } from "react-icons/fi";
-import { useNavigate } from "react-router";
-import { logout } from "../../lib/auth";
 
 // Demo Data
 const crops = [
@@ -48,20 +46,9 @@ const statusColor = {
 
 export default function FarmerDashboard() {
   const [showListings, setShowListings] = useState(false);
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-      try {
-        await logout();
-        navigate("/login");
-      } catch (error) {
-        console.error("Logout failed:", error);
-      }
-    };
 
   return (
     <div className="min-h-screen bg-base-100 text-base-content">
-        <button className="btn btn-primary" onClick={handleLogout}>logout</button>
       {/* Main Content */}
       <div className={`transition-all duration-200 ${showListings ? "scale-[0.995] blur-sm" : ""}`}>
         

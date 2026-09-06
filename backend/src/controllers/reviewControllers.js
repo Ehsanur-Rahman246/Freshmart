@@ -4,6 +4,8 @@ import Customer from "../models/Customer.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import Farm from "../models/Farm.js";
+import Farmer from "../models/Farmer.js";
+import createNotification from "../utils/createNotification.js";
 
 // ==========================================
 // CREATE PRODUCT REVIEW
@@ -104,6 +106,19 @@ export const createProductReview = async (req, res) => {
       rating: Number(rating),
       comment: comment || "",
     });
+
+    const farmer = await Farmer.findById(order.farmer);
+    if (farmer) {
+      await createNotification({
+        recipient: farmer.user,
+        recipientRole: "farmer",
+        type: "reviewReceived",
+        title: "New Product Review",
+        message: `A customer left a ${rating}-star review for one of your products.`,
+        relatedOrder: order._id,
+        relatedProduct: product._id,
+      });
+    }
 
     return res.status(201).json({
       success: true,
@@ -209,6 +224,19 @@ export const createFarmReview = async (req, res) => {
       rating: Number(rating),
       comment: comment || "",
     });
+
+    const farmer = await Farmer.findById(order.farmer);
+
+    if (farmer) {
+      await createNotification({
+        recipient: farmer.user,
+        recipientRole: "farmer",
+        type: "reviewReceived",
+        title: "New Farm Review",
+        message: `A customer left a ${rating}-star review for your farm.`,
+        relatedOrder: order._id,
+      });
+    }
 
     return res.status(201).json({
       success: true,
