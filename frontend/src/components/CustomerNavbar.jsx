@@ -40,9 +40,13 @@ const CutomerNavbar = () => {
   }, []);
 
   const handleLogout = async () => {
-    await logout();
-    navigate("/login");
-  }
+    try {
+      await logout();
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   return (
     <>
@@ -116,8 +120,10 @@ const CutomerNavbar = () => {
                 tabIndex={-1}
                 className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
               >
-                <button>Profile</button>
-                <button type="button" onClick={handleLogout}>Logout</button>
+                <button className="mt-1 mb-4 px-1 py-0.5 bg-primary-soft rounded-lg">Profile</button>
+                <button type="button" onClick={handleLogout} className="px-1 py-0.5 bg-error-soft rounded-lg">
+                  Logout
+                </button>
               </ul>
             </div>
           </div>
