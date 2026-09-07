@@ -8,6 +8,7 @@ import {
   resetPassword,
   sendResetPasswordOtp,
   sendVerificationOtp,
+  updateProfile,
   verifyResetPasswordOtp,
   verifyUser,
 } from "../controllers/authControllers.js";
@@ -18,6 +19,7 @@ const authRouter = express.Router();
 authRouter.post("/register", register);
 authRouter.post("/login", login);
 authRouter.post("/logout", logout);
+authRouter.patch("/update-profile", userAuth, updateProfile);
 authRouter.delete("/delete-account", userAuth, deleteAccount);
 authRouter.post("/send-verification-otp", userAuth, sendVerificationOtp);
 authRouter.post("/verify-account", userAuth, verifyUser);

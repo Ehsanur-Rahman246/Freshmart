@@ -6,6 +6,7 @@ import {
   addToWishlist,
   deleteAddress,
   getCustomerProfile,
+  getWallet,
   getWishlist,
   removeFromWishlist,
   setDefaultAddress,
@@ -27,6 +28,8 @@ customerRouter.patch(
   roleAuth("customer"),
   updateCustomerProfile,
 );
+// customerRoutes.js — add:
+customerRouter.get("/wallet", userAuth, roleAuth("customer"), getWallet);
 customerRouter.post("/addresses", userAuth, roleAuth("customer"), addAddress);
 customerRouter.patch(
   "/addresses/:addressId",

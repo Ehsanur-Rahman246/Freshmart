@@ -234,7 +234,7 @@ export const createOrder = async (req, res) => {
           estimatedDeliveryAt,
         },
 
-        status: "processing",
+        status: "pendingAcceptance",
       });
 
       await createNotification({
@@ -352,7 +352,7 @@ export const getOrderById = async (req, res) => {
       .populate("delivery.originZone")
       .populate("delivery.destinationZone")
       .populate("delivery.courier")
-      .populate("delivery.driver");
+      .populate("delivery.driver.driverId");
 
     if (!order) {
       return res.status(404).json({
@@ -447,7 +447,11 @@ export const cancelOrder = async (req, res) => {
     }
 
     // Can only cancel before pickup
-    if (!["processing", "readyForPickup"].includes(order.status)) {
+    if (
+      !["pendingAcceptance", "processing", "readyForPickup"].includes(
+        order.status,
+      )
+    ) {
       return res.status(400).json({
         success: false,
         message: "This order can no longer be cancelled",
@@ -540,6 +544,66 @@ export const getFarmerOrders = async (req, res) => {
   }
 };
 
+export const getFarmOrders = async (req, res) => {
+  try {
+    const { farmId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(farmId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid farm ID",
+      });
+    }
+
+    const farmer = await Farmer.findOne({
+      user: req.user.userId,
+    });
+
+    if (!farmer) {
+      return res.status(404).json({
+        success: false,
+        message: "Farmer profile not found",
+      });
+    }
+
+    // Important:
+    // Verify that this farm belongs to the logged-in farmer
+    const farm = await Farm.findOne({
+      _id: farmId,
+      farmer: farmer._id,
+    });
+
+    if (!farm) {
+      return res.status(404).json({
+        success: false,
+        message: "Farm not found or you do not own this farm",
+      });
+    }
+
+    const orders = await Order.find({
+      farm: farm._id,
+    })
+      .populate("customer", "user")
+      .populate("items.product", "name images")
+      .sort({
+        createdAt: -1,
+      });
+
+    return res.status(200).json({
+      success: true,
+      count: orders.length,
+      orders,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 // ==========================================
 // UPDATE ORDER STATUS
 // FARMER
@@ -550,9 +614,7 @@ export const updateOrderStatus = async (req, res) => {
     const { orderId } = req.params;
     const { status } = req.body;
 
-    const allowedStatuses = ["processing", "readyForPickup"];
-
-    if (!allowedStatuses.includes(status)) {
+    if (status !== "readyForPickup") {
       return res.status(400).json({
         success: false,
         message: "Invalid status update",
@@ -596,19 +658,13 @@ export const updateOrderStatus = async (req, res) => {
       });
     }
 
-    order.status = status;
+    order.status = "readyForPickup";
 
     await order.save();
 
     const customer = await Customer.findById(order.customer).populate("user");
     if (customer) {
       const notificationData = {
-        processing: {
-          type: "orderProcessing",
-          title: "Order Processing",
-          message: "Your order is now being processed by the farmer.",
-        },
-
         readyForPickup: {
           type: "readyForPickup",
           title: "Order Ready for Pickup",
@@ -756,6 +812,204 @@ export const getOrdersByFarmer = async (req, res) => {
       success: true,
       count: orders.length,
       orders,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const getOrdersByFarm = async (req, res) => {
+  try {
+    const { farmId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(farmId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid farm ID",
+      });
+    }
+
+    const farm = await Farm.findById(farmId);
+
+    if (!farm) {
+      return res.status(404).json({
+        success: false,
+        message: "Farm not found",
+      });
+    }
+
+    const orders = await Order.find({
+      farm: farm._id,
+    }).sort({
+      createdAt: -1,
+    });
+
+    return res.status(200).json({
+      success: true,
+      count: orders.length,
+      orders,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+// ==========================================
+// ACCEPT ORDER
+// FARMER
+// ==========================================
+
+export const acceptOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const farmer = await Farmer.findOne({
+      user: req.user.userId,
+    });
+
+    if (!farmer) {
+      return res.status(404).json({
+        success: false,
+        message: "Farmer profile not found",
+      });
+    }
+
+    const order = await Order.findOne({
+      _id: orderId,
+      farmer: farmer._id,
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    if (order.status !== "pendingAcceptance") {
+      return res.status(400).json({
+        success: false,
+        message: "This order can no longer be accepted",
+      });
+    }
+
+    order.status = "processing";
+
+    await order.save();
+
+    const customer = await Customer.findById(order.customer).populate("user");
+    if (customer) {
+      await createNotification({
+        recipient: customer.user._id,
+        recipientRole: "customer",
+        type: "orderAccepted",
+        title: "Order Accepted",
+        message: "The farmer has accepted your order and is preparing it.",
+        relatedOrder: order._id,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Order accepted successfully",
+      order,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+// ==========================================
+// REJECT ORDER
+// FARMER
+// ==========================================
+
+export const rejectOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { reason } = req.body;
+
+    const farmer = await Farmer.findOne({
+      user: req.user.userId,
+    });
+
+    if (!farmer) {
+      return res.status(404).json({
+        success: false,
+        message: "Farmer profile not found",
+      });
+    }
+
+    const order = await Order.findOne({
+      _id: orderId,
+      farmer: farmer._id,
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    if (order.status !== "pendingAcceptance") {
+      return res.status(400).json({
+        success: false,
+        message: "This order can no longer be rejected",
+      });
+    }
+
+    order.status = "rejected";
+
+    await order.save();
+
+    // Order never entered processing, so restore stock
+    for (const item of order.items) {
+      await Product.updateOne(
+        {
+          _id: item.product,
+        },
+        {
+          $inc: {
+            stock: item.quantity,
+          },
+        },
+      );
+    }
+
+    const customer = await Customer.findById(order.customer).populate("user");
+    if (customer) {
+      await createNotification({
+        recipient: customer.user._id,
+        recipientRole: "customer",
+        type: "orderRejected",
+        title: "Order Rejected",
+        message: reason
+          ? `The farmer could not fulfill your order: ${reason}`
+          : "The farmer was unable to fulfill your order.",
+        relatedOrder: order._id,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Order rejected successfully",
+      order,
     });
   } catch (error) {
     console.error(error);

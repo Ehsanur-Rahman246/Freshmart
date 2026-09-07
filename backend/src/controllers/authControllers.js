@@ -218,6 +218,78 @@ export const login = async (req, res) => {
   }
 };
 
+export const updateProfile = async (req, res) => {
+  try {
+    const { name, phone } = req.body;
+
+    if (name === undefined && phone === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "Provide at least one field to update",
+      });
+    }
+
+    const user = await User.findById(req.user.userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (name !== undefined) {
+      if (!name.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "Name cannot be empty",
+        });
+      }
+      user.name = name.trim();
+    }
+
+    if (phone !== undefined) {
+      const phoneTrimmed = phone.trim();
+
+      if (phoneTrimmed) {
+        const existingPhone = await User.findOne({
+          phone: phoneTrimmed,
+          _id: { $ne: user._id },
+        });
+
+        if (existingPhone) {
+          return res.status(409).json({
+            success: false,
+            message: "This phone number is already in use",
+          });
+        }
+      }
+
+      user.phone = phoneTrimmed;
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 export const logout = (req, res) => {
   res.clearCookie("token", {
     httpOnly: true,

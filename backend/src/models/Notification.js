@@ -18,9 +18,13 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       enum: [
         "orderPlaced",
+        "orderAccepted",
+        "orderRejected",
         "orderCancelled",
         "orderProcessing",
         "readyForPickup",
+        "driverAssigned",
+        "pickedUp",
         "toOriginCenter",
         "inTransit",
         "outForDelivery",

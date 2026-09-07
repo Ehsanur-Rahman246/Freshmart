@@ -10,6 +10,10 @@ import {
   getAllOrders,
   getOrdersByCustomer,
   getOrdersByFarmer,
+  acceptOrder,
+  rejectOrder,
+  getFarmOrders,
+  getOrdersByFarm,
 } from "../controllers/orderControllers.js";
 
 import userAuth from "../middlewares/userAuth.js";
@@ -17,24 +21,13 @@ import roleAuth from "../middlewares/roleAuth.js";
 
 const orderRouter = express.Router();
 
-
 // ==========================================
 // CUSTOMER ROUTES
 // ==========================================
 
-orderRouter.post(
-  "/",
-  userAuth,
-  roleAuth("customer"),
-  createOrder,
-);
+orderRouter.post("/", userAuth, roleAuth("customer"), createOrder);
 
-orderRouter.get(
-  "/my-orders",
-  userAuth,
-  roleAuth("customer"),
-  getMyOrders,
-);
+orderRouter.get("/my-orders", userAuth, roleAuth("customer"), getMyOrders);
 
 orderRouter.patch(
   "/:orderId/cancel",
@@ -42,7 +35,6 @@ orderRouter.patch(
   roleAuth("customer"),
   cancelOrder,
 );
-
 
 // ==========================================
 // FARMER ROUTES
@@ -55,6 +47,8 @@ orderRouter.get(
   getFarmerOrders,
 );
 
+orderRouter.get("/farm/:farmId", userAuth, roleAuth("farmer"), getFarmOrders);
+
 orderRouter.patch(
   "/:orderId/status",
   userAuth,
@@ -62,17 +56,25 @@ orderRouter.patch(
   updateOrderStatus,
 );
 
+orderRouter.patch(
+  "/:orderId/accept",
+  userAuth,
+  roleAuth("farmer"),
+  acceptOrder,
+);
+
+orderRouter.patch(
+  "/:orderId/reject",
+  userAuth,
+  roleAuth("farmer"),
+  rejectOrder,
+);
 
 // ==========================================
 // ADMIN ROUTES
 // ==========================================
 
-orderRouter.get(
-  "/admin/all",
-  userAuth,
-  roleAuth("admin"),
-  getAllOrders,
-);
+orderRouter.get("/admin/all", userAuth, roleAuth("admin"), getAllOrders);
 
 orderRouter.get(
   "/admin/customer/:customerId",
@@ -88,6 +90,7 @@ orderRouter.get(
   getOrdersByFarmer,
 );
 
+orderRouter.get("/admin/farm/:farmId", userAuth, roleAuth("admin"), getOrdersByFarm);
 
 // ==========================================
 // SINGLE ORDER

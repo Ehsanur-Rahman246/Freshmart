@@ -69,6 +69,17 @@ const customerSchema = new mongoose.Schema(
       default: null,
     },
 
+    pointsBalance: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    debtBalance: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
     addresses: {
       type: [addressSchema],
       default: [],

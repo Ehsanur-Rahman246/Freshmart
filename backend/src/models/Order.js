@@ -197,24 +197,37 @@ const orderSchema = new mongoose.Schema(
       },
 
       driver: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Driver",
-        default: null,
+        driverId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Driver",
+          default: null,
+        },
+        name: {
+          type: String,
+          default: null,
+        },
+        phone: {
+          type: String,
+          default: null,
+        },
       },
     },
 
     status: {
       type: String,
       enum: [
+        "pendingAcceptance",
         "processing",
+        "rejected",
         "readyForPickup",
+        "pickedUp",
         "toOriginCenter",
         "inTransit",
         "outForDelivery",
         "delivered",
         "cancelled",
       ],
-      default: "processing",
+      default: "pendingAcceptance",
     },
   },
   {

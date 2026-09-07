@@ -65,6 +65,35 @@ export const updateCustomerProfile = async (req, res) => {
   }
 };
 
+export const getWallet = async (req, res) => {
+  try {
+    const customer = await Customer.findOne({
+      user: req.user.userId,
+    }).select("pointsBalance debtBalance");
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer profile not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      wallet: {
+        pointsBalance: customer.pointsBalance,
+        debtBalance: customer.debtBalance,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 export const addAddress = async (req, res) => {
   try {
     const {
