@@ -18,7 +18,6 @@ const orderSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      index: true,
     },
 
     // One order belongs to one farmer/farm origin
