@@ -7,10 +7,6 @@ import Farm from "../models/Farm.js";
 import Farmer from "../models/Farmer.js";
 import createNotification from "../utils/createNotification.js";
 
-// ==========================================
-// CREATE PRODUCT REVIEW
-// ==========================================
-
 export const createProductReview = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -135,10 +131,6 @@ export const createProductReview = async (req, res) => {
   }
 };
 
-// ==========================================
-// CREATE FARM REVIEW
-// ==========================================
-
 export const createFarmReview = async (req, res) => {
   try {
     const { farmId } = req.params;
@@ -253,11 +245,6 @@ export const createFarmReview = async (req, res) => {
   }
 };
 
-// ==========================================
-// GET PRODUCT REVIEWS
-// PUBLIC
-// ==========================================
-
 export const getProductReviews = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -298,11 +285,6 @@ export const getProductReviews = async (req, res) => {
   }
 };
 
-// ==========================================
-// GET FARM REVIEWS
-// PUBLIC
-// ==========================================
-
 export const getFarmReviews = async (req, res) => {
   try {
     const { farmId } = req.params;
@@ -342,10 +324,6 @@ export const getFarmReviews = async (req, res) => {
     });
   }
 };
-
-// ==========================================
-// UPDATE REVIEW
-// ==========================================
 
 export const updateReview = async (req, res) => {
   try {
@@ -419,10 +397,6 @@ export const updateReview = async (req, res) => {
     });
   }
 };
-
-// ==========================================
-// DELETE REVIEW
-// ==========================================
 
 export const deleteReview = async (req, res) => {
   try {

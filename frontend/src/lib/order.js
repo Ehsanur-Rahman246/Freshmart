@@ -14,5 +14,5 @@ export const getAllOrders = () => api.get("/orders/admin/all");
 export const getOrdersByCustomer = (customerId) => api.get(`/orders/admin/customer/${customerId}`);
 export const getOrdersByFarmer = (farmerId) => api.get(`/orders/admin/farmer/${farmerId}`);
 
-// Shared (customer / farmer / admin — access controlled by roleAuth on the backend)
+// All
 export const getOrderById = (orderId) => api.get(`/orders/${orderId}`);

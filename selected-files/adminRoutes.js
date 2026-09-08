@@ -16,15 +16,11 @@ const adminRouter = express.Router();
 adminRouter.use(userAuth, roleAuth("admin"));
 
 adminRouter.get("/dashboard", getAdminDashboard);
-
 adminRouter.get("/customers", getAllCustomers);
 adminRouter.get("/customers/:customerId", getCustomerById);
-
 adminRouter.get("/farmers", getAllFarmers);
 adminRouter.get("/farmers/:farmerId", getFarmerById);
-
 adminRouter.get("/farms", getAllFarms);
-
 adminRouter.patch("/users/:userId/status", toggleUserStatus);
 
 export default adminRouter;

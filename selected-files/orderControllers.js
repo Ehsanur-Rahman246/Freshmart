@@ -8,9 +8,88 @@ import Zone from "../models/Zone.js";
 import generateOrderNumber from "../utils/generateOrderNumber.js";
 import createNotification from "../utils/createNotification.js";
 
-// ==========================================
-// CREATE ORDER
-// ==========================================
+export const getOrderById = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order ID",
+      });
+    }
+
+    const order = await Order.findById(orderId)
+      .populate("customer")
+      .populate("farmer")
+      .populate("farm", "name location")
+      .populate("items.product", "name images")
+      .populate("delivery.originZone")
+      .populate("delivery.destinationZone")
+      .populate("delivery.courier")
+      .populate("delivery.driver.driverId");
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    // Admin can access every order
+    if (req.user.role === "admin") {
+      return res.status(200).json({
+        success: true,
+        order,
+      });
+    }
+
+    // Customer access
+    if (req.user.role === "customer") {
+      const customer = await Customer.findOne({
+        user: req.user.userId,
+      });
+
+      if (
+        !customer ||
+        order.customer._id.toString() !== customer._id.toString()
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not authorized to access this order",
+        });
+      }
+    }
+
+    // Farmer access
+    if (req.user.role === "farmer") {
+      const farmer = await Farmer.findOne({
+        user: req.user.userId,
+      });
+
+      if (!farmer || order.farmer._id.toString() !== farmer._id.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not authorized to access this order",
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      order,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+// CUSTOMER
 
 export const createOrder = async (req, res) => {
   try {
@@ -284,11 +363,6 @@ export const createOrder = async (req, res) => {
   }
 };
 
-// ==========================================
-// GET MY ORDERS
-// CUSTOMER
-// ==========================================
-
 export const getMyOrders = async (req, res) => {
   try {
     const customer = await Customer.findOne({
@@ -327,97 +401,6 @@ export const getMyOrders = async (req, res) => {
     });
   }
 };
-
-// ==========================================
-// GET SINGLE ORDER
-// CUSTOMER / FARMER / ADMIN
-// ==========================================
-
-export const getOrderById = async (req, res) => {
-  try {
-    const { orderId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid order ID",
-      });
-    }
-
-    const order = await Order.findById(orderId)
-      .populate("customer")
-      .populate("farmer")
-      .populate("farm", "name location")
-      .populate("items.product", "name images")
-      .populate("delivery.originZone")
-      .populate("delivery.destinationZone")
-      .populate("delivery.courier")
-      .populate("delivery.driver.driverId");
-
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
-    }
-
-    // Admin can access every order
-    if (req.user.role === "admin") {
-      return res.status(200).json({
-        success: true,
-        order,
-      });
-    }
-
-    // Customer access
-    if (req.user.role === "customer") {
-      const customer = await Customer.findOne({
-        user: req.user.userId,
-      });
-
-      if (
-        !customer ||
-        order.customer._id.toString() !== customer._id.toString()
-      ) {
-        return res.status(403).json({
-          success: false,
-          message: "You are not authorized to access this order",
-        });
-      }
-    }
-
-    // Farmer access
-    if (req.user.role === "farmer") {
-      const farmer = await Farmer.findOne({
-        user: req.user.userId,
-      });
-
-      if (!farmer || order.farmer._id.toString() !== farmer._id.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: "You are not authorized to access this order",
-        });
-      }
-    }
-
-    return res.status(200).json({
-      success: true,
-      order,
-    });
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
-
-// ==========================================
-// CANCEL ORDER
-// CUSTOMER
-// ==========================================
 
 export const cancelOrder = async (req, res) => {
   try {
@@ -502,10 +485,6 @@ export const cancelOrder = async (req, res) => {
     });
   }
 };
-
-// ==========================================
-// GET FARMER ORDERS
-// ==========================================
 
 export const getFarmerOrders = async (req, res) => {
   try {
@@ -604,10 +583,7 @@ export const getFarmOrders = async (req, res) => {
   }
 };
 
-// ==========================================
-// UPDATE ORDER STATUS
 // FARMER
-// ==========================================
 
 export const updateOrderStatus = async (req, res) => {
   try {
@@ -701,174 +677,6 @@ export const updateOrderStatus = async (req, res) => {
   }
 };
 
-// ==========================================
-// GET ALL ORDERS
-// ADMIN
-// ==========================================
-
-export const getAllOrders = async (req, res) => {
-  try {
-    const orders = await Order.find()
-      .populate("customer", "user")
-      .populate("farmer", "user")
-      .populate("farm", "name")
-      .sort({
-        createdAt: -1,
-      });
-
-    return res.status(200).json({
-      success: true,
-      count: orders.length,
-      orders,
-    });
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
-
-// ==========================================
-// GET ORDERS BY CUSTOMER
-// ADMIN
-// ==========================================
-
-export const getOrdersByCustomer = async (req, res) => {
-  try {
-    const { customerId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(customerId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid customer ID",
-      });
-    }
-
-    const customer = await Customer.findById(customerId);
-
-    if (!customer) {
-      return res.status(404).json({
-        success: false,
-        message: "Customer not found",
-      });
-    }
-
-    const orders = await Order.find({
-      customer: customer._id,
-    }).sort({
-      createdAt: -1,
-    });
-
-    return res.status(200).json({
-      success: true,
-      count: orders.length,
-      orders,
-    });
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
-
-// ==========================================
-// GET ORDERS BY FARMER
-// ADMIN
-// ==========================================
-
-export const getOrdersByFarmer = async (req, res) => {
-  try {
-    const { farmerId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(farmerId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid farmer ID",
-      });
-    }
-
-    const farmer = await Farmer.findById(farmerId);
-
-    if (!farmer) {
-      return res.status(404).json({
-        success: false,
-        message: "Farmer not found",
-      });
-    }
-
-    const orders = await Order.find({
-      farmer: farmer._id,
-    }).sort({
-      createdAt: -1,
-    });
-
-    return res.status(200).json({
-      success: true,
-      count: orders.length,
-      orders,
-    });
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
-
-export const getOrdersByFarm = async (req, res) => {
-  try {
-    const { farmId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(farmId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid farm ID",
-      });
-    }
-
-    const farm = await Farm.findById(farmId);
-
-    if (!farm) {
-      return res.status(404).json({
-        success: false,
-        message: "Farm not found",
-      });
-    }
-
-    const orders = await Order.find({
-      farm: farm._id,
-    }).sort({
-      createdAt: -1,
-    });
-
-    return res.status(200).json({
-      success: true,
-      count: orders.length,
-      orders,
-    });
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
-
-// ==========================================
-// ACCEPT ORDER
-// FARMER
-// ==========================================
-
 export const acceptOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -933,11 +741,6 @@ export const acceptOrder = async (req, res) => {
     });
   }
 };
-
-// ==========================================
-// REJECT ORDER
-// FARMER
-// ==========================================
 
 export const rejectOrder = async (req, res) => {
   try {
@@ -1010,6 +813,156 @@ export const rejectOrder = async (req, res) => {
       success: true,
       message: "Order rejected successfully",
       order,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+// ADMIN
+
+export const getAllOrders = async (req, res) => {
+  try {
+    const orders = await Order.find()
+      .populate("customer", "user")
+      .populate("farmer", "user")
+      .populate("farm", "name")
+      .sort({
+        createdAt: -1,
+      });
+
+    return res.status(200).json({
+      success: true,
+      count: orders.length,
+      orders,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const getOrdersByCustomer = async (req, res) => {
+  try {
+    const { customerId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(customerId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid customer ID",
+      });
+    }
+
+    const customer = await Customer.findById(customerId);
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer not found",
+      });
+    }
+
+    const orders = await Order.find({
+      customer: customer._id,
+    }).sort({
+      createdAt: -1,
+    });
+
+    return res.status(200).json({
+      success: true,
+      count: orders.length,
+      orders,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const getOrdersByFarmer = async (req, res) => {
+  try {
+    const { farmerId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(farmerId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid farmer ID",
+      });
+    }
+
+    const farmer = await Farmer.findById(farmerId);
+
+    if (!farmer) {
+      return res.status(404).json({
+        success: false,
+        message: "Farmer not found",
+      });
+    }
+
+    const orders = await Order.find({
+      farmer: farmer._id,
+    }).sort({
+      createdAt: -1,
+    });
+
+    return res.status(200).json({
+      success: true,
+      count: orders.length,
+      orders,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const getOrdersByFarm = async (req, res) => {
+  try {
+    const { farmId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(farmId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid farm ID",
+      });
+    }
+
+    const farm = await Farm.findById(farmId);
+
+    if (!farm) {
+      return res.status(404).json({
+        success: false,
+        message: "Farm not found",
+      });
+    }
+
+    const orders = await Order.find({
+      farm: farm._id,
+    }).sort({
+      createdAt: -1,
+    });
+
+    return res.status(200).json({
+      success: true,
+      count: orders.length,
+      orders,
     });
   } catch (error) {
     console.error(error);

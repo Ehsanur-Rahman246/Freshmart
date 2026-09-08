@@ -12,13 +12,9 @@ import {
 const farmRouter = express.Router();
 
 farmRouter.post("/", userAuth, roleAuth("farmer"), createFarm);
-
 farmRouter.get("/my-farms", userAuth, roleAuth("farmer"), getMyFarms);
-
 farmRouter.get("/:farmId", getFarmById);
-
 farmRouter.patch("/:farmId", userAuth, roleAuth("farmer"), updateFarm);
-
 farmRouter.delete("/:farmId", userAuth, roleAuth("farmer"), deleteFarm);
 
 export default farmRouter;

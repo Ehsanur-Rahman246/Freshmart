@@ -7,10 +7,6 @@ import Farm from "../models/Farm.js";
 const SAFE_USER_FIELDS =
   "-password -verificationOTP -verificationOTPExpireAt -passwordResetOTP -passwordResetOTPExpireAt";
 
-// ==========================================
-// GET ALL CUSTOMERS
-// ==========================================
-
 export const getAllCustomers = async (req, res) => {
   try {
     const customers = await Customer.find().populate("user", SAFE_USER_FIELDS);
@@ -29,10 +25,6 @@ export const getAllCustomers = async (req, res) => {
     });
   }
 };
-
-// ==========================================
-// GET CUSTOMER BY ID
-// ==========================================
 
 export const getCustomerById = async (req, res) => {
   try {
@@ -70,10 +62,6 @@ export const getCustomerById = async (req, res) => {
   }
 };
 
-// ==========================================
-// GET ALL FARMERS
-// ==========================================
-
 export const getAllFarmers = async (req, res) => {
   try {
     const farmers = await Farmer.find()
@@ -94,10 +82,6 @@ export const getAllFarmers = async (req, res) => {
     });
   }
 };
-
-// ==========================================
-// GET FARMER BY ID
-// ==========================================
 
 export const getFarmerById = async (req, res) => {
   try {
@@ -135,10 +119,6 @@ export const getFarmerById = async (req, res) => {
   }
 };
 
-// ==========================================
-// GET ALL FARMS
-// ==========================================
-
 export const getAllFarms = async (req, res) => {
   try {
     const farms = await Farm.find().populate({
@@ -164,10 +144,6 @@ export const getAllFarms = async (req, res) => {
     });
   }
 };
-
-// ==========================================
-// TOGGLE USER ACTIVE STATUS
-// ==========================================
 
 export const toggleUserStatus = async (req, res) => {
   try {

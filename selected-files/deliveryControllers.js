@@ -6,10 +6,6 @@ import Customer from "../models/Customer.js";
 import Farmer from "../models/Farmer.js";
 import createNotification from "../utils/createNotification.js";
 
-// ==========================================
-// GET ORDERS AWAITING DRIVER ASSIGNMENT
-// ==========================================
-
 export const getOrdersAwaitingAssignment = async (req, res) => {
   try {
     const orders = await Order.find({
@@ -37,10 +33,6 @@ export const getOrdersAwaitingAssignment = async (req, res) => {
     });
   }
 };
-
-// ==========================================
-// GET AVAILABLE DRIVERS FOR AN ORDER
-// ==========================================
 
 export const getAvailableDriversForOrder = async (req, res) => {
   try {
@@ -92,10 +84,6 @@ export const getAvailableDriversForOrder = async (req, res) => {
     });
   }
 };
-
-// ==========================================
-// ASSIGN DRIVER TO ORDER
-// ==========================================
 
 export const assignDriverToOrder = async (req, res) => {
   try {
