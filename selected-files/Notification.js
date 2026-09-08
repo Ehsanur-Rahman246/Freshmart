@@ -1,8 +1,76 @@
-import api from "./api";
+import mongoose from "mongoose";
 
-export const getMyNotifications = () => api.get("/notifications");
-export const getUnreadNotifications = () => api.get("/notifications/unread");
-export const markNotificationAsRead = (notificationId) => api.patch(`/notifications/${notificationId}/read`);
-export const markAllNotificationsAsRead = () => api.patch("/notifications/mark-all-read");
-export const deleteNotification = (notificationId) => api.delete(`/notifications/${notificationId}`);
-export const deleteAllNotifications = () => api.delete("/notifications");
+const notificationSchema = new mongoose.Schema(
+  {
+    recipient: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    recipientRole: {
+      type: String,
+      enum: ["customer", "farmer", "admin"],
+      required: true,
+    },
+
+    type: {
+      type: String,
+      enum: [
+        "orderPlaced",
+        "orderAccepted",
+        "orderRejected",
+        "orderCancelled",
+        "orderProcessing",
+        "readyForPickup",
+        "driverAssigned",
+        "pickedUp",
+        "toOriginCenter",
+        "inTransit",
+        "outForDelivery",
+        "delivered",
+        "paymentSuccess",
+        "paymentFailed",
+        "productExpired",
+        "reviewReceived",
+      ],
+      required: true,
+    },
+
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    message: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    relatedOrder: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Order",
+      default: null,
+    },
+
+    relatedProduct: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      default: null,
+    },
+
+    isRead: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
+
+const Notification = mongoose.model("Notification", notificationSchema);
+
+export default Notification;

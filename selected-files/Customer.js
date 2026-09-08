@@ -1,19 +1,119 @@
-import api from "./api";
+import mongoose from "mongoose";
 
-export const getCustomerProfile = () => api.get("/customer/profile");
-export const updateCustomerProfile = (data) =>
-  api.patch("/customer/profile", data);
+const addressSchema = new mongoose.Schema({
+  label: {
+    type: String,
+    trim: true,
+    default: "Home",
+  },
 
-export const addAddress = (data) => api.post("/customer/addresses", data);
-export const updateAddress = (addressId, data) =>
-  api.patch(`/customer/addresses/${addressId}`, data);
-export const deleteAddress = (addressId) =>
-  api.delete(`/customer/addresses/${addressId}`);
-export const setDefaultAddress = (addressId) =>
-  api.patch(`/customer/addresses/${addressId}/default`);
+  recipientName: {
+    type: String,
+    required: true,
+    trim: true,
+  },
 
-export const getWishlist = () => api.get("/customer/wishlist");
-export const addToWishlist = (productId) =>
-  api.post(`/customer/wishlist/${productId}`);
-export const removeFromWishlist = (productId) =>
-  api.delete(`/customer/wishlist/${productId}`);
+  phone: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+
+  division: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+
+  district: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+
+  upazila: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+
+  village: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+
+  address: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+
+  isDefault: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const customerSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true,
+    },
+
+    profileImage: {
+      type: String,
+      default: null,
+    },
+
+    pointsBalance: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    debtBalance: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    addresses: {
+      type: [addressSchema],
+      default: [],
+    },
+
+    cart: [
+      {
+        product: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+          required: true,
+        },
+
+        quantity: {
+          type: Number,
+          required: true,
+          min: 1,
+          default: 1,
+        },
+      },
+    ],
+
+    wishlist: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product",
+      },
+    ],
+  },
+  {
+    timestamps: true,
+  },
+);
+
+const Customer = mongoose.model("Customer", customerSchema);
+
+export default Customer;

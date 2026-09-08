@@ -1,18 +1,239 @@
-import api from "./api";
+import mongoose from "mongoose";
 
-// Customer
-export const createOrder = (data) => api.post("/orders", data);
-export const getMyOrders = () => api.get("/orders/my-orders");
-export const cancelOrder = (orderId) => api.patch(`/orders/${orderId}/cancel`);
+const orderSchema = new mongoose.Schema(
+  {
+    customer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Customer",
+      required: true,
+    },
 
-// Farmer
-export const getFarmerOrders = () => api.get("/orders/farmer/my-orders");
-export const updateOrderStatus = (orderId, data) => api.patch(`/orders/${orderId}/status`, data);
+    orderGroup: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      index: true,
+    },
 
-// Admin
-export const getAllOrders = () => api.get("/orders/admin/all");
-export const getOrdersByCustomer = (customerId) => api.get(`/orders/admin/customer/${customerId}`);
-export const getOrdersByFarmer = (farmerId) => api.get(`/orders/admin/farmer/${farmerId}`);
+    orderNumber: {
+      type: String,
+      required: true,
+      unique: true,
+    },
 
-// Shared (customer / farmer / admin — access controlled by roleAuth on the backend)
-export const getOrderById = (orderId) => api.get(`/orders/${orderId}`);
+    // One order belongs to one farmer/farm origin
+    farmer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Farmer",
+      required: true,
+    },
+
+    farm: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Farm",
+      required: true,
+    },
+
+    items: {
+      type: [
+        {
+          product: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Product",
+            required: true,
+          },
+
+          name: {
+            type: String,
+            required: true,
+            trim: true,
+          },
+
+          price: {
+            type: Number,
+            required: true,
+            min: 0,
+          },
+
+          quantity: {
+            type: Number,
+            required: true,
+            min: 1,
+          },
+
+          unit: {
+            type: String,
+            required: true,
+            enum: ["kg", "g", "L", "pc", "dozen", "mL"],
+          },
+
+          subtotal: {
+            type: Number,
+            required: true,
+            min: 0,
+          },
+        },
+      ],
+      required: true,
+      validate: {
+        validator: (items) => items.length > 0,
+        message: "Order must contain at least one item",
+      },
+    },
+
+    // Delivery address snapshot
+    deliveryAddress: {
+      name: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+
+      phone: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+
+      district: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+
+      upazila: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+
+      village: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+
+      address: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+    },
+
+    pricing: {
+      itemsTotal: {
+        type: Number,
+        required: true,
+        min: 0,
+      },
+
+      deliveryCharge: {
+        type: Number,
+        required: true,
+        default: 0,
+        min: 0,
+      },
+
+      discount: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+
+      total: {
+        type: Number,
+        required: true,
+        min: 0,
+      },
+    },
+
+    payment: {
+      method: {
+        type: String,
+        required: true,
+        enum: ["cashOnDelivery", "online"],
+      },
+
+      status: {
+        type: String,
+        enum: ["pending", "paid", "failed", "refunded"],
+        default: "pending",
+      },
+
+      transactionId: {
+        type: String,
+        default: null,
+      },
+    },
+
+    delivery: {
+      originZone: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Zone",
+        required: true,
+      },
+
+      destinationZone: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Zone",
+        required: true,
+      },
+
+      estimatedHours: {
+        type: Number,
+        required: true,
+        min: 0,
+      },
+
+      estimatedDeliveryAt: {
+        type: Date,
+        required: true,
+      },
+
+      courier: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Courier",
+        default: null,
+      },
+
+      driver: {
+        driverId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Driver",
+          default: null,
+        },
+        name: {
+          type: String,
+          default: null,
+        },
+        phone: {
+          type: String,
+          default: null,
+        },
+      },
+    },
+
+    status: {
+      type: String,
+      enum: [
+        "pendingAcceptance",
+        "processing",
+        "rejected",
+        "readyForPickup",
+        "pickedUp",
+        "toOriginCenter",
+        "inTransit",
+        "outForDelivery",
+        "delivered",
+        "cancelled",
+      ],
+      default: "pendingAcceptance",
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
+
+const Order = mongoose.model("Order", orderSchema);
+
+export default Order;

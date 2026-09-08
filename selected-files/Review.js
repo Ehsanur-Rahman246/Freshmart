@@ -1,11 +1,89 @@
-import api from "./api";
+import mongoose from "mongoose";
 
-// Public
-export const getProductReviews = (productId) => api.get(`/reviews/product/${productId}`);
-export const getFarmReviews = (farmId) => api.get(`/reviews/farm/${farmId}`);
+const reviewSchema = new mongoose.Schema(
+  {
+    customer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Customer",
+      required: true,
+    },
 
-// Customer
-export const createProductReview = (productId, data) => api.post(`/reviews/product/${productId}`, data);
-export const createFarmReview = (farmId, data) => api.post(`/reviews/farm/${farmId}`, data);
-export const updateReview = (reviewId, data) => api.patch(`/reviews/${reviewId}`, data);
-export const deleteReview = (reviewId) => api.delete(`/reviews/${reviewId}`);
+    // Required for every review
+    order: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Order",
+      required: true,
+    },
+
+    // Filled for product reviews
+    product: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      default: null,
+    },
+
+    // Filled for farm reviews
+    farm: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Farm",
+      default: null,
+    },
+
+    rating: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 5,
+    },
+
+    comment: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: 1000,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
+
+// One customer can review one product once per order
+reviewSchema.index(
+  {
+    customer: 1,
+    order: 1,
+    product: 1,
+  },
+  {
+    unique: true,
+    partialFilterExpression: {
+      product: {
+        $exists: true,
+        $ne: null,
+      },
+    },
+  },
+);
+
+// One customer can review one farm once per order
+reviewSchema.index(
+  {
+    customer: 1,
+    order: 1,
+    farm: 1,
+  },
+  {
+    unique: true,
+    partialFilterExpression: {
+      farm: {
+        $exists: true,
+        $ne: null,
+      },
+    },
+  },
+);
+
+const Review = mongoose.model("Review", reviewSchema);
+
+export default Review;
