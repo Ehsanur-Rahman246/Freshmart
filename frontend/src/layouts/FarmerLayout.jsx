@@ -6,8 +6,8 @@ const FarmerLayout = () => {
   return (
     <>
     <FarmerNavbar/>
-    <Footer/>
     <Outlet/>
+    <Footer/>
     </>
   )
 }

@@ -7,6 +7,7 @@ import Farm from "../models/Farm.js";
 import Zone from "../models/Zone.js";
 import generateOrderNumber from "../utils/generateOrderNumber.js";
 import createNotification from "../utils/createNotification.js";
+import transporter from "../config/nodemailer.js";
 
 export const getOrderById = async (req, res) => {
   try {
@@ -725,6 +726,40 @@ export const acceptOrder = async (req, res) => {
         message: "The farmer has accepted your order and is preparing it.",
         relatedOrder: order._id,
       });
+    }
+
+    if (customer.user.email) {
+      try {
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: customer.user.email,
+          subject: "Your FreshMart Order Has Been Accepted",
+          html: `
+              <h2>Order Accepted</h2>
+
+              <p>Hello ${customer.user.name || "Customer"},</p>
+
+              <p>
+                Good news! The farmer has accepted your order
+                and is now preparing it.
+              </p>
+
+              <p>
+                <strong>Order ID:</strong> ${order._id}
+              </p>
+
+              <p>
+                You can check your order status from your FreshMart account.
+              </p>
+
+              <p>
+                Thank you for shopping with FreshMart!
+              </p>
+            `,
+        });
+      } catch (emailError) {
+        console.error("Failed to send order acceptance email:", emailError);
+      }
     }
 
     return res.status(200).json({
