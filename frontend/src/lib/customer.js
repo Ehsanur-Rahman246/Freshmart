@@ -15,3 +15,4 @@ export const addToWishlist = (productId) =>
   api.post(`/customer/wishlist/${productId}`);
 export const removeFromWishlist = (productId) =>
   api.delete(`/customer/wishlist/${productId}`);
+export const getWallet = () => api.get("/customer/wallet");

@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 
 .env
+update-files.bat
+selected-files/
