@@ -38,7 +38,11 @@ reviewRouter.post(
 
 // Create farm review
 reviewRouter.post("/farm/:farmId", userAuth, roleAuth("customer"), createFarmReview);
+
+// Update own review
 reviewRouter.patch("/:reviewId", userAuth, roleAuth("customer"), updateReview);
+
+// Delete own review
 reviewRouter.delete("/:reviewId", userAuth, roleAuth("customer"), deleteReview);
 
 export default reviewRouter;

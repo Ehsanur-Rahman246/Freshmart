@@ -3,6 +3,10 @@ import Farmer from "../models/Farmer.js";
 import Farm from "../models/Farm.js";
 import Order from "../models/Order.js";
 
+// ==========================================
+// GET ADMIN DASHBOARD STATS
+// ==========================================
+
 export const getAdminDashboard = async (req, res) => {
   try {
     const [

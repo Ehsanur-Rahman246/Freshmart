@@ -9,6 +9,7 @@ import {
 const farmerRouter = express.Router();
 
 farmerRouter.get("/profile", userAuth, roleAuth("farmer"), getFarmerProfile);
+
 farmerRouter.patch(
   "/profile",
   userAuth,

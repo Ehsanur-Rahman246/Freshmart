@@ -2,6 +2,10 @@ import mongoose from "mongoose";
 import Customer from "../models/Customer.js";
 import Product from "../models/Product.js";
 
+// ==========================================
+// GET CART
+// ==========================================
+
 export const getCart = async (req, res) => {
   try {
     const customer = await Customer.findOne({
@@ -37,6 +41,10 @@ export const getCart = async (req, res) => {
     });
   }
 };
+
+// ==========================================
+// ADD TO CART
+// ==========================================
 
 export const addToCart = async (req, res) => {
   try {
@@ -137,6 +145,10 @@ export const addToCart = async (req, res) => {
   }
 };
 
+// ==========================================
+// UPDATE CART ITEM
+// ==========================================
+
 export const updateCartItem = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -223,6 +235,10 @@ export const updateCartItem = async (req, res) => {
     });
   }
 };
+
+// ==========================================
+// REMOVE FROM CART
+// ==========================================
 
 export const removeFromCart = async (req, res) => {
   try {

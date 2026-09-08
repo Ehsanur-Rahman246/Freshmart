@@ -8,88 +8,9 @@ import Zone from "../models/Zone.js";
 import generateOrderNumber from "../utils/generateOrderNumber.js";
 import createNotification from "../utils/createNotification.js";
 
-export const getOrderById = async (req, res) => {
-  try {
-    const { orderId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid order ID",
-      });
-    }
-
-    const order = await Order.findById(orderId)
-      .populate("customer")
-      .populate("farmer")
-      .populate("farm", "name location")
-      .populate("items.product", "name images")
-      .populate("delivery.originZone")
-      .populate("delivery.destinationZone")
-      .populate("delivery.courier")
-      .populate("delivery.driver.driverId");
-
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
-    }
-
-    // Admin can access every order
-    if (req.user.role === "admin") {
-      return res.status(200).json({
-        success: true,
-        order,
-      });
-    }
-
-    // Customer access
-    if (req.user.role === "customer") {
-      const customer = await Customer.findOne({
-        user: req.user.userId,
-      });
-
-      if (
-        !customer ||
-        order.customer._id.toString() !== customer._id.toString()
-      ) {
-        return res.status(403).json({
-          success: false,
-          message: "You are not authorized to access this order",
-        });
-      }
-    }
-
-    // Farmer access
-    if (req.user.role === "farmer") {
-      const farmer = await Farmer.findOne({
-        user: req.user.userId,
-      });
-
-      if (!farmer || order.farmer._id.toString() !== farmer._id.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: "You are not authorized to access this order",
-        });
-      }
-    }
-
-    return res.status(200).json({
-      success: true,
-      order,
-    });
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
-
-// CUSTOMER
+// ==========================================
+// CREATE ORDER
+// ==========================================
 
 export const createOrder = async (req, res) => {
   try {
@@ -363,6 +284,11 @@ export const createOrder = async (req, res) => {
   }
 };
 
+// ==========================================
+// GET MY ORDERS
+// CUSTOMER
+// ==========================================
+
 export const getMyOrders = async (req, res) => {
   try {
     const customer = await Customer.findOne({
@@ -401,6 +327,97 @@ export const getMyOrders = async (req, res) => {
     });
   }
 };
+
+// ==========================================
+// GET SINGLE ORDER
+// CUSTOMER / FARMER / ADMIN
+// ==========================================
+
+export const getOrderById = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order ID",
+      });
+    }
+
+    const order = await Order.findById(orderId)
+      .populate("customer")
+      .populate("farmer")
+      .populate("farm", "name location")
+      .populate("items.product", "name images")
+      .populate("delivery.originZone")
+      .populate("delivery.destinationZone")
+      .populate("delivery.courier")
+      .populate("delivery.driver.driverId");
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    // Admin can access every order
+    if (req.user.role === "admin") {
+      return res.status(200).json({
+        success: true,
+        order,
+      });
+    }
+
+    // Customer access
+    if (req.user.role === "customer") {
+      const customer = await Customer.findOne({
+        user: req.user.userId,
+      });
+
+      if (
+        !customer ||
+        order.customer._id.toString() !== customer._id.toString()
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not authorized to access this order",
+        });
+      }
+    }
+
+    // Farmer access
+    if (req.user.role === "farmer") {
+      const farmer = await Farmer.findOne({
+        user: req.user.userId,
+      });
+
+      if (!farmer || order.farmer._id.toString() !== farmer._id.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not authorized to access this order",
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      order,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+// ==========================================
+// CANCEL ORDER
+// CUSTOMER
+// ==========================================
 
 export const cancelOrder = async (req, res) => {
   try {
@@ -485,6 +502,10 @@ export const cancelOrder = async (req, res) => {
     });
   }
 };
+
+// ==========================================
+// GET FARMER ORDERS
+// ==========================================
 
 export const getFarmerOrders = async (req, res) => {
   try {
@@ -583,7 +604,10 @@ export const getFarmOrders = async (req, res) => {
   }
 };
 
+// ==========================================
+// UPDATE ORDER STATUS
 // FARMER
+// ==========================================
 
 export const updateOrderStatus = async (req, res) => {
   try {
@@ -677,154 +701,10 @@ export const updateOrderStatus = async (req, res) => {
   }
 };
 
-export const acceptOrder = async (req, res) => {
-  try {
-    const { orderId } = req.params;
-
-    const farmer = await Farmer.findOne({
-      user: req.user.userId,
-    });
-
-    if (!farmer) {
-      return res.status(404).json({
-        success: false,
-        message: "Farmer profile not found",
-      });
-    }
-
-    const order = await Order.findOne({
-      _id: orderId,
-      farmer: farmer._id,
-    });
-
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
-    }
-
-    if (order.status !== "pendingAcceptance") {
-      return res.status(400).json({
-        success: false,
-        message: "This order can no longer be accepted",
-      });
-    }
-
-    order.status = "processing";
-
-    await order.save();
-
-    const customer = await Customer.findById(order.customer).populate("user");
-    if (customer) {
-      await createNotification({
-        recipient: customer.user._id,
-        recipientRole: "customer",
-        type: "orderAccepted",
-        title: "Order Accepted",
-        message: "The farmer has accepted your order and is preparing it.",
-        relatedOrder: order._id,
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Order accepted successfully",
-      order,
-    });
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
-
-export const rejectOrder = async (req, res) => {
-  try {
-    const { orderId } = req.params;
-    const { reason } = req.body;
-
-    const farmer = await Farmer.findOne({
-      user: req.user.userId,
-    });
-
-    if (!farmer) {
-      return res.status(404).json({
-        success: false,
-        message: "Farmer profile not found",
-      });
-    }
-
-    const order = await Order.findOne({
-      _id: orderId,
-      farmer: farmer._id,
-    });
-
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
-    }
-
-    if (order.status !== "pendingAcceptance") {
-      return res.status(400).json({
-        success: false,
-        message: "This order can no longer be rejected",
-      });
-    }
-
-    order.status = "rejected";
-
-    await order.save();
-
-    // Order never entered processing, so restore stock
-    for (const item of order.items) {
-      await Product.updateOne(
-        {
-          _id: item.product,
-        },
-        {
-          $inc: {
-            stock: item.quantity,
-          },
-        },
-      );
-    }
-
-    const customer = await Customer.findById(order.customer).populate("user");
-    if (customer) {
-      await createNotification({
-        recipient: customer.user._id,
-        recipientRole: "customer",
-        type: "orderRejected",
-        title: "Order Rejected",
-        message: reason
-          ? `The farmer could not fulfill your order: ${reason}`
-          : "The farmer was unable to fulfill your order.",
-        relatedOrder: order._id,
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Order rejected successfully",
-      order,
-    });
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
-
+// ==========================================
+// GET ALL ORDERS
 // ADMIN
+// ==========================================
 
 export const getAllOrders = async (req, res) => {
   try {
@@ -850,6 +730,11 @@ export const getAllOrders = async (req, res) => {
     });
   }
 };
+
+// ==========================================
+// GET ORDERS BY CUSTOMER
+// ADMIN
+// ==========================================
 
 export const getOrdersByCustomer = async (req, res) => {
   try {
@@ -891,6 +776,11 @@ export const getOrdersByCustomer = async (req, res) => {
     });
   }
 };
+
+// ==========================================
+// GET ORDERS BY FARMER
+// ADMIN
+// ==========================================
 
 export const getOrdersByFarmer = async (req, res) => {
   try {
@@ -963,6 +853,163 @@ export const getOrdersByFarm = async (req, res) => {
       success: true,
       count: orders.length,
       orders,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+// ==========================================
+// ACCEPT ORDER
+// FARMER
+// ==========================================
+
+export const acceptOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const farmer = await Farmer.findOne({
+      user: req.user.userId,
+    });
+
+    if (!farmer) {
+      return res.status(404).json({
+        success: false,
+        message: "Farmer profile not found",
+      });
+    }
+
+    const order = await Order.findOne({
+      _id: orderId,
+      farmer: farmer._id,
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    if (order.status !== "pendingAcceptance") {
+      return res.status(400).json({
+        success: false,
+        message: "This order can no longer be accepted",
+      });
+    }
+
+    order.status = "processing";
+
+    await order.save();
+
+    const customer = await Customer.findById(order.customer).populate("user");
+    if (customer) {
+      await createNotification({
+        recipient: customer.user._id,
+        recipientRole: "customer",
+        type: "orderAccepted",
+        title: "Order Accepted",
+        message: "The farmer has accepted your order and is preparing it.",
+        relatedOrder: order._id,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Order accepted successfully",
+      order,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+// ==========================================
+// REJECT ORDER
+// FARMER
+// ==========================================
+
+export const rejectOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { reason } = req.body;
+
+    const farmer = await Farmer.findOne({
+      user: req.user.userId,
+    });
+
+    if (!farmer) {
+      return res.status(404).json({
+        success: false,
+        message: "Farmer profile not found",
+      });
+    }
+
+    const order = await Order.findOne({
+      _id: orderId,
+      farmer: farmer._id,
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    if (order.status !== "pendingAcceptance") {
+      return res.status(400).json({
+        success: false,
+        message: "This order can no longer be rejected",
+      });
+    }
+
+    order.status = "rejected";
+
+    await order.save();
+
+    // Order never entered processing, so restore stock
+    for (const item of order.items) {
+      await Product.updateOne(
+        {
+          _id: item.product,
+        },
+        {
+          $inc: {
+            stock: item.quantity,
+          },
+        },
+      );
+    }
+
+    const customer = await Customer.findById(order.customer).populate("user");
+    if (customer) {
+      await createNotification({
+        recipient: customer.user._id,
+        recipientRole: "customer",
+        type: "orderRejected",
+        title: "Order Rejected",
+        message: reason
+          ? `The farmer could not fulfill your order: ${reason}`
+          : "The farmer was unable to fulfill your order.",
+        relatedOrder: order._id,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Order rejected successfully",
+      order,
     });
   } catch (error) {
     console.error(error);
