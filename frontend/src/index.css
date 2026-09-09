@@ -12,8 +12,7 @@
    FONT
    ========================================================= */
 
-@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap");
-
+@import url("https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700;1,800&family=Pacifico&display=swap");
 @import "tailwindcss";
 
 
@@ -130,6 +129,8 @@
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
+
+    --font-pacifico: "Pacifico", cursive;
 
 
   /* -------------------------------------------------------
@@ -433,6 +434,12 @@
   background-color: var(--color-purple-soft);
 }
 
+@utility logo {
+  font-family: var(--font-pacifico);
+  font-size: clamp(1.5rem, 2vw, 1.75rem);
+  line-height: 1;
+  color: var(--color-primary);
+}
 
 /* ---------------------------------------------------------
    OVERLAY
