@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import crypto from "crypto";
 import Order from "../models/Order.js";
 import Customer from "../models/Customer.js";
 import Product from "../models/Product.js";
@@ -8,6 +9,8 @@ import Zone from "../models/Zone.js";
 import generateOrderNumber from "../utils/generateOrderNumber.js";
 import createNotification from "../utils/createNotification.js";
 import transporter from "../config/nodemailer.js";
+import computeDeliveryEstimate from "../utils/computeDeliveryEstimate.js";
+import { HOUR_IN_MS, DEMO_PROCESSING_HOURS } from "../config/time.js";
 
 export const getOrderById = async (req, res) => {
   try {
@@ -37,7 +40,6 @@ export const getOrderById = async (req, res) => {
       });
     }
 
-    // Admin can access every order
     if (req.user.role === "admin") {
       return res.status(200).json({
         success: true,
@@ -45,7 +47,6 @@ export const getOrderById = async (req, res) => {
       });
     }
 
-    // Customer access
     if (req.user.role === "customer") {
       const customer = await Customer.findOne({
         user: req.user.userId,
@@ -62,7 +63,6 @@ export const getOrderById = async (req, res) => {
       }
     }
 
-    // Farmer access
     if (req.user.role === "farmer") {
       const farmer = await Farmer.findOne({
         user: req.user.userId,
@@ -94,7 +94,7 @@ export const getOrderById = async (req, res) => {
 
 export const createOrder = async (req, res) => {
   try {
-    const { addressId, paymentMethod } = req.body;
+    const { addressId, paymentMethod, pointsToRedeem = 0 } = req.body;
 
     if (!addressId) {
       return res.status(400).json({
@@ -107,6 +107,15 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Invalid payment method",
+      });
+    }
+
+    const requestedPoints = Number(pointsToRedeem) || 0;
+
+    if (requestedPoints < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Points to redeem cannot be negative",
       });
     }
 
@@ -137,7 +146,6 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // Get destination zone using district
     const destinationZone = await Zone.findOne({
       districts: selectedAddress.district,
     });
@@ -162,7 +170,6 @@ export const createOrder = async (req, res) => {
         });
       }
 
-      // Validate product status
       if (product.status !== "active") {
         return res.status(400).json({
           success: false,
@@ -170,7 +177,6 @@ export const createOrder = async (req, res) => {
         });
       }
 
-      // Validate expiration
       if (product.expiresAt && product.expiresAt <= new Date()) {
         return res.status(400).json({
           success: false,
@@ -178,7 +184,6 @@ export const createOrder = async (req, res) => {
         });
       }
 
-      // Validate stock
       if (product.stock < cartItem.quantity) {
         return res.status(400).json({
           success: false,
@@ -198,11 +203,9 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // Shared group ID for all farm orders
-    const orderGroup = new mongoose.Types.ObjectId();
-    const orderNumber = await generateOrderNumber();
-
-    const createdOrders = [];
+    // Pass 1: resolve farm/farmer/zone and compute discounted totals per farm
+    const farmData = [];
+    let grandItemsTotal = 0;
 
     for (const [farmId, items] of farmOrders.entries()) {
       const farm = await Farm.findById(farmId);
@@ -223,7 +226,6 @@ export const createOrder = async (req, res) => {
         });
       }
 
-      // Find origin zone from farm district
       const originZone = await Zone.findOne({
         districts: farm.location.district,
       });
@@ -236,55 +238,98 @@ export const createOrder = async (req, res) => {
       }
 
       const orderItems = [];
-
       let itemsTotal = 0;
+      let discountAmount = 0;
 
       for (const item of items) {
-        const subtotal = item.product.price * item.quantity;
+        const originalUnitPrice = item.product.price;
+        const discountPct = item.product.discountPercentage || 0;
 
+        const effectiveUnitPrice =
+          Math.round(originalUnitPrice * (1 - discountPct / 100) * 100) / 100;
+
+        const subtotal =
+          Math.round(effectiveUnitPrice * item.quantity * 100) / 100;
+
+        const originalSubtotal = originalUnitPrice * item.quantity;
+
+        discountAmount += originalSubtotal - subtotal;
         itemsTotal += subtotal;
 
         orderItems.push({
           product: item.product._id,
-
           name: item.product.name,
-
-          price: item.product.price,
-
+          price: effectiveUnitPrice,
           quantity: item.quantity,
-
           unit: item.product.unit,
-
           subtotal,
         });
       }
 
-      // Delivery logic will be added later
-      const deliveryCharge = 0;
+      grandItemsTotal += itemsTotal;
 
-      const discount = 0;
+      farmData.push({
+        farm,
+        farmer,
+        originZone,
+        orderItems,
+        itemsTotal,
+        discountAmount,
+        items,
+      });
+    }
 
-      const total = itemsTotal + deliveryCharge - discount;
+    // Points redemption: 1 point = 1 taka, capped by balance and by cart value
+    const pointsToRedeemActual = Math.min(
+      requestedPoints,
+      customer.pointsBalance,
+      grandItemsTotal,
+    );
 
-      // Temporary estimate until delivery
-      // calculation logic is implemented
-      const estimatedHours = 24;
+    if (pointsToRedeemActual > 0) {
+      customer.pointsBalance -= pointsToRedeemActual;
+    }
+
+    const orderGroup = new mongoose.Types.ObjectId();
+    const orderNumber = await generateOrderNumber();
+    const createdOrders = [];
+    let pointsAllocatedSoFar = 0;
+
+    for (let i = 0; i < farmData.length; i++) {
+      const data = farmData[i];
+      const isLast = i === farmData.length - 1;
+
+      let pointsForThisOrder = 0;
+
+      if (pointsToRedeemActual > 0) {
+        pointsForThisOrder = isLast
+          ? pointsToRedeemActual - pointsAllocatedSoFar
+          : Math.round((data.itemsTotal / grandItemsTotal) * pointsToRedeemActual);
+
+        pointsForThisOrder = Math.min(pointsForThisOrder, data.itemsTotal);
+        pointsAllocatedSoFar += pointsForThisOrder;
+      }
+
+      const { estimatedHours, deliveryCharge } = computeDeliveryEstimate(
+        data.originZone,
+        destinationZone,
+      );
+
+      const total = data.itemsTotal + deliveryCharge - pointsForThisOrder;
 
       const estimatedDeliveryAt = new Date(
         Date.now() + estimatedHours * 60 * 60 * 1000,
       );
 
+      const isDemoFarmer = data.farmer.isDemo === true;
+
       const order = await Order.create({
         customer: customer._id,
-
         orderGroup,
         orderNumber,
-
-        farmer: farmer._id,
-
-        farm: farm._id,
-
-        items: orderItems,
+        farmer: data.farmer._id,
+        farm: data.farm._id,
+        items: data.orderItems,
 
         deliveryAddress: {
           name: selectedAddress.recipientName,
@@ -296,9 +341,10 @@ export const createOrder = async (req, res) => {
         },
 
         pricing: {
-          itemsTotal,
+          itemsTotal: data.itemsTotal,
           deliveryCharge,
-          discount,
+          discount: data.discountAmount,
+          pointsRedeemed: pointsForThisOrder,
           total,
         },
 
@@ -308,50 +354,72 @@ export const createOrder = async (req, res) => {
         },
 
         delivery: {
-          originZone: originZone._id,
+          originZone: data.originZone._id,
           destinationZone: destinationZone._id,
           estimatedHours,
           estimatedDeliveryAt,
         },
 
-        status: "pendingAcceptance",
+        status: isDemoFarmer ? "processing" : "pendingAcceptance",
+        isDemoOrder: isDemoFarmer,
+        processingReadyAt: isDemoFarmer
+          ? new Date(Date.now() + DEMO_PROCESSING_HOURS * HOUR_IN_MS)
+          : null,
       });
 
       await createNotification({
-        recipient: farmer.user,
+        recipient: data.farmer.user,
         recipientRole: "farmer",
         type: "orderPlaced",
         title: "New Order Received",
-        message: `You have received a new order from a customer.`,
+        message: "You have received a new order from a customer.",
         relatedOrder: order._id,
       });
 
+      // Demo farmers skip the manual accept step, so the customer-facing
+      // acceptance/payment notifications fire immediately here instead of
+      // waiting on acceptOrder().
+      if (isDemoFarmer) {
+        await createNotification({
+          recipient: customer.user,
+          recipientRole: "customer",
+          type: "orderAccepted",
+          title: "Order Accepted",
+          message: "The farmer has accepted your order and is preparing it.",
+          relatedOrder: order._id,
+        });
+
+        if (paymentMethod === "online") {
+          await createNotification({
+            recipient: customer.user,
+            recipientRole: "customer",
+            type: "paymentRequired",
+            title: "Payment Required",
+            message:
+              "Please complete your online payment before this order is picked up.",
+            relatedOrder: order._id,
+          });
+        }
+      }
+
       createdOrders.push(order);
 
-      // Reduce product stock
-      for (const item of items) {
+      for (const item of data.items) {
         await Product.updateOne(
-          {
-            _id: item.product._id,
-          },
-          {
-            $inc: {
-              stock: -item.quantity,
-            },
-          },
+          { _id: item.product._id },
+          { $inc: { stock: -item.quantity } },
         );
       }
     }
 
-    // Clear cart after successful orders
     customer.cart = [];
-
     await customer.save();
 
     return res.status(201).json({
       success: true,
       message: "Orders placed successfully",
       orderGroup,
+      pointsRedeemed: pointsToRedeemActual,
       orders: createdOrders,
     });
   } catch (error) {
@@ -403,6 +471,94 @@ export const getMyOrders = async (req, res) => {
   }
 };
 
+export const confirmPayment = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order ID",
+      });
+    }
+
+    const customer = await Customer.findOne({
+      user: req.user.userId,
+    });
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer profile not found",
+      });
+    }
+
+    const order = await Order.findOne({
+      _id: orderId,
+      customer: customer._id,
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    if (order.payment.method !== "online") {
+      return res.status(400).json({
+        success: false,
+        message: "This order does not require online payment confirmation",
+      });
+    }
+
+    if (order.payment.status === "paid") {
+      return res.status(400).json({
+        success: false,
+        message: "This order has already been paid for",
+      });
+    }
+
+    if (!["processing", "readyForPickup"].includes(order.status)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Payment can only be confirmed after the farmer accepts the order and before it is picked up",
+      });
+    }
+
+    order.payment.status = "paid";
+    order.payment.transactionId = `TXN-${crypto
+      .randomBytes(6)
+      .toString("hex")
+      .toUpperCase()}`;
+
+    await order.save();
+
+    await createNotification({
+      recipient: req.user.userId,
+      recipientRole: "customer",
+      type: "paymentSuccess",
+      title: "Payment Successful",
+      message: "Your payment has been confirmed for this order.",
+      relatedOrder: order._id,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Payment confirmed successfully",
+      order,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 export const cancelOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -430,21 +586,74 @@ export const cancelOrder = async (req, res) => {
       });
     }
 
-    // Can only cancel before pickup
-    if (
-      !["pendingAcceptance", "processing", "readyForPickup"].includes(
-        order.status,
-      )
-    ) {
+    const REFUND_TIERS = {
+      pendingAcceptance: 100,
+      processing: 100,
+      readyForPickup: 100,
+      pickedUp: 70,
+      toOriginCenter: 40,
+      inTransit: 40,
+    };
+
+    if (!(order.status in REFUND_TIERS)) {
       return res.status(400).json({
         success: false,
-        message: "This order can no longer be cancelled",
+        message:
+          order.status === "outForDelivery" || order.status === "delivered"
+            ? "This order can no longer be cancelled at this delivery stage"
+            : "This order can no longer be cancelled",
       });
     }
 
+    const refundPercentage = REFUND_TIERS[order.status];
+    const wasPrePickup = [
+      "pendingAcceptance",
+      "processing",
+      "readyForPickup",
+    ].includes(order.status);
+
     order.status = "cancelled";
+    order.cancelledAt = new Date();
+
+    if (order.pricing.pointsRedeemed > 0) {
+      customer.pointsBalance += order.pricing.pointsRedeemed;
+    }
+
+    const refundAmount = Math.round(
+      order.pricing.total * (refundPercentage / 100),
+    );
+
+    if (order.payment.method === "online") {
+      if (order.payment.status === "paid") {
+        customer.pointsBalance += refundAmount;
+        order.payment.status = "refunded";
+      }
+    } else if (order.payment.method === "cashOnDelivery") {
+      const forfeitedPercentage = 100 - refundPercentage;
+
+      if (forfeitedPercentage > 0) {
+        customer.debtBalance += Math.round(
+          order.pricing.total * (forfeitedPercentage / 100),
+        );
+      }
+    }
+
+    order.refund = {
+      percentage: refundPercentage,
+      amount: refundAmount,
+    };
 
     await order.save();
+    await customer.save();
+
+    if (wasPrePickup) {
+      for (const item of order.items) {
+        await Product.updateOne(
+          { _id: item.product },
+          { $inc: { stock: item.quantity } },
+        );
+      }
+    }
 
     const farmer = await Farmer.findById(order.farmer);
     if (farmer) {
@@ -456,20 +665,6 @@ export const cancelOrder = async (req, res) => {
         message: "A customer has cancelled an order.",
         relatedOrder: order._id,
       });
-    }
-
-    // Restore stock
-    for (const item of order.items) {
-      await Product.updateOne(
-        {
-          _id: item.product,
-        },
-        {
-          $inc: {
-            stock: item.quantity,
-          },
-        },
-      );
     }
 
     return res.status(200).json({
@@ -546,8 +741,6 @@ export const getFarmOrders = async (req, res) => {
       });
     }
 
-    // Important:
-    // Verify that this farm belongs to the logged-in farmer
     const farm = await Farm.findOne({
       _id: farmId,
       farmer: farmer._id,
@@ -726,6 +919,18 @@ export const acceptOrder = async (req, res) => {
         message: "The farmer has accepted your order and is preparing it.",
         relatedOrder: order._id,
       });
+
+      if (order.payment.method === "online") {
+        await createNotification({
+          recipient: customer.user._id,
+          recipientRole: "customer",
+          type: "paymentRequired",
+          title: "Payment Required",
+          message:
+            "Please complete your online payment before this order is picked up.",
+          relatedOrder: order._id,
+        });
+      }
     }
 
     if (customer.user.email) {
@@ -816,7 +1021,6 @@ export const rejectOrder = async (req, res) => {
 
     await order.save();
 
-    // Order never entered processing, so restore stock
     for (const item of order.items) {
       await Product.updateOne(
         {

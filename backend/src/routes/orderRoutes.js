@@ -5,6 +5,7 @@ import {
   getMyOrders,
   getOrderById,
   cancelOrder,
+  confirmPayment,
   getFarmerOrders,
   updateOrderStatus,
   getAllOrders,
@@ -21,7 +22,7 @@ import roleAuth from "../middlewares/roleAuth.js";
 
 const orderRouter = express.Router();
 
-// CUSTROMER
+// CUSTOMER
 orderRouter.post("/", userAuth, roleAuth("customer"), createOrder);
 orderRouter.get("/my-orders", userAuth, roleAuth("customer"), getMyOrders);
 orderRouter.patch(
@@ -29,6 +30,12 @@ orderRouter.patch(
   userAuth,
   roleAuth("customer"),
   cancelOrder,
+);
+orderRouter.patch(
+  "/:orderId/confirm-payment",
+  userAuth,
+  roleAuth("customer"),
+  confirmPayment,
 );
 // FARMER
 orderRouter.get(

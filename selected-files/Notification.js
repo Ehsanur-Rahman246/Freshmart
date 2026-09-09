@@ -23,6 +23,7 @@ const notificationSchema = new mongoose.Schema(
         "orderCancelled",
         "orderProcessing",
         "readyForPickup",
+        "paymentRequired",
         "driverAssigned",
         "pickedUp",
         "toOriginCenter",
@@ -37,17 +38,8 @@ const notificationSchema = new mongoose.Schema(
       required: true,
     },
 
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    message: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    title: { type: String, required: true, trim: true },
+    message: { type: String, required: true, trim: true },
 
     relatedOrder: {
       type: mongoose.Schema.Types.ObjectId,
@@ -61,10 +53,7 @@ const notificationSchema = new mongoose.Schema(
       default: null,
     },
 
-    isRead: {
-      type: Boolean,
-      default: false,
-    },
+    isRead: { type: Boolean, default: false },
   },
   {
     timestamps: true,

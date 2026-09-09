@@ -5,6 +5,7 @@ import Driver from "../models/Driver.js";
 import Customer from "../models/Customer.js";
 import Farmer from "../models/Farmer.js";
 import createNotification from "../utils/createNotification.js";
+import { HOUR_IN_MS, LOCAL_PICKUP_HOURS } from "../config/time.js";
 
 export const getOrdersAwaitingAssignment = async (req, res) => {
   try {
@@ -116,6 +117,13 @@ export const assignDriverToOrder = async (req, res) => {
       });
     }
 
+    if (order.payment.method === "online" && order.payment.status !== "paid") {
+      return res.status(400).json({
+        success: false,
+        message: "Payment must be completed before this order can be picked up",
+      });
+    }
+
     if (order.delivery.courier) {
       return res.status(400).json({
         success: false,
@@ -146,6 +154,9 @@ export const assignDriverToOrder = async (req, res) => {
       phone: driver.phone,
     };
     order.status = "pickedUp";
+    order.delivery.nextTransitionAt = new Date(
+      Date.now() + LOCAL_PICKUP_HOURS * HOUR_IN_MS,
+    );
 
     await order.save();
 

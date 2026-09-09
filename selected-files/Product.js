@@ -14,23 +14,11 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
 
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    name: { type: String, required: true, trim: true },
 
-    description: {
-      type: String,
-      default: "",
-      trim: true,
-    },
+    description: { type: String, default: "", trim: true },
 
-    images: [
-      {
-        type: String,
-      },
-    ],
+    images: [{ type: String }],
 
     category: {
       type: String,
@@ -46,11 +34,7 @@ const productSchema = new mongoose.Schema(
       ],
     },
 
-    subCategory: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    subCategory: { type: String, required: true, trim: true },
 
     season: {
       type: String,
@@ -71,11 +55,7 @@ const productSchema = new mongoose.Schema(
       ],
     },
 
-    price: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
+    price: { type: Number, required: true, min: 0 },
 
     unit: {
       type: String,
@@ -83,29 +63,13 @@ const productSchema = new mongoose.Schema(
       enum: ["kg", "g", "L", "pc", "dozen", "mL"],
     },
 
-    stock: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
+    stock: { type: Number, required: true, min: 0 },
 
-    discountPercentage: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 100,
-    },
+    discountPercentage: { type: Number, default: 0, min: 0, max: 100 },
 
-    listingDuration: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
+    listingDuration: { type: Number, required: true, min: 1 },
 
-    expiresAt: {
-      type: Date,
-      required: true,
-    },
+    expiresAt: { type: Date, required: true },
 
     status: {
       type: String,
@@ -120,15 +84,33 @@ const productSchema = new mongoose.Schema(
       default: "active",
     },
 
-    company: {
+    company: { type: String, default: null },
+
+    soldToCompanyAt: { type: Date, default: null },
+
+    // --- Company-sale lifecycle (demo auto-sale / real-farmer offer flow) ---
+    companySaleStage: {
       type: String,
-      default: null,
+      enum: [
+        "none",
+        "awaitingFarmerResponse",
+        "processing",
+        "readyForPickup",
+        "pickedUp",
+        "sold",
+        "rejected",
+      ],
+      default: "none",
     },
 
-    soldToCompanyAt: {
-      type: Date,
-      default: null,
-    },
+    companySalePrice: { type: Number, default: null },
+
+    // Deadline for a real farmer to respond before the offer auto-rejects.
+    companySaleRespondBy: { type: Date, default: null },
+
+    // When a demo listing goes soldOut before expiring, this is when the
+    // automation will create its replacement listing.
+    nextRestockAt: { type: Date, default: null },
   },
   {
     timestamps: true,

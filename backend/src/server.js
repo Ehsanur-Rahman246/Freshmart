@@ -14,6 +14,8 @@ import reviewRouter from "./routes/reviewRoutes.js";
 import notificationRouter from "./routes/notificationRoutes.js";
 import adminRouter from "./routes/adminRoutes.js";
 import deliveryRouter from "./routes/deliveryRoutes.js";
+import { startDeliveryScheduler } from "./jobs/deliveryProgression.js";
+import { startDemoFarmerScheduler } from "./jobs/demoFarmerAutomation.js";
 
 
 const app = express();
@@ -41,5 +43,7 @@ app.use("/api/delivery", deliveryRouter);
 connectDB().then(() => {
     app.listen(PORT, () => {
         console.log("Server started on PORT:", PORT);
+        startDeliveryScheduler();
+        startDemoFarmerScheduler();
     });
 });

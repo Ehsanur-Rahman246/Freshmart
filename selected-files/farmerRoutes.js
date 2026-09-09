@@ -4,6 +4,9 @@ import roleAuth from "../middlewares/roleAuth.js";
 import {
   getFarmerProfile,
   updateFarmerProfile,
+  respondToCompanySaleOffer,
+  markCompanySaleReady,
+  getMyRevenue,
 } from "../controllers/farmerControllers.js";
 
 const farmerRouter = express.Router();
@@ -15,5 +18,18 @@ farmerRouter.patch(
   roleAuth("farmer"),
   updateFarmerProfile,
 );
+farmerRouter.patch(
+  "/company-sale/:productId/respond",
+  userAuth,
+  roleAuth("farmer"),
+  respondToCompanySaleOffer,
+);
+farmerRouter.patch(
+  "/company-sale/:productId/ready",
+  userAuth,
+  roleAuth("farmer"),
+  markCompanySaleReady,
+);
+farmerRouter.get("/revenue", userAuth, roleAuth("farmer"), getMyRevenue);
 
 export default farmerRouter;
