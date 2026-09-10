@@ -1,6 +1,7 @@
 import express from "express";
 import userAuth from "../middlewares/userAuth.js";
 import roleAuth from "../middlewares/roleAuth.js";
+import { upload } from "../middlewares/multer.middleware.js";
 import {
   createProduct,
   deleteProduct,
@@ -12,11 +13,23 @@ import {
 
 const productRouter = express.Router();
 
-productRouter.post("/", userAuth, roleAuth("farmer"), createProduct);
+productRouter.post(
+  "/",
+  userAuth,
+  roleAuth("farmer"),
+  upload.array("images", 6),
+  createProduct,
+);
 productRouter.get("/my-products", userAuth, roleAuth("farmer"), getMyProducts);
 productRouter.get("/", getProducts);
 productRouter.get("/:productId", getProductById);
-productRouter.patch("/:productId", userAuth, roleAuth("farmer"), updateProduct);
+productRouter.patch(
+  "/:productId",
+  userAuth,
+  roleAuth("farmer"),
+  upload.array("images", 6),
+  updateProduct,
+);
 productRouter.delete(
   "/:productId",
   userAuth,

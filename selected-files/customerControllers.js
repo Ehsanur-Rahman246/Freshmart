@@ -1,4 +1,8 @@
 import Customer from "../models/Customer.js";
+import {
+  uploadBufferToCloudinary,
+  deleteFromCloudinary,
+} from "../utils/uploadToCloudinary.js";
 
 export const getCustomerProfile = async (req, res) => {
   try {
@@ -31,8 +35,6 @@ export const getCustomerProfile = async (req, res) => {
 
 export const updateCustomerProfile = async (req, res) => {
   try {
-    const { profileImage } = req.body;
-
     const customer = await Customer.findOne({
       user: req.user.userId,
     });
@@ -44,8 +46,17 @@ export const updateCustomerProfile = async (req, res) => {
       });
     }
 
-    if (profileImage !== undefined) {
-      customer.profileImage = profileImage;
+    if (req.file) {
+      if (customer.profileImage?.publicId) {
+        await deleteFromCloudinary(customer.profileImage.publicId);
+      }
+
+      const uploaded = await uploadBufferToCloudinary(
+        req.file.buffer,
+        "freshmart/customers/profile",
+      );
+
+      customer.profileImage = uploaded;
     }
 
     await customer.save();

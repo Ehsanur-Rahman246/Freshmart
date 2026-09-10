@@ -1,5 +1,12 @@
 import Farm from "../models/Farm.js";
 import Farmer from "../models/Farmer.js";
+import pLimit from "p-limit";
+import {
+  uploadBufferToCloudinary,
+  deleteFromCloudinary,
+} from "../utils/uploadToCloudinary.js";
+
+const IMAGE_UPLOAD_CONCURRENCY = 3;
 
 export const createFarm = async (req, res) => {
   try {
@@ -17,7 +24,6 @@ export const createFarm = async (req, res) => {
     const {
       name,
       description,
-      images,
       isActive,
       establishedYear,
       size,
@@ -26,23 +32,44 @@ export const createFarm = async (req, res) => {
       products,
     } = req.body;
 
+    // size, location, and farmType may arrive as JSON strings via form-data
+    const parsedSize = typeof size === "string" ? JSON.parse(size) : size;
+    const parsedLocation =
+      typeof location === "string" ? JSON.parse(location) : location;
+    const parsedFarmType =
+      typeof farmType === "string" ? JSON.parse(farmType) : farmType;
+    const parsedProducts =
+      typeof products === "string" ? JSON.parse(products) : products;
+
     if (
       !name ||
-      !size ||
-      !size.value ||
-      !size.unit ||
-      !location ||
-      !location.district ||
-      !location.upazila ||
-      !location.village ||
-      !farmType ||
-      !Array.isArray(farmType) ||
-      farmType.length === 0
+      !parsedSize ||
+      !parsedSize.value ||
+      !parsedSize.unit ||
+      !parsedLocation ||
+      !parsedLocation.district ||
+      !parsedLocation.upazila ||
+      !parsedLocation.village ||
+      !parsedFarmType ||
+      !Array.isArray(parsedFarmType) ||
+      parsedFarmType.length === 0
     ) {
       return res.status(400).json({
         success: false,
         message: "All required farm fields must be provided",
       });
+    }
+
+    let images = [];
+
+    if (req.files && req.files.length > 0) {
+      const limit = pLimit(IMAGE_UPLOAD_CONCURRENCY);
+
+      images = await Promise.all(
+        req.files.map((file) =>
+          limit(() => uploadBufferToCloudinary(file.buffer, "freshmart/farms")),
+        ),
+      );
     }
 
     const farm = await Farm.create({
@@ -52,10 +79,10 @@ export const createFarm = async (req, res) => {
       images,
       isActive,
       establishedYear,
-      size,
-      location,
-      farmType,
-      products,
+      size: parsedSize,
+      location: parsedLocation,
+      farmType: parsedFarmType,
+      products: parsedProducts,
     });
 
     farmer.farms.push(farm._id);
@@ -172,26 +199,71 @@ export const updateFarm = async (req, res) => {
     const {
       name,
       description,
-      images,
       isActive,
       establishedYear,
       size,
       location,
       farmType,
       products,
+      removeImages,
     } = req.body;
 
     if (name !== undefined) farm.name = name;
     if (description !== undefined) farm.description = description;
-    if (images !== undefined) farm.images = images;
     if (isActive !== undefined) farm.isActive = isActive;
     if (establishedYear !== undefined) {
       farm.establishedYear = establishedYear;
     }
-    if (size !== undefined) farm.size = size;
-    if (location !== undefined) farm.location = location;
-    if (farmType !== undefined) farm.farmType = farmType;
-    if (products !== undefined) farm.products = products;
+    if (size !== undefined) {
+      farm.size = typeof size === "string" ? JSON.parse(size) : size;
+    }
+    if (location !== undefined) {
+      farm.location =
+        typeof location === "string" ? JSON.parse(location) : location;
+    }
+    if (farmType !== undefined) {
+      farm.farmType =
+        typeof farmType === "string" ? JSON.parse(farmType) : farmType;
+    }
+    if (products !== undefined) {
+      farm.products =
+        typeof products === "string" ? JSON.parse(products) : products;
+    }
+
+    // Remove requested images (by publicId) from Cloudinary + the array
+    if (removeImages) {
+      let removeIds = [];
+
+      try {
+        removeIds =
+          typeof removeImages === "string"
+            ? JSON.parse(removeImages)
+            : removeImages;
+      } catch {
+        removeIds = [];
+      }
+
+      if (Array.isArray(removeIds) && removeIds.length > 0) {
+        await Promise.all(removeIds.map((id) => deleteFromCloudinary(id)));
+
+        farm.images = farm.images.filter(
+          (img) => !removeIds.includes(img.publicId),
+        );
+      }
+    }
+
+    // Append newly uploaded images
+    if (req.files && req.files.length > 0) {
+      const limit = pLimit(IMAGE_UPLOAD_CONCURRENCY);
+
+      const uploaded = await Promise.all(
+        req.files.map((file) =>
+          limit(() => uploadBufferToCloudinary(file.buffer, "freshmart/farms")),
+        ),
+      );
+
+      farm.images.push(...uploaded);
+    }
 
     await farm.save();
 
@@ -235,6 +307,12 @@ export const deleteFarm = async (req, res) => {
         success: false,
         message: "Farm not found or you are not authorized to delete it",
       });
+    }
+
+    if (farm.images && farm.images.length > 0) {
+      await Promise.all(
+        farm.images.map((img) => deleteFromCloudinary(img.publicId)),
+      );
     }
 
     await Farm.findByIdAndDelete(farmId);

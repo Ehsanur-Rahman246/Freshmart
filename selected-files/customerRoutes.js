@@ -1,6 +1,7 @@
 import express from "express";
 import userAuth from "../middlewares/userAuth.js";
 import roleAuth from "../middlewares/roleAuth.js";
+import { upload } from "../middlewares/multer.middleware.js";
 import {
   addAddress,
   addToWishlist,
@@ -26,9 +27,9 @@ customerRouter.patch(
   "/profile",
   userAuth,
   roleAuth("customer"),
+  upload.single("profileImage"),
   updateCustomerProfile,
 );
-// customerRoutes.js — add:
 customerRouter.get("/wallet", userAuth, roleAuth("customer"), getWallet);
 customerRouter.post("/addresses", userAuth, roleAuth("customer"), addAddress);
 customerRouter.patch(

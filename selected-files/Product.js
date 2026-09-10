@@ -18,7 +18,12 @@ const productSchema = new mongoose.Schema(
 
     description: { type: String, default: "", trim: true },
 
-    images: [{ type: String }],
+    images: [
+      {
+        url: { type: String, required: true },
+        publicId: { type: String, required: true },
+      },
+    ],
 
     category: {
       type: String,
@@ -88,7 +93,6 @@ const productSchema = new mongoose.Schema(
 
     soldToCompanyAt: { type: Date, default: null },
 
-    // --- Company-sale lifecycle (demo auto-sale / real-farmer offer flow) ---
     companySaleStage: {
       type: String,
       enum: [
@@ -105,11 +109,8 @@ const productSchema = new mongoose.Schema(
 
     companySalePrice: { type: Number, default: null },
 
-    // Deadline for a real farmer to respond before the offer auto-rejects.
     companySaleRespondBy: { type: Date, default: null },
 
-    // When a demo listing goes soldOut before expiring, this is when the
-    // automation will create its replacement listing.
     nextRestockAt: { type: Date, default: null },
   },
   {

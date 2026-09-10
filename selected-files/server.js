@@ -16,6 +16,7 @@ import adminRouter from "./routes/adminRoutes.js";
 import deliveryRouter from "./routes/deliveryRoutes.js";
 import { startDeliveryScheduler } from "./jobs/deliveryProgression.js";
 import { startDemoFarmerScheduler } from "./jobs/demoFarmerAutomation.js";
+import { multerErrorHandling } from "./middlewares/multerError.middleware.js";
 
 
 const app = express();
@@ -39,6 +40,8 @@ app.use("/api/reviews", reviewRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/delivery", deliveryRouter);
+
+app.use(multerErrorHandling);
 
 connectDB().then(() => {
     app.listen(PORT, () => {

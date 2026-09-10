@@ -1,6 +1,7 @@
 import express from "express";
 import userAuth from "../middlewares/userAuth.js";
 import roleAuth from "../middlewares/roleAuth.js";
+import { upload } from "../middlewares/multer.middleware.js";
 import {
   getFarmerProfile,
   updateFarmerProfile,
@@ -16,6 +17,7 @@ farmerRouter.patch(
   "/profile",
   userAuth,
   roleAuth("farmer"),
+  upload.single("profileImage"),
   updateFarmerProfile,
 );
 farmerRouter.patch(

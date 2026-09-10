@@ -1,6 +1,10 @@
 import Farmer from "../models/Farmer.js";
 import Product from "../models/Product.js";
 import Revenue from "../models/Revenue.js";
+import {
+  uploadBufferToCloudinary,
+  deleteFromCloudinary,
+} from "../utils/uploadToCloudinary.js";
 
 export const getFarmerProfile = async (req, res) => {
   try {
@@ -33,8 +37,6 @@ export const getFarmerProfile = async (req, res) => {
 
 export const updateFarmerProfile = async (req, res) => {
   try {
-    const { profileImage } = req.body;
-
     const farmer = await Farmer.findOne({
       user: req.user.userId,
     });
@@ -46,8 +48,17 @@ export const updateFarmerProfile = async (req, res) => {
       });
     }
 
-    if (profileImage !== undefined) {
-      farmer.profileImage = profileImage;
+    if (req.file) {
+      if (farmer.profileImage?.publicId) {
+        await deleteFromCloudinary(farmer.profileImage.publicId);
+      }
+
+      const uploaded = await uploadBufferToCloudinary(
+        req.file.buffer,
+        "freshmart/farmers/profile",
+      );
+
+      farmer.profileImage = uploaded;
     }
 
     await farmer.save();

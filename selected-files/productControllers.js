@@ -1,6 +1,13 @@
 import Product from "../models/Product.js";
 import Farmer from "../models/Farmer.js";
 import Farm from "../models/Farm.js";
+import pLimit from "p-limit";
+import {
+  uploadBufferToCloudinary,
+  deleteFromCloudinary,
+} from "../utils/uploadToCloudinary.js";
+
+const IMAGE_UPLOAD_CONCURRENCY = 3;
 
 export const createProduct = async (req, res) => {
   try {
@@ -19,7 +26,6 @@ export const createProduct = async (req, res) => {
       farmId,
       name,
       description,
-      images,
       category,
       subCategory,
       season,
@@ -62,7 +68,21 @@ export const createProduct = async (req, res) => {
     }
 
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + listingDuration);
+    expiresAt.setDate(expiresAt.getDate() + Number(listingDuration));
+
+    let images = [];
+
+    if (req.files && req.files.length > 0) {
+      const limit = pLimit(IMAGE_UPLOAD_CONCURRENCY);
+
+      images = await Promise.all(
+        req.files.map((file) =>
+          limit(() =>
+            uploadBufferToCloudinary(file.buffer, "freshmart/products"),
+          ),
+        ),
+      );
+    }
 
     const product = await Product.create({
       farmer: farmer._id,
@@ -234,7 +254,6 @@ export const updateProduct = async (req, res) => {
       farmId,
       name,
       description,
-      images,
       category,
       subCategory,
       season,
@@ -243,6 +262,7 @@ export const updateProduct = async (req, res) => {
       unit,
       stock,
       discountPercentage,
+      removeImages,
     } = req.body;
 
     // Snapshot the "before" state so we know what to remove from Farm.products
@@ -269,7 +289,6 @@ export const updateProduct = async (req, res) => {
 
     if (name !== undefined) product.name = name;
     if (description !== undefined) product.description = description;
-    if (images !== undefined) product.images = images;
     if (category !== undefined) product.category = category;
     if (subCategory !== undefined) product.subCategory = subCategory;
     if (season !== undefined) product.season = season;
@@ -282,6 +301,43 @@ export const updateProduct = async (req, res) => {
       product.discountPercentage = discountPercentage;
     }
 
+    // Remove requested images (by publicId) from Cloudinary + the array
+    if (removeImages) {
+      let removeIds = [];
+
+      try {
+        removeIds =
+          typeof removeImages === "string"
+            ? JSON.parse(removeImages)
+            : removeImages;
+      } catch {
+        removeIds = [];
+      }
+
+      if (Array.isArray(removeIds) && removeIds.length > 0) {
+        await Promise.all(removeIds.map((id) => deleteFromCloudinary(id)));
+
+        product.images = product.images.filter(
+          (img) => !removeIds.includes(img.publicId),
+        );
+      }
+    }
+
+    // Append newly uploaded images
+    if (req.files && req.files.length > 0) {
+      const limit = pLimit(IMAGE_UPLOAD_CONCURRENCY);
+
+      const uploaded = await Promise.all(
+        req.files.map((file) =>
+          limit(() =>
+            uploadBufferToCloudinary(file.buffer, "freshmart/products"),
+          ),
+        ),
+      );
+
+      product.images.push(...uploaded);
+    }
+
     await product.save();
 
     const newFarmId = product.farm.toString();
@@ -292,7 +348,6 @@ export const updateProduct = async (req, res) => {
       const oldFarm = newFarm ? await Farm.findById(oldFarmId) : null;
 
       if (newFarmId !== oldFarmId) {
-        // Moved to a different farm: pull from old farm, push into new farm
         if (oldFarm) {
           oldFarm.products[oldSeason].pull(product._id);
           await oldFarm.save();
@@ -301,7 +356,6 @@ export const updateProduct = async (req, res) => {
         newFarm.products[newSeason].push(product._id);
         await newFarm.save();
       } else {
-        // Same farm, season changed: pull from old season array, push into new one
         const farm = await Farm.findById(newFarmId);
 
         if (farm) {
@@ -348,6 +402,12 @@ export const deleteProduct = async (req, res) => {
         success: false,
         message: "Product not found or you are not authorized to delete it",
       });
+    }
+
+    if (product.images && product.images.length > 0) {
+      await Promise.all(
+        product.images.map((img) => deleteFromCloudinary(img.publicId)),
+      );
     }
 
     await Product.findByIdAndDelete(productId);
