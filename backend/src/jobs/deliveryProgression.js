@@ -6,10 +6,12 @@ import Farmer from "../models/Farmer.js";
 import Zone from "../models/Zone.js";
 import createNotification from "../utils/createNotification.js";
 import { recordSaleRevenue } from "../utils/recordRevenue.js";
+import transporter from "../config/nodemailer.js";
 import {
   HOUR_IN_MS,
   CRON_INTERVAL,
   DISPATCH_HOURS,
+  DESTINATION_PROCESSING_HOURS,
   LOCAL_DELIVERY_HOURS,
   SAME_ZONE_TRANSIT_HOURS,
 } from "../config/time.js";
@@ -18,6 +20,7 @@ const ACTIVE_STATUSES = [
   "pickedUp",
   "toOriginCenter",
   "inTransit",
+  "toDestinationCenter",
   "outForDelivery",
 ];
 
@@ -99,13 +102,13 @@ const advanceOrder = async (order) => {
     }
 
     case "inTransit": {
-      order.status = "outForDelivery";
+      order.status = "toDestinationCenter";
       order.delivery.nextTransitionAt = new Date(
-        now.getTime() + LOCAL_DELIVERY_HOURS * HOUR_IN_MS,
+        now.getTime() + DESTINATION_PROCESSING_HOURS * HOUR_IN_MS,
       );
 
-      // Driver's currentZone updates only now, right before outForDelivery,
-      // per the confirmed design (not immediately on assignment).
+      // Driver's currentZone updates now, on arrival at the destination
+      // zone center.
       if (order.delivery.driver?.driverId) {
         const destinationZone = await Zone.findById(
           order.delivery.destinationZone,
@@ -117,6 +120,26 @@ const advanceOrder = async (order) => {
           );
         }
       }
+
+      const customer = await Customer.findById(order.customer).populate("user");
+      if (customer) {
+        await createNotification({
+          recipient: customer.user._id,
+          recipientRole: "customer",
+          type: "toDestinationCenter",
+          title: "Order Arrived at Destination Center",
+          message: "Your order has arrived at the destination zone center.",
+          relatedOrder: order._id,
+        });
+      }
+      break;
+    }
+
+    case "toDestinationCenter": {
+      order.status = "outForDelivery";
+      order.delivery.nextTransitionAt = new Date(
+        now.getTime() + LOCAL_DELIVERY_HOURS * HOUR_IN_MS,
+      );
 
       const customer = await Customer.findById(order.customer).populate("user");
       if (customer) {
@@ -157,6 +180,27 @@ const advanceOrder = async (order) => {
           message: "Your order has been delivered successfully.",
           relatedOrder: order._id,
         });
+
+        if (customer.user.email) {
+          try {
+            await transporter.sendMail({
+              from: process.env.EMAIL_USER,
+              to: customer.user.email,
+              subject: "Your FreshMart Order Has Been Delivered",
+              html: `
+                <h2>Order Delivered</h2>
+                <p>Hello ${customer.user.name || "Customer"},</p>
+                <p>Your order <strong>${order.orderNumber}</strong> has been delivered successfully.</p>
+                <p>Thank you for shopping with FreshMart!</p>
+              `,
+            });
+          } catch (emailError) {
+            console.error(
+              "Failed to send order-delivered email (customer):",
+              emailError,
+            );
+          }
+        }
       }
 
       const farmer = await Farmer.findById(order.farmer).populate("user");
@@ -170,6 +214,27 @@ const advanceOrder = async (order) => {
             "An order from your farm has been delivered to the customer.",
           relatedOrder: order._id,
         });
+
+        if (!order.isDemoOrder && farmer.user.email) {
+          try {
+            await transporter.sendMail({
+              from: process.env.EMAIL_USER,
+              to: farmer.user.email,
+              subject: "An Order From Your Farm Has Been Delivered",
+              html: `
+                <h2>Order Delivered</h2>
+                <p>Hello ${farmer.user.name || "Farmer"},</p>
+                <p>Order <strong>${order.orderNumber}</strong> has been delivered to the customer.</p>
+                <p>Thank you for being part of FreshMart!</p>
+              `,
+            });
+          } catch (emailError) {
+            console.error(
+              "Failed to send order-delivered email (farmer):",
+              emailError,
+            );
+          }
+        }
       }
 
       await recordSaleRevenue(order);

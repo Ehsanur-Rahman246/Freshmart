@@ -291,7 +291,6 @@ export const createOrder = async (req, res) => {
     }
 
     const orderGroup = new mongoose.Types.ObjectId();
-    const orderNumber = await generateOrderNumber();
     const createdOrders = [];
     let pointsAllocatedSoFar = 0;
 
@@ -322,6 +321,7 @@ export const createOrder = async (req, res) => {
       );
 
       const isDemoFarmer = data.farmer.isDemo === true;
+      const orderNumber = await generateOrderNumber();
 
       const order = await Order.create({
         customer: customer._id,

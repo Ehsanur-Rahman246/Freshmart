@@ -4,8 +4,8 @@ import api from "./api";
 export const createOrder = (data) => api.post("/orders", data);
 export const getMyOrders = () => api.get("/orders/my-orders");
 export const cancelOrder = (orderId) => api.patch(`/orders/${orderId}/cancel`);
-export const confirmPayment = (orderId) =>
-  api.patch(`/orders/${orderId}/confirm-payment`);
+export const confirmPayment = (orderGroupId) =>
+  api.patch(`/orders/group/${orderGroupId}/confirm-payment`);
 
 // Farmer
 export const getFarmerOrders = () => api.get("/orders/farmer/my-orders");

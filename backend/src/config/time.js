@@ -20,6 +20,7 @@ export const CRON_INTERVAL = "*/10 * * * * *";
 // these represent short local movements rather than inter-zone travel.
 export const LOCAL_PICKUP_HOURS = 1; // farm -> origin zone center
 export const DISPATCH_HOURS = 1; // origin center depart buffer before inter-zone transit begins
+export const DESTINATION_PROCESSING_HOURS = 1; // Buffer at the destination zone center before local delivery begins.
 export const LOCAL_DELIVERY_HOURS = 1; // destination zone center -> customer's door
 
 // Fallback transit range when origin and destination zone are the same,

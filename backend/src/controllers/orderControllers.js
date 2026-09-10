@@ -291,7 +291,6 @@ export const createOrder = async (req, res) => {
     }
 
     const orderGroup = new mongoose.Types.ObjectId();
-    const orderNumber = await generateOrderNumber();
     const createdOrders = [];
     let pointsAllocatedSoFar = 0;
 
@@ -304,7 +303,9 @@ export const createOrder = async (req, res) => {
       if (pointsToRedeemActual > 0) {
         pointsForThisOrder = isLast
           ? pointsToRedeemActual - pointsAllocatedSoFar
-          : Math.round((data.itemsTotal / grandItemsTotal) * pointsToRedeemActual);
+          : Math.round(
+              (data.itemsTotal / grandItemsTotal) * pointsToRedeemActual,
+            );
 
         pointsForThisOrder = Math.min(pointsForThisOrder, data.itemsTotal);
         pointsAllocatedSoFar += pointsForThisOrder;
@@ -322,6 +323,7 @@ export const createOrder = async (req, res) => {
       );
 
       const isDemoFarmer = data.farmer.isDemo === true;
+      const orderNumber = await generateOrderNumber();
 
       const order = await Order.create({
         customer: customer._id,
@@ -360,11 +362,16 @@ export const createOrder = async (req, res) => {
           estimatedDeliveryAt,
         },
 
-        status: isDemoFarmer ? "processing" : "pendingAcceptance",
+        status: isDemoFarmer
+          ? paymentMethod === "online"
+            ? "paymentPending"
+            : "processing"
+          : "pendingAcceptance",
         isDemoOrder: isDemoFarmer,
-        processingReadyAt: isDemoFarmer
-          ? new Date(Date.now() + DEMO_PROCESSING_HOURS * HOUR_IN_MS)
-          : null,
+        processingReadyAt:
+          isDemoFarmer && paymentMethod !== "online"
+            ? new Date(Date.now() + DEMO_PROCESSING_HOURS * HOUR_IN_MS)
+            : null,
       });
 
       await createNotification({
@@ -473,12 +480,12 @@ export const getMyOrders = async (req, res) => {
 
 export const confirmPayment = async (req, res) => {
   try {
-    const { orderId } = req.params;
+    const { orderGroupId } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+    if (!mongoose.Types.ObjectId.isValid(orderGroupId)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid order ID",
+        message: "Invalid order group ID",
       });
     }
 
@@ -493,61 +500,83 @@ export const confirmPayment = async (req, res) => {
       });
     }
 
-    const order = await Order.findOne({
-      _id: orderId,
+    const orders = await Order.find({
+      orderGroup: orderGroupId,
       customer: customer._id,
     });
 
-    if (!order) {
+    if (orders.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "Order not found",
+        message: "Order group not found",
       });
     }
 
-    if (order.payment.method !== "online") {
-      return res.status(400).json({
-        success: false,
-        message: "This order does not require online payment confirmation",
-      });
-    }
+    const nonOnlineOrder = orders.find(
+      (order) => order.payment.method !== "online",
+    );
 
-    if (order.payment.status === "paid") {
-      return res.status(400).json({
-        success: false,
-        message: "This order has already been paid for",
-      });
-    }
-
-    if (!["processing", "readyForPickup"].includes(order.status)) {
+    if (nonOnlineOrder) {
       return res.status(400).json({
         success: false,
         message:
-          "Payment can only be confirmed after the farmer accepts the order and before it is picked up",
+          "This order group does not require online payment confirmation",
       });
     }
 
-    order.payment.status = "paid";
-    order.payment.transactionId = `TXN-${crypto
+    if (orders.every((order) => order.payment.status === "paid")) {
+      return res.status(400).json({
+        success: false,
+        message: "This order group has already been paid for",
+      });
+    }
+
+    // ---- everything below this point is the new piece ----
+
+    const invalidStatusOrder = orders.find(
+      (order) => order.status !== "paymentPending",
+    );
+
+    if (invalidStatusOrder) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Payment can only be confirmed while the order is awaiting payment",
+      });
+    }
+
+    const transactionId = `TXN-${crypto
       .randomBytes(6)
       .toString("hex")
       .toUpperCase()}`;
 
-    await order.save();
+    for (const order of orders) {
+      order.payment.status = "paid";
+      order.payment.transactionId = transactionId;
+      order.status = "processing";
 
-    await createNotification({
-      recipient: req.user.userId,
-      recipientRole: "customer",
-      type: "paymentSuccess",
-      title: "Payment Successful",
-      message: "Your payment has been confirmed for this order.",
-      relatedOrder: order._id,
-    });
+      if (order.isDemoOrder) {
+        order.processingReadyAt = new Date(
+          Date.now() + DEMO_PROCESSING_HOURS * HOUR_IN_MS,
+        );
+      }
+
+      await order.save();
+
+      await createNotification({
+        recipient: req.user.userId,
+        recipientRole: "customer",
+        type: "paymentSuccess",
+        title: "Payment Successful",
+        message: "Your payment has been confirmed for this order.",
+        relatedOrder: order._id,
+      });
+    }
 
     return res.status(200).json({
       success: true,
       message: "Payment confirmed successfully",
-      order,
+      orders,
     });
   } catch (error) {
     console.error(error);
@@ -593,6 +622,7 @@ export const cancelOrder = async (req, res) => {
       pickedUp: 70,
       toOriginCenter: 40,
       inTransit: 40,
+      toDestinationCenter: 40,
     };
 
     if (!(order.status in REFUND_TIERS)) {
@@ -905,7 +935,8 @@ export const acceptOrder = async (req, res) => {
       });
     }
 
-    order.status = "processing";
+    order.status =
+      order.payment.method === "online" ? "paymentPending" : "processing";
 
     await order.save();
 
@@ -950,7 +981,7 @@ export const acceptOrder = async (req, res) => {
               </p>
 
               <p>
-                <strong>Order ID:</strong> ${order._id}
+                <strong>Order ID:</strong> ${order.orderNumber}
               </p>
 
               <p>
