@@ -32,7 +32,7 @@ orderRouter.patch(
   cancelOrder,
 );
 orderRouter.patch(
-  "/:orderId/confirm-payment",
+  "/group/:orderGroupId/confirm-payment",
   userAuth,
   roleAuth("customer"),
   confirmPayment,
@@ -77,7 +77,12 @@ orderRouter.get(
   roleAuth("admin"),
   getOrdersByFarmer,
 );
-orderRouter.get("/admin/farm/:farmId", userAuth, roleAuth("admin"), getOrdersByFarm);
+orderRouter.get(
+  "/admin/farm/:farmId",
+  userAuth,
+  roleAuth("admin"),
+  getOrdersByFarm,
+);
 // ALL
 orderRouter.get(
   "/:orderId",

@@ -28,6 +28,7 @@ const notificationSchema = new mongoose.Schema(
         "pickedUp",
         "toOriginCenter",
         "inTransit",
+        "toDestinationCenter",
         "outForDelivery",
         "delivered",
         "paymentSuccess",
