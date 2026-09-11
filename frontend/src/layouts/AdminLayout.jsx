@@ -1,4 +1,4 @@
-import { logout } from "../lib/auth";
+import { logout } from "../api/auth";
 import { useNavigate } from "react-router";
 
 

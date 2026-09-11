@@ -49,7 +49,7 @@ const Marketplace = () => {
               name={product.name}
               src={product.farm?.name}
               price={product.price}
-              badge={getCategoryIcon(product.category)}
+              badge={getCategoryIcon(product.source)}
             />
           ))}
       </div>

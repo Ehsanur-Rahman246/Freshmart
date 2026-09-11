@@ -12,7 +12,7 @@ import {
   sendResetOtp,
   verifyResetPasswordOtp,
   resetPassword,
-} from "../lib/auth";
+} from "../api/auth";
 
 const Input = ({
   icon: Icon,

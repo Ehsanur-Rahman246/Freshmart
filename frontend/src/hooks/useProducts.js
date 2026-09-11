@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getProducts } from "../lib/product";
+import { getProducts } from "../api/product";
 
 export const useProducts = (page, limit = 10) =>
   useQuery({

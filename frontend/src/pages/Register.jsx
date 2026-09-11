@@ -9,7 +9,7 @@ import {
   FiArrowLeft,
   FiArrowRight,
 } from "react-icons/fi";
-import { register } from "../lib/auth";
+import { register } from "../api/auth";
 
 // Input component
 const Input = ({

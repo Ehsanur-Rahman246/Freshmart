@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router";
-import { checkAuth } from "../lib/auth";
+import { checkAuth } from "../api/auth";
 import Loader from "./Loader";
 
 const ProtectedRoute = ({ role }) => {

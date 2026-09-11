@@ -39,7 +39,7 @@ REM =========================
 REM FRONTEND
 REM =========================
 
-copy /Y frontend\src\lib\*.js selected-files\lib\ >nul
+copy /Y frontend\src\api\*.js selected-files\lib\ >nul
 copy /Y frontend\src\forms\*.jsx selected-files\lib\ >nul
 copy /Y frontend\src\hooks\*.js selected-files\lib\ >nul
 

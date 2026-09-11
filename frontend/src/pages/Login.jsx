@@ -8,7 +8,7 @@ import {
   FiEyeOff,
   FiArrowRight,
 } from "react-icons/fi";
-import { login } from "../lib/auth";
+import { login } from "../api/auth";
 
 
 // Input component

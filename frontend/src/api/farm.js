@@ -1,4 +1,4 @@
-import api from "./api";
+import api from "../api/api";
 
 export const createFarm = (data) => api.post("/farm", data);
 export const getMyFarms = () => api.get("/farm/my-farms");

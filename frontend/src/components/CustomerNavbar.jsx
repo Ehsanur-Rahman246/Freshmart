@@ -4,7 +4,7 @@ import { IoNotifications } from "react-icons/io5";
 import { FaSearch } from "react-icons/fa";
 import { FiLogOut, FiMenu, FiUser } from "react-icons/fi";
 import Sidebar from "./Sidebar";
-import { logout } from "../lib/auth";
+import { logout } from "../api/auth";
 import { NavLink, useNavigate } from "react-router";
 
 const SearchBar = () => {

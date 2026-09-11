@@ -10,7 +10,7 @@ import {
 } from "react-icons/fi";
 import { IoNotifications } from "react-icons/io5";
 import { Link, NavLink, useNavigate } from "react-router";
-import { logout } from "../lib/auth";
+import { logout } from "../api/auth";
 
 const menuItems = [
   {
