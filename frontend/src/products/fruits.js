@@ -9,6 +9,7 @@ import Lemon3 from "../assets/f8to14/11-lemon.jpg";
 import Lime from "../assets/f8to14/09-lime.jpg";
 import Anaras1 from "../assets/f8to14/10-anaras.jpg";
 import Anaras2 from "../assets/f8to14/11-anaras.jpg";
+import Anaras3 from "../assets/f36to42/37-anaras.jpg";
 import Chalta from "../assets/f8to14/10-chalta.jpg";
 import Kamranga from "../assets/f8to14/10-kamranga.jpg";
 import Banana1 from "../assets/f8to14/12-banana.jpg";
@@ -60,7 +61,7 @@ import Olive from "../assets/f8to14/10-olive.jpg";
 
 export {
   Litchi1, Litchi2, Litchi3, Litchi4,
-  Lemon1, Lemon2, Lemon3, Lime, Anaras1, Anaras2,
+  Lemon1, Lemon2, Lemon3, Lime, Anaras1, Anaras2, Anaras3,
   Chalta, Kamranga, Banana1, Banana2, Banana3,
   Orange1, Orange2, Komola, Kathal1, Kathal2, Kathal3, Kathal4,
   Mango1, Mango2, Mango3, Mango4, Bel,

@@ -198,22 +198,29 @@ export const getProductById = async (req, res) => {
 
 export const getProducts = async (req, res) => {
   try {
-    const products = await Product.find({
-      status: "active",
-    })
-      .populate("farm", "name")
-      .populate({
-        path: "farmer",
-        select: "profileImage",
-        populate: {
-          path: "user",
-          select: "name",
-        },
-      });
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const limit = Math.min(Number(req.query.limit) || 10, 50);
+    const skip = (page - 1) * limit;
+
+    const [products, total] = await Promise.all([
+      Product.find({ status: "active" })
+        .populate("farm", "name")
+        .populate({
+          path: "farmer",
+          select: "profileImage",
+          populate: { path: "user", select: "name" },
+        })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Product.countDocuments({ status: "active" }),
+    ]);
 
     return res.status(200).json({
       success: true,
       products,
+      page,
+      totalPages: Math.max(Math.ceil(total / limit), 1),
     });
   } catch (error) {
     console.error(error);

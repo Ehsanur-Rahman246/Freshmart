@@ -12,11 +12,7 @@ REM BACKEND
 REM =========================
 
 REM Config
-copy /Y backend\src\config\db.js selected-files\ >nul
-copy /Y backend\src\config\nodemailer.js selected-files\ >nul
-copy /Y backend\src\config\upstash.js selected-files\ >nul
-copy /Y backend\src\config\business.js selected-files\ >nul
-copy /Y backend\src\config\time.js selected-files\ >nul
+copy /Y backend\src\config\*.js selected-files\ >nul
 
 REM Controllers
 copy /Y backend\src\controllers\*.js selected-files\ >nul
@@ -37,10 +33,7 @@ REM Server
 copy /Y backend\src\server.js selected-files\ >nul
 
 REM Utils
-copy /Y backend\src\utils\createNotification.js selected-files\ >nul
-copy /Y backend\src\utils\generateOrderNumber.js selected-files\ >nul
-copy /Y backend\src\utils\computeDeliveryEstimate.js selected-files\ >nul
-copy /Y backend\src\utils\recordRevenue.js selected-files\ >nul
+copy /Y backend\src\utils\*.js selected-files\ >nul
 
 REM =========================
 REM FRONTEND
