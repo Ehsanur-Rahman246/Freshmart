@@ -70,7 +70,7 @@ const HeroSlogan = () => {
       {/* Actions */}
       <div className="mt-7 flex flex-wrap items-center gap-4">
         <Link
-          to="/register/customer"
+          to="/register"
           className="
             btn btn-primary
             rounded-full
@@ -85,7 +85,7 @@ const HeroSlogan = () => {
         </Link>
 
         <Link
-          to="/register/farmer"
+          to="/register"
           className="
             group
             inline-flex items-center gap-2

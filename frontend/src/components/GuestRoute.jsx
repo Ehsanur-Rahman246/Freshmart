@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router";
-import { checkAuth } from "../lib/auth";
+import { checkAuth } from "../api/auth";
+import Loader from "./Loader";
 
 const GuestRoute = () => {
   const [loading, setLoading] = useState(true);
@@ -25,7 +26,7 @@ const GuestRoute = () => {
   }, []);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <Loader/>;
   }
 
   if (user) {

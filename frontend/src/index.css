@@ -353,6 +353,38 @@
   }
 }
 
+/* ---------------------------------------------------------
+   SKELETON SHIMMER (self-contained, doesn't depend on daisyUI)
+   --------------------------------------------------------- */
+
+@layer utilities {
+  .skeleton {
+    background-color: var(--color-base-200);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--color-base-content) 8%, transparent),
+      transparent
+    );
+    animation: skeleton-shimmer 1.5s infinite;
+  }
+
+  @keyframes skeleton-shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+}
+
 
 /* =========================================================
    CUSTOM UTILITIES

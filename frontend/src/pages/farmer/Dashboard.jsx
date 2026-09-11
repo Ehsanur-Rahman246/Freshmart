@@ -6,10 +6,8 @@ import {
   FiArrowUpRight,
   FiStar,
   FiChevronRight,
-  FiX,
-  FiPackage,
 } from "react-icons/fi";
-import Register from "../Register";
+import { useNavigate } from "react-router";
 
 // Demo Data
 const crops = [
@@ -32,13 +30,6 @@ const reviews = [
   { customer: "M. Hossain", stars: 4, note: "Good produce, delivery ran a little late." },
 ];
 
-const listings = [
-  { id: "LST-1001", name: "Fresh Tomato", category: "Vegetables", stock: "120 kg", price: 62, unit: "kg", status: "Live" },
-  { id: "LST-1002", name: "Fresh Mango", category: "Fruits", stock: "75 kg", price: 95, unit: "kg", status: "Live" },
-  { id: "LST-1003", name: "Organic Spinach", category: "Leafy Greens", stock: "48 bundles", price: 18, unit: "bundle", status: "Live" },
-  { id: "LST-1004", name: "Farm Potato", category: "Vegetables", stock: "200 kg", price: 24, unit: "kg", status: "Draft" },
-];
-
 const statusColor = {
   Confirmed: "var(--color-success)",
   "Out for delivery": "var(--color-orange)",
@@ -46,11 +37,11 @@ const statusColor = {
 };
 
 export default function FarmerDashboard() {
+  const navigate = useNavigate();
   const [showListings, setShowListings] = useState(false);
 
   return (
     <div className="min-h-screen bg-base-100 text-base-content">
-        <Register/>
       {/* Main Content */}
       <div className={`transition-all duration-200 ${showListings ? "scale-[0.995] blur-sm" : ""}`}>
         
@@ -116,9 +107,9 @@ export default function FarmerDashboard() {
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { icon: FiPlus, text: "List a product", sub: "Add stock, set your baseline-linked price", action: () => setShowListings(true) },
-              { icon: null, text: "Request payout", sub: "৳18,240 available to withdraw", action: () => window.location.href = "/seller/payout" },
-              { icon: FiArrowUpRight, text: "Request price increase", sub: "Flag weather or yield conditions", action: () => window.location.href = "/seller/editproduct" },
+              { icon: FiPlus, text: "List a product", sub: "Add stock, set your baseline-linked price", action: () => navigate("/farmer/listings") },
+              { icon: null, text: "Request payout", sub: "৳18,240 available to withdraw", action: () => navigate("/farmer/revenue") },
+              { icon: FiArrowUpRight, text: "Request price increase", sub: "Flag weather or yield conditions", action: () => navigate("/farmer/listings") },
               { icon: null, text: "Verification status", sub: "Documents approved · listing live" },
             ].map((item, idx) => (
               <button
@@ -191,80 +182,6 @@ export default function FarmerDashboard() {
       </div>
 
       {/* Listings Overlay */}
-      {showListings && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-overlay px-4 py-8" onClick={() => setShowListings(false)}>
-          <div className="w-full max-w-5xl rounded-box bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-theme px-6 py-5">
-              <div>
-                <div className="flex items-center gap-2 text-primary">
-                  <FiPackage size={19} />
-                  <span className="text-xs font-bold uppercase tracking-wider">Seller listings</span>
-                </div>
-                <h2 className="mt-1 text-2xl font-extrabold">Your products</h2>
-                <p className="mt-1 text-sm text-muted-light">Manage the products currently available on FramFresh.</p>
-              </div>
-              <button type="button" onClick={() => setShowListings(false)} className="btn btn-circle btn-sm border-0 bg-base-200 hover:bg-error-soft hover:text-error">
-                <FiX size={18} />
-              </button>
-            </div>
-
-            {/* Listings Content */}
-            <div className="p-6">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {listings.map((listing) => (
-                  <div key={listing.id} className="rounded-box border border-theme bg-base-100 p-5 transition hover:border-primary hover:shadow-sm">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="text-lg font-extrabold">{listing.name}</div>
-                        <div className="mt-1 text-xs text-muted-light">{listing.category}</div>
-                      </div>
-                      <span className={`rounded-full px-3 py-1 text-xs font-bold ${listing.status === "Live" ? "bg-success-soft text-success" : "bg-warning-soft text-warning"}`}>
-                        {listing.status}
-                      </span>
-                    </div>
-                    
-                    <div className="mt-5 grid grid-cols-3 gap-3">
-                      <div className="rounded-field bg-base-200 p-3">
-                        <div className="text-xs text-muted-light">Stock</div>
-                        <div className="mt-1 text-sm font-bold">{listing.stock}</div>
-                      </div>
-                      <div className="rounded-field bg-base-200 p-3">
-                        <div className="text-xs text-muted-light">Price</div>
-                        <div className="mt-1 text-sm font-bold">৳{listing.price}</div>
-                      </div>
-                      <div className="rounded-field bg-base-200 p-3">
-                        <div className="text-xs text-muted-light">Unit</div>
-                        <div className="mt-1 text-sm font-bold">/{listing.unit}</div>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-4 flex items-center justify-between">
-                      <span className="text-xs text-muted-light">{listing.id}</span>
-                      <button type="button" className="btn btn-sm border-0 bg-primary-soft text-primary hover:bg-primary hover:text-primary-content">
-                        Manage <FiChevronRight size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <button type="button" className="mt-5 flex w-full items-center justify-center gap-2 rounded-box border border-dashed border-primary bg-primary-soft px-4 py-4 text-sm font-bold text-primary transition hover:bg-primary hover:text-primary-content">
-                <FiPlus size={17} /> Add new listing
-              </button>
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-between border-t border-theme bg-base-200 px-6 py-4">
-              <span className="text-xs text-muted-light">{listings.length} demo listings</span>
-              <button type="button" onClick={() => setShowListings(false)} className="btn btn-sm bg-neutral text-neutral-content hover:opacity-90">
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

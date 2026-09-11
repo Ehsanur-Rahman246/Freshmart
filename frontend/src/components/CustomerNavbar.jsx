@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { FaCartShopping } from "react-icons/fa6";
 import { IoNotifications } from "react-icons/io5";
-import { FaUserCircle, FaSearch } from "react-icons/fa";
-import { FiMenu } from "react-icons/fi";
+import { FaSearch } from "react-icons/fa";
+import { FiLogOut, FiMenu, FiUser } from "react-icons/fi";
 import Sidebar from "./Sidebar";
-import { logout } from "../lib/auth";
-import { useNavigate } from "react-router";
+import { logout } from "../api/auth";
+import { NavLink, useNavigate } from "react-router";
 
 const SearchBar = () => {
   return (
@@ -23,8 +23,76 @@ const SearchBar = () => {
   );
 };
 
-const CutomerNavbar = () => {
+const ProfileMenu = () => {
+  const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
+  return (
+    <div className="relative ml-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-content">
+      {/* Menu Button */}
+      <button
+        type="button"
+        className="btn btn-ghost btn-circle m-1 text-2xl"
+        onClick={() => setIsOpen((prev) => !prev)}
+        aria-label="Menu"
+      >
+        <FiUser className="text-2xl" />
+      </button>
+
+      {/* Menu */}
+      {isOpen && (
+        <ul className="absolute right-0 top-full z-2 mt-2 w-52 rounded-xl border border-theme-light bg-base-300 p-2 shadow-lg">
+          <li key={"profile"}>
+            <NavLink
+              to={"/customer/profile"}
+              onClick={() => setIsOpen(false)}
+              className={({ isActive }) =>
+                `relative flex items-center gap-3 rounded-lg px-3 py-2.5 font-semibold
+                  transition-colors duration-200 mb-2
+                  ${
+                    isActive
+                      ? "bg-primary-soft text-primary-active"
+                      : "text-base-content hover:bg-primary-soft hover:text-primary"
+                  }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <FiUser className="text-[17px]" />
+                  <span>Profile</span>
+
+                  {isActive && (
+                    <span className="absolute right-0 top-1/2 h-7 w-0.75 -translate-y-1/2 rounded-l-full bg-primary" />
+                  )}
+                </>
+              )}
+            </NavLink>
+          </li>
+          <li key={"logout"}>
+            <div
+              className="relative flex items-center gap-3 rounded-lg px-3 py-2.5 font-semibold transition-colors duration-200 text-base-content hover:bg-error/60 hover:text-error-content"
+              onClick={handleLogout}
+            >
+              <FiLogOut className="text-[17px]" />
+              <span>Log Out</span>
+            </div>
+          </li>
+        </ul>
+      )}
+    </div>
+  );
+};
+
+const CutomerNavbar = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchActive, setSearchActive] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -38,11 +106,6 @@ const CutomerNavbar = () => {
 
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  const handleLogout = async () => {
-    await logout();
-    navigate("/login");
-  }
 
   return (
     <>
@@ -103,23 +166,7 @@ const CutomerNavbar = () => {
 
           {/* Profile */}
           <div className="tooltip tooltip-bottom" data-tip="Profile">
-            <div className="dropdown dropdown-bottom dropdown-end">
-              <button
-                tabIndex={0}
-                className="btn btn-ghost btn-circle text-2xl"
-                aria-label="Profile"
-              >
-                <FaUserCircle className="text-primary" />
-              </button>
-
-              <ul
-                tabIndex={-1}
-                className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-              >
-                <button>Profile</button>
-                <button type="button" onClick={handleLogout}>Logout</button>
-              </ul>
-            </div>
+            <ProfileMenu/>
           </div>
         </div>
       </nav>

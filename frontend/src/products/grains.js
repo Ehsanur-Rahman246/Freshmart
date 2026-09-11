@@ -19,6 +19,7 @@ import Ata1 from "../assets/f1to7/07-ata.jpg";
 import Ata2 from "../assets/f29to35/34-ata.jpg";
 import Jowar from "../assets/f1to7/07-jowar.jpg";
 import Bajra from "../assets/f8to14/14-bajra.jpg";
+import Basmati from "../assets/f1to7/07-basmati.jpg";
 import Ramdana from "../assets/f22to28/26-ramdana.jpg";
 import Job from "../assets/f29to35/34-job.jpg";
 import Corn1 from "../assets/f1to7/05-corn.jpg";
@@ -32,6 +33,6 @@ export {
   Aman1, Aman2, Aman3, Aman4, Aman5, Aman6, Aman7, Aman8,
   Aus1, Aus2, Aus3,
   Ata1, Ata2,
-  Jowar, Bajra, Ramdana, Job,
+  Jowar, Bajra, Basmati, Ramdana, Job,
   Corn1, Corn2, Corn3, Corn4, Corn5
 };

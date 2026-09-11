@@ -68,17 +68,18 @@ const AppRoutes = () => {
 
       {/* ================= PUBLIC ROUTES ================= */}
 
-      <Route path="/" element={<Home />} />
+
+      <Route element={<GuestRoute/>}>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+      </Route>
       <Route path="/about" element={<About />} />
       <Route path="/marketplace" element={<Marketplace />} />
       <Route path="/products/:id" element={<ProductDetails />} />
       <Route path="/farms" element={<FarmInfo/>} />
       <Route path="/farms/:id" element={<FarmProfile />} />
 
-      <Route element={<GuestRoute/>}>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-      </Route>
 
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route
