@@ -155,6 +155,35 @@ const handleExpiredProducts = async () => {
       await product.save();
 
       await recordCompanySaleRevenue(product, quantitySold);
+
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + product.listingDuration);
+
+      const newProduct = await Product.create({
+        farmer: product.farmer,
+        farm: product.farm,
+        name: product.name,
+        description: product.description,
+        images: product.images,
+        category: product.category,
+        subCategory: product.subCategory,
+        season: product.season,
+        source: product.source,
+        price: product.price,
+        unit: product.unit,
+        stock: DEMO_RESTOCK_QUANTITY,
+        discountPercentage: product.discountPercentage,
+        listingDuration: product.listingDuration,
+        expiresAt,
+        status: "active",
+      });
+
+      const farm = await Farm.findById(product.farm);
+
+      if (farm) {
+        farm.products[product.season].push(newProduct._id);
+        await farm.save();
+      }
     } else {
       product.status = "expired";
       product.companySaleStage = "awaitingFarmerResponse";
