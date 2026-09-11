@@ -1,11 +1,8 @@
 import {
   GiMilkCarton,
   GiWheat,
-  GiChiliPepper,
   GiChicken,
   GiCow,
-  GiFruitBowl,
-  GiCarrot,
   GiField,
   GiGreenhouse,
   GiFruitTree,
