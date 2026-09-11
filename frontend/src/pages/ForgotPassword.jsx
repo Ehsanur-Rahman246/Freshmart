@@ -245,13 +245,37 @@ export default function ForgotPassword() {
         {/* Step 2: OTP */}
         {step === 2 && (
           <form onSubmit={verifyOTP} className="space-y-4">
-            <Input
+            <label className="text-muted text-[14px] flex justify-center">Enter OTP</label>
+            <div className="flex justify-center">
+              <label className="otp otp-primary">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <input
+                  type="text"
+                  value={otp}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, "");
+                    setOtp(value);
+                  }}
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  maxLength={6}
+                  pattern="[0-9]{6}"
+                  required
+                />
+              </label>
+            </div>
+            {/* <Input
               icon={FiMail}
               type="text"
               placeholder="Enter OTP"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
-            />
+            /> */}
             <button
               type="submit"
               disabled={loading}

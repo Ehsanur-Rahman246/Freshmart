@@ -8,8 +8,6 @@ import {
   FiMapPin,
   FiStar,
   FiShield,
-  FiTruck,
-  FiClock,
   FiCheckCircle,
   FiShoppingCart,
 } from "react-icons/fi";
@@ -65,7 +63,7 @@ const ProductDetails = () => {
     <main className="min-h-screen bg-base-100 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
         {/* Product section */}
-        <section className="rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm sm:p-6 lg:p-8">
+        <section className="rounded-2xl border border-base-300 bg-base-100 p-4 shadow-md sm:p-6 lg:p-8">
           <div className="grid gap-8 lg:grid-cols-[1fr_1fr] lg:gap-10">
             {/* Image gallery */}
             <div className="min-w-0">
@@ -93,7 +91,7 @@ const ProductDetails = () => {
                       ? "Remove product from favorites"
                       : "Add product to favorites"
                   }
-                  className={`btn btn-circle absolute right-4 top-4 border-0 bg-base-100 shadow-md hover:bg-base-100 ${
+                  className={`btn btn-circle absolute right-4 top-4 border-0 bg-base-100 shadow-md hover:bg-base-300 ${
                     isFavorite ? "text-error" : "text-base-content"
                   }`}
                 >
@@ -147,7 +145,6 @@ const ProductDetails = () => {
 
             {/* Product information */}
             <div className="flex flex-col">
-              <div className="flex items-start justify-between gap-4">
                 <div>
                   <h1 className="text-2xl font-extrabold tracking-tight text-base-content sm:text-3xl">
                     Fresh Tomatoes
@@ -167,29 +164,10 @@ const ProductDetails = () => {
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setIsFavorite((current) => !current)}
-                  aria-label={
-                    isFavorite
-                      ? "Remove product from favorites"
-                      : "Add product to favorites"
-                  }
-                  className={`btn btn-circle btn-sm shrink-0 border-base-300 bg-base-100 ${
-                    isFavorite ? "text-error" : ""
-                  }`}
-                >
-                  <FiHeart
-                    className="text-lg"
-                    fill={isFavorite ? "currentColor" : "none"}
-                  />
-                </button>
-              </div>
-
               {/* Rating */}
               <div className="mt-3 flex items-center gap-2 text-sm">
                 <span className="flex items-center gap-1 font-bold">
-                  <FiStar className="fill-warning text-warning" />
+                  <FiStar className="fill-secondary text-secondary" />
                   4.8
                 </span>
                 <span className="text-base-content/60">(120 reviews)</span>
@@ -230,7 +208,7 @@ const ProductDetails = () => {
               <div>
                 <p className="mb-2 text-sm font-bold">Quantity</p>
 
-                <div className="flex w-fit items-center overflow-hidden rounded-lg border border-base-300">
+                <div className="flex w-fit items-center overflow-hidden rounded-lg border border-base-300 bg-base-300">
                   <button
                     type="button"
                     onClick={decreaseQuantity}
@@ -269,7 +247,7 @@ const ProductDetails = () => {
                   type="button"
                   aria-label="Add product to favorites"
                   onClick={() => setIsFavorite((current) => !current)}
-                  className={`btn btn-square rounded-lg border-base-300 bg-base-100 ${
+                  className={`btn btn-square rounded-lg border-base-300 bg-base-300 hover:bg-base-100 ${
                     isFavorite ? "text-error" : ""
                   }`}
                 >
@@ -282,7 +260,7 @@ const ProductDetails = () => {
                 <button
                   type="button"
                   aria-label="Share product"
-                  className="btn btn-square rounded-lg border-base-300 bg-base-100"
+                  className="btn btn-square rounded-lg border-base-300 bg-base-300 hover:bg-base-100"
                 >
                   <FiShare2 className="text-xl" />
                 </button>
@@ -292,9 +270,9 @@ const ProductDetails = () => {
         </section>
 
         {/* Farmer information */}
-        <section className="mt-5 rounded-2xl border border-base-300 bg-base-100 p-5 shadow-sm sm:p-6">
+        <section className="mt-5 rounded-2xl border border-base-300 bg-base-100 p-5 shadow-md sm:p-6">
           <h2 className="text-sm font-extrabold text-base-content sm:text-base">
-            Farmer Information
+            Farm Information
           </h2>
 
           <div className="mt-5 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -322,7 +300,7 @@ const ProductDetails = () => {
                   </span>
 
                   <span className="flex items-center gap-1">
-                    <FiStar className="fill-warning text-warning" />
+                    <FiStar className="fill-secondary text-secondary" />
                     <strong className="text-base-content/80">4.9</strong>
                     (230 reviews)
                   </span>
@@ -332,61 +310,10 @@ const ProductDetails = () => {
 
             <button
               type="button"
-              className="btn btn-outline btn-sm w-full rounded-lg border-base-300 sm:w-auto sm:px-6"
+              className="btn btn-primary btn-sm w-full rounded-lg border-base-300 sm:w-auto sm:px-6"
             >
               View Farm
             </button>
-          </div>
-        </section>
-
-        {/* Small reassurance row */}
-        <section className="mt-5 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-base-300 bg-base-100 p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <FiShield className="text-xl" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-base-content">
-                  Secure Payment
-                </p>
-                <p className="mt-0.5 text-[11px] text-base-content/60">
-                  100% secure checkout
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-base-300 bg-base-100 p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <FiTruck className="text-xl" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-base-content">
-                  Fast Delivery
-                </p>
-                <p className="mt-0.5 text-[11px] text-base-content/60">
-                  2–3 days
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-base-300 bg-base-100 p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <FiClock className="text-xl" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-base-content">
-                  Easy Returns
-                </p>
-                <p className="mt-0.5 text-[11px] text-base-content/60">
-                  7 days return
-                </p>
-              </div>
-            </div>
           </div>
         </section>
       </div>

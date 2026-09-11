@@ -149,8 +149,8 @@ const CutomerNavbar = () => {
             <button
               className="btn btn-ghost btn-circle text-2xl"
               aria-label="Cart"
-            >
-              <FaCartShopping className="text-primary" />
+            ><NavLink to={"/customer/cart"}>
+              <FaCartShopping className="text-primary" /></NavLink>
             </button>
           </div>
 

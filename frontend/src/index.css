@@ -375,7 +375,7 @@
       color-mix(in srgb, var(--color-base-content) 8%, transparent),
       transparent
     );
-    animation: skeleton-shimmer 1.5s infinite;
+    animation: skeleton-shimmer 2s infinite;
   }
 
   @keyframes skeleton-shimmer {
