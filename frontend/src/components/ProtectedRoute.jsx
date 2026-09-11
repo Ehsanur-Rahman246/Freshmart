@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router";
 import { checkAuth } from "../lib/auth";
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import Loader from "./Loader";
 
 const ProtectedRoute = ({ role }) => {
   const [loading, setLoading] = useState(true);
@@ -26,9 +26,7 @@ const ProtectedRoute = ({ role }) => {
   }, []);
 
   if (loading) {
-    return <div className="min-h-screen flex justify-center items-center">
-      <DotLottieReact src="/loading-screen.json" loop autoplay className="w-128 h-128" />
-    </div>;
+    return <Loader/>;
   }
 
   if (!user) {

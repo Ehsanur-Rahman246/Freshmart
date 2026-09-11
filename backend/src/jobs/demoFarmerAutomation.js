@@ -17,6 +17,7 @@ import {
   DEMO_RESTOCK_QUANTITY,
 } from "../config/business.js";
 import { recordCompanySaleRevenue } from "../utils/recordRevenue.js";
+import notifyAdmin from "../utils/notifyAdmin.js";
 
 // 1. Demo orders: processing -> readyForPickup, automatically.
 const advanceDemoOrders = async () => {
@@ -44,6 +45,12 @@ const advanceDemoOrders = async () => {
         relatedOrder: order._id,
       });
     }
+    await notifyAdmin({
+      type: "readyForPickup",
+      title: "Order Ready for Pickup",
+      message: `Order ${order.orderNumber} is ready for pickup and needs a driver assigned.`,
+      relatedOrder: order._id,
+    });
   }
 };
 
@@ -137,12 +144,13 @@ const handleExpiredProducts = async () => {
 
     if (product.farmer?.isDemo) {
       const quantitySold = product.stock;
-      
+
       product.status = "soldToCompany";
       product.companySaleStage = "sold";
       product.companySalePrice = companySalePrice;
       product.company = DEMO_COMPANY_NAME;
       product.soldToCompanyAt = now;
+      product.stock = 0;
 
       await product.save();
 

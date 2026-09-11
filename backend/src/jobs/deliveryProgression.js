@@ -7,6 +7,7 @@ import Zone from "../models/Zone.js";
 import createNotification from "../utils/createNotification.js";
 import { recordSaleRevenue } from "../utils/recordRevenue.js";
 import transporter from "../config/nodemailer.js";
+import notifyAdmin from "../utils/notifyAdmin.js";
 import {
   HOUR_IN_MS,
   CRON_INTERVAL,
@@ -35,6 +36,15 @@ const advanceOrder = async (order) => {
       order.delivery.nextTransitionAt = new Date(
         now.getTime() + DISPATCH_HOURS * HOUR_IN_MS,
       );
+      if (order.delivery.driver?.driverId) {
+        const originZone = await Zone.findById(order.delivery.originZone);
+        if (originZone) {
+          await Driver.updateOne(
+            { _id: order.delivery.driver.driverId },
+            { $set: { currentZone: originZone.zoneId } },
+          );
+        }
+      }
 
       const farmer = await Farmer.findById(order.farmer).populate("user");
       if (farmer) {
@@ -238,6 +248,12 @@ const advanceOrder = async (order) => {
       }
 
       await recordSaleRevenue(order);
+      await notifyAdmin({
+        type: "delivered",
+        title: "Order Delivered",
+        message: `Order ${order.orderNumber} has been delivered.`,
+        relatedOrder: order._id,
+      });
 
       break;
     }

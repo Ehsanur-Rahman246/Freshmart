@@ -5,9 +5,29 @@
     <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Freshmart</title>
+    <style>
+    html, body {
+      background-color: hsl(40 30% 93%);
+    }
+  </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="initial-loader" style="min-height:100vh;display:flex;justify-content:center;align-items:center;">
+        <div id="lottie-loader" style="width:200px;height:200px;"></div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/lottie-web@5.12.2/build/player/lottie.min.js"></script>
+    <script>
+      lottie.loadAnimation({
+        container: document.getElementById("lottie-loader"),
+        path: "/loading-screen.json",
+        renderer: "svg",
+        loop: true,
+        autoplay: true,
+      });
+    </script>
     <!-- <script>
       if(!sessionStorage.getItem("alertShown")){
         window.alert("This is a demo project");

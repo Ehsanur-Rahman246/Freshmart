@@ -163,6 +163,7 @@ export const finalizeCompanySale = async (req, res) => {
     product.status = "soldToCompany";
     product.company = company.trim();
     product.soldToCompanyAt = new Date();
+    product.stock = 0;
 
     await product.save();
     await recordCompanySaleRevenue(product, quantitySold);
