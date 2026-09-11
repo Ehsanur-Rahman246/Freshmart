@@ -35,6 +35,8 @@ const notificationSchema = new mongoose.Schema(
         "paymentFailed",
         "productExpired",
         "reviewReceived",
+        "newCustomerRegistered",
+        "newFarmerRegistered",
       ],
       required: true,
     },

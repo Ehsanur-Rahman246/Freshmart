@@ -6,11 +6,13 @@ import Product from "../models/Product.js";
 import Farmer from "../models/Farmer.js";
 import Farm from "../models/Farm.js";
 import Zone from "../models/Zone.js";
+import Driver from "../models/Driver.js";
 import generateOrderNumber from "../utils/generateOrderNumber.js";
 import createNotification from "../utils/createNotification.js";
 import transporter from "../config/nodemailer.js";
 import computeDeliveryEstimate from "../utils/computeDeliveryEstimate.js";
 import { HOUR_IN_MS, DEMO_PROCESSING_HOURS } from "../config/time.js";
+import notifyAdmin from "../utils/notifyAdmin.js";
 
 export const getOrderById = async (req, res) => {
   try {
@@ -383,6 +385,13 @@ export const createOrder = async (req, res) => {
         relatedOrder: order._id,
       });
 
+      await notifyAdmin({
+        type: "orderPlaced",
+        title: "New Order Placed",
+        message: `Order ${order.orderNumber} was placed for ${data.farm.name}.`,
+        relatedOrder: order._id,
+      });
+
       // Demo farmers skip the manual accept step, so the customer-facing
       // acceptance/payment notifications fire immediately here instead of
       // waiting on acceptOrder().
@@ -684,6 +693,12 @@ export const cancelOrder = async (req, res) => {
         );
       }
     }
+    if (order.delivery.driver?.driverId) {
+      await Driver.updateOne(
+        { _id: order.delivery.driver.driverId },
+        { $set: { isAvailable: true } },
+      );
+    }
 
     const farmer = await Farmer.findById(order.farmer);
     if (farmer) {
@@ -696,6 +711,12 @@ export const cancelOrder = async (req, res) => {
         relatedOrder: order._id,
       });
     }
+    await notifyAdmin({
+      type: "orderCancelled",
+      title: "Order Cancelled",
+      message: `Order ${order.orderNumber} was cancelled by the customer.`,
+      relatedOrder: order._id,
+    });
 
     return res.status(200).json({
       success: true,
@@ -885,6 +906,13 @@ export const updateOrderStatus = async (req, res) => {
         });
       }
     }
+
+    await notifyAdmin({
+      type: "readyForPickup",
+      title: "Order Ready for Pickup",
+      message: `Order ${order.orderNumber} is ready for pickup and needs a driver assigned.`,
+      relatedOrder: order._id,
+    });
 
     return res.status(200).json({
       success: true,
@@ -1078,6 +1106,12 @@ export const rejectOrder = async (req, res) => {
         relatedOrder: order._id,
       });
     }
+    await notifyAdmin({
+      type: "orderRejected",
+      title: "Order Rejected",
+      message: `Order ${order.orderNumber} was rejected by the farmer.`,
+      relatedOrder: order._id,
+    });
 
     return res.status(200).json({
       success: true,

@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import transporter from "../config/nodemailer.js";
 import Customer from "../models/Customer.js";
 import Farmer from "../models/Farmer.js";
+import notifyAdmin from "../utils/notifyAdmin.js";
 
 export const register = async (req, res) => {
   try {
@@ -62,12 +63,22 @@ export const register = async (req, res) => {
       await Customer.create({
         user: user._id,
       });
+      await notifyAdmin({
+        type: "newCustomerRegistered",
+        title: "New Customer Registered",
+        message: `A new customer, ${user.name}, has registered.`,
+      });
     }
 
     //farmer doc
     if (user.role === "farmer") {
       await Farmer.create({
         user: user._id,
+      });
+      await notifyAdmin({
+        type: "newFarmerRegistered",
+        title: "New Farmer Registered",
+        message: `A new farmer, ${user.name}, has registered.`,
       });
     }
 
