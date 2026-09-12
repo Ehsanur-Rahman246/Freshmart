@@ -1,6 +1,7 @@
 import { NavLink } from "react-router";
 import {
   FiHome,
+  FiShoppingCart,
   FiShoppingBag,
   FiPackage,
   FiHeart,
@@ -14,6 +15,11 @@ const Menu = ({ setSidebarOpen }) => {
       path: "/customer",
       icon: FiHome,
       end: true,
+    },
+    {
+      name: "Cart",
+      path: "/customer/cart",
+      icon: FiShoppingCart,
     },
     {
       name: "Market",

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   FiCreditCard,
   FiPackage,
@@ -126,10 +127,12 @@ const MobileMenu = () => {
 const ProfileMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const handleLogout = async () => {
     try {
       await logout();
+      queryClient.invalidateQueries({ queryKey: ["viewer"] });
       navigate("/login");
     } catch (error) {
       console.error("Logout failed:", error);

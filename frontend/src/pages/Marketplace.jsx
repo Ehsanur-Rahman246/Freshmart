@@ -49,6 +49,7 @@ const Marketplace = () => {
               name={product.name}
               src={product.farm?.name}
               price={product.price}
+              unit={product.unit}
               badge={getCategoryIcon(product.source)}
             />
           ))}

@@ -1,126 +1,89 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import {
   FiArrowRight,
-  FiCheck,
   FiMinus,
   FiPlus,
   FiShoppingCart,
   FiTag,
   FiTrash2,
 } from "react-icons/fi";
-
-const INITIAL_CART = [
-  {
-    id: 1,
-    name: "Fresh Tomatoes",
-    category: "Fresh Vegetables",
-    price: 85,
-    unit: "kg",
-    quantity: 2,
-    image:
-      "https://images.unsplash.com/photo-1546094096-0df4bcaaa337?auto=format&fit=crop&w=300&q=80",
-  },
-  {
-    id: 2,
-    name: "Fresh Broccoli",
-    category: "Green Vegetables",
-    price: 140,
-    unit: "kg",
-    quantity: 1,
-    image:
-      "https://images.unsplash.com/photo-1459411621453-7b03977f4bfc?auto=format&fit=crop&w=300&q=80",
-  },
-  {
-    id: 3,
-    name: "Fresh Carrots",
-    category: "Root Vegetables",
-    price: 110,
-    unit: "kg",
-    quantity: 1,
-    image:
-      "https://images.unsplash.com/photo-1445282768818-728615cc910a?auto=format&fit=crop&w=300&q=80",
-  },
-  {
-    id: 4,
-    name: "Fresh Tomatoes",
-    category: "Fresh Vegetables",
-    price: 85,
-    unit: "kg",
-    quantity: 2,
-    image:
-      "https://images.unsplash.com/photo-1546094096-0df4bcaaa337?auto=format&fit=crop&w=300&q=80",
-  },
-  {
-    id: 5,
-    name: "Fresh Broccoli",
-    category: "Green Vegetables",
-    price: 140,
-    unit: "kg",
-    quantity: 1,
-    image:
-      "https://images.unsplash.com/photo-1459411621453-7b03977f4bfc?auto=format&fit=crop&w=300&q=80",
-  },
-  {
-    id: 6,
-    name: "Fresh Carrots",
-    category: "Root Vegetables",
-    price: 110,
-    unit: "kg",
-    quantity: 1,
-    image:
-      "https://images.unsplash.com/photo-1445282768818-728615cc910a?auto=format&fit=crop&w=300&q=80",
-  },
-];
+import { getCart, updateCartItem, removeFromCart } from "../../api/cart";
 
 const Cart = () => {
   const navigate = useNavigate();
-localStorage.setItem("freshmart-cart", INITIAL_CART)
-  const [cartItems, setCartItems] = useState(() => {
-    try {
-      const savedCart = localStorage.getItem("freshmart-cart");
-
-      return savedCart ? JSON.parse(savedCart) : INITIAL_CART;
-    } catch {
-      return INITIAL_CART;
-    }
-  });
+  const queryClient = useQueryClient();
 
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
 
-  useEffect(() => {
-    localStorage.setItem("freshmart-cart", JSON.stringify(cartItems));
-  }, [cartItems]);
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["cart"],
+    queryFn: async () => (await getCart()).data.cart,
+  });
+
+  const cartItems = data ?? [];
+
+  const updateQuantityMutation = useMutation({
+    mutationFn: ({ productId, quantity }) =>
+      updateCartItem(productId, { quantity }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+    },
+    onError: (error) => {
+      toast.error(error?.response?.data?.message || "Could not update quantity");
+    },
+  });
+
+  const removeItemMutation = useMutation({
+    mutationFn: (productId) => removeFromCart(productId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+    },
+    onError: (error) => {
+      toast.error(error?.response?.data?.message || "Could not remove item");
+    },
+  });
+
+  const getEffectivePrice = (product) => {
+    const discountPct = product.discountPercentage || 0;
+    return Math.round(product.price * (1 - discountPct / 100) * 100) / 100;
+  };
 
   const subtotal = useMemo(() => {
-    return cartItems.reduce(
-      (total, item) => total + item.price * item.quantity,
-      0
-    );
+    return cartItems.reduce((total, item) => {
+      if (!item.product) return total;
+      return total + getEffectivePrice(item.product) * item.quantity;
+    }, 0);
   }, [cartItems]);
 
   const discount = promoApplied ? Math.round(subtotal * 0.1) : 0;
   const deliveryFee = subtotal > 0 ? 50 : 0;
   const total = subtotal - discount + deliveryFee;
 
-  const updateQuantity = (id, change) => {
-    setCartItems((items) =>
-      items
-        .map((item) => {
-          if (item.id !== id) return item;
+  const updateQuantity = (item, change) => {
+    const newQuantity = item.quantity + change;
 
-          return {
-            ...item,
-            quantity: Math.max(1, item.quantity + change),
-          };
-        })
-        .filter((item) => item.quantity > 0)
-    );
+    if (newQuantity < 1) {
+      removeItemMutation.mutate(item.product._id);
+      return;
+    }
+
+    if (newQuantity > item.product.stock) {
+      toast.error("Requested quantity exceeds available stock");
+      return;
+    }
+
+    updateQuantityMutation.mutate({
+      productId: item.product._id,
+      quantity: newQuantity,
+    });
   };
 
-  const removeItem = (id) => {
-    setCartItems((items) => items.filter((item) => item.id !== id));
+  const removeItem = (productId) => {
+    removeItemMutation.mutate(productId);
   };
 
   const applyPromo = () => {
@@ -132,9 +95,28 @@ localStorage.setItem("freshmart-cart", INITIAL_CART)
   };
 
   const handleCheckout = () => {
-    localStorage.setItem("freshmart-cart", JSON.stringify(cartItems));
     navigate("/customer/checkout");
   };
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-base-200/40 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl text-center py-16 text-muted">
+          Loading your cart...
+        </div>
+      </main>
+    );
+  }
+
+  if (isError) {
+    return (
+      <main className="min-h-screen bg-base-200/40 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl text-center py-16 text-error">
+          Couldn't load your cart. Please try again.
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-base-200/40 px-4 py-6 sm:px-6 lg:px-8">
@@ -154,7 +136,7 @@ localStorage.setItem("freshmart-cart", INITIAL_CART)
               Your Cart
             </h1>
             <p className="mt-1 text-sm text-muted">
-              Fresh vegetables, ready for your kitchen.
+              Fresh groceries, farm to your door
             </p>
           </div>
 
@@ -190,17 +172,10 @@ localStorage.setItem("freshmart-cart", INITIAL_CART)
             {/* ================= CART ITEMS ================= */}
             <section className="overflow-hidden rounded-2xl border border-theme bg-base-100 shadow-sm">
 
-              {/* Select all */}
               <div className="flex items-center justify-between border-b border-theme-light px-5 py-4 sm:px-6">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-5 w-5 items-center justify-center rounded border-2 border-primary bg-primary text-white">
-                    <FiCheck size={13} strokeWidth={3} />
-                  </div>
-
-                  <span className="text-sm font-bold sm:text-base">
-                    Select All
-                  </span>
-                </div>
+                <span className="text-sm font-bold sm:text-base">
+                  Items in Cart
+                </span>
 
                 <span className="text-sm text-muted">
                   {cartItems.length} products
@@ -209,87 +184,97 @@ localStorage.setItem("freshmart-cart", INITIAL_CART)
 
               {/* Items */}
               <div>
-                {cartItems.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className={`flex gap-4 px-5 py-5 sm:px-6 ${
-                      index !== cartItems.length - 1
-                        ? "border-b border-theme-light"
-                        : ""
-                    }`}
-                  >
-                    {/* Checkbox */}
-                    <div className="hidden pt-2 sm:block">
-                      <div className="flex h-5 w-5 items-center justify-center rounded border-2 border-primary bg-primary text-white">
-                        <FiCheck size={13} strokeWidth={3} />
-                      </div>
-                    </div>
+                {cartItems.map((item, index) => {
+                  const product = item.product;
 
-                    {/* Product Image */}
-                    <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-base-200 sm:h-28 sm:w-28">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
+                  if (!product) return null;
 
-                    {/* Product Info */}
-                    <div className="flex min-w-0 flex-1 flex-col justify-between gap-3">
-                      <div className="pr-1">
-                        <p className="text-xs font-semibold text-primary">
-                          {item.category}
-                        </p>
+                  const effectivePrice = getEffectivePrice(product);
 
-                        <h3 className="mt-0.5 text-base font-extrabold sm:text-lg">
-                          {item.name}
-                        </h3>
-
-                        <p className="mt-1 text-sm text-muted">
-                          ৳{item.price} / {item.unit}
-                        </p>
+                  return (
+                    <div
+                      key={item._id}
+                      className={`flex gap-4 px-5 py-5 sm:px-6 ${
+                        index !== cartItems.length - 1
+                          ? "border-b border-theme-light"
+                          : ""
+                      }`}
+                    >
+                      {/* Product Image */}
+                      <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-base-200 sm:h-28 sm:w-28">
+                        <img
+                          src={product.images?.[0]?.url}
+                          alt={product.name}
+                          className="h-full w-full object-cover"
+                        />
                       </div>
 
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <p className="text-lg font-extrabold">
-                          ৳{item.price * item.quantity}
-                        </p>
+                      {/* Product Info */}
+                      <div className="flex min-w-0 flex-1 flex-col justify-between gap-3">
+                        <div className="pr-1">
+                          <p className="text-xs font-semibold text-primary">
+                            {product.farm?.name}
+                          </p>
 
-                        {/* Quantity */}
-                        <div className="flex h-9 items-center overflow-hidden rounded-lg border border-theme bg-base-100">
-                          <button
-                            onClick={() => updateQuantity(item.id, -1)}
-                            className="flex h-full w-9 items-center justify-center text-muted transition hover:bg-primary-soft hover:text-primary"
-                            aria-label={`Decrease ${item.name}`}
-                          >
-                            <FiMinus size={14} />
-                          </button>
+                          <h3 className="mt-0.5 text-base font-extrabold sm:text-lg">
+                            {product.name}
+                          </h3>
 
-                          <span className="flex min-w-10 items-center justify-center border-x border-theme px-2 text-sm font-bold">
-                            {item.quantity}
-                          </span>
+                          <p className="mt-1 text-sm text-muted">
+                            ৳{effectivePrice} / {product.unit}
+                          </p>
 
-                          <button
-                            onClick={() => updateQuantity(item.id, 1)}
-                            className="flex h-full w-9 items-center justify-center text-muted transition hover:bg-primary-soft hover:text-primary"
-                            aria-label={`Increase ${item.name}`}
-                          >
-                            <FiPlus size={14} />
-                          </button>
+                          {product.status !== "active" && (
+                            <p className="mt-1 text-xs font-bold text-error">
+                              This item is no longer available
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <p className="text-lg font-extrabold">
+                            ৳{Math.round(effectivePrice * item.quantity * 100) / 100}
+                          </p>
+
+                          {/* Quantity */}
+                          <div className="flex h-9 items-center overflow-hidden rounded-lg border border-theme bg-base-100">
+                            <button
+                              onClick={() => updateQuantity(item, -1)}
+                              disabled={updateQuantityMutation.isPending}
+                              className="flex h-full w-9 items-center justify-center text-muted transition hover:bg-primary-soft hover:text-primary"
+                              aria-label={`Decrease ${product.name}`}
+                            >
+                              <FiMinus size={14} />
+                            </button>
+
+                            <span className="flex min-w-10 items-center justify-center border-x border-theme px-2 text-sm font-bold">
+                              {item.quantity}
+                            </span>
+
+                            <button
+                              onClick={() => updateQuantity(item, 1)}
+                              disabled={updateQuantityMutation.isPending}
+                              className="flex h-full w-9 items-center justify-center text-muted transition hover:bg-primary-soft hover:text-primary"
+                              aria-label={`Increase ${product.name}`}
+                            >
+                              <FiPlus size={14} />
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Delete */}
-                    <button
-                      onClick={() => removeItem(item.id)}
-                      className="self-start rounded-lg p-2 text-error transition hover:bg-error-soft"
-                      aria-label={`Remove ${item.name}`}
-                    >
-                      <FiTrash2 size={18} />
-                    </button>
-                  </div>
-                ))}
+                      {/* Delete */}
+                      <button
+                        onClick={() => removeItem(product._id)}
+                        disabled={removeItemMutation.isPending}
+                        className="self-start rounded-lg p-2 text-error transition hover:bg-error-soft"
+                        aria-label={`Remove ${product.name}`}
+                      >
+                        <FiTrash2 size={18} />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Continue Shopping */}

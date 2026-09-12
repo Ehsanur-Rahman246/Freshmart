@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   FiUser,
   FiLock,
@@ -35,6 +36,7 @@ const Input = ({
 
 export default function Login() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // State
   const [showPassword, setShowPassword] = useState(false);
@@ -71,6 +73,7 @@ export default function Login() {
 
       if (data.success) {
         const { user } = data;
+        await queryClient.invalidateQueries({ queryKey: ["viewer"] });
         goToPage(user);
       }
     } catch (error) {
