@@ -1527,7 +1527,7 @@ export const placeDemoOrder = async ({ userId, addressId }) => {
 // Cancels an order outside the normal customer-initiated HTTP flow (e.g.
 // no driver was available). Duplicates cancelOrder's logic since there's
 // no req/res here, and adds an optional system-generated reason.
-export const autoCancelOrder = async (order, customer, reason) => {
+export const autoCancelOrder = async ({order, customer, reason}) => {
   try {
     const REFUND_TIERS = {
       pendingAcceptance: 100,
