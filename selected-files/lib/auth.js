@@ -3,6 +3,7 @@ import api from "../api/api";
 export const register = (data) => api.post("/auth/register", data);
 export const login = (data) => api.post("/auth/login", data);
 export const logout = () => api.post("/auth/logout");
+export const updateProfile = (data) => api.patch("/auth/update-profile", data);
 export const deleteAccount = (data) =>
   api.delete("/auth/delete-account", { data });
 export const sendVerificationOtp = () =>
