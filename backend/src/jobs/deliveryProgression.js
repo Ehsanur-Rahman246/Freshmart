@@ -191,7 +191,7 @@ const advanceOrder = async (order) => {
           relatedOrder: order._id,
         });
 
-        if (customer.user.email) {
+        if (!customer.isDemo && customer.user.email) {
           try {
             await transporter.sendMail({
               from: process.env.EMAIL_USER,
@@ -225,7 +225,7 @@ const advanceOrder = async (order) => {
           relatedOrder: order._id,
         });
 
-        if (!order.isDemoOrder && farmer.user.email) {
+        if (!farmer.isDemo && farmer.user.email) {
           try {
             await transporter.sendMail({
               from: process.env.EMAIL_USER,

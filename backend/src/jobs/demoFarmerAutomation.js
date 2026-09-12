@@ -18,6 +18,8 @@ import {
 } from "../config/business.js";
 import { recordCompanySaleRevenue } from "../utils/recordRevenue.js";
 import notifyAdmin from "../utils/notifyAdmin.js";
+import { tryAutoAssignDriver } from "../controllers/deliveryControllers.js";
+import { autoCancelOrder } from "../controllers/orderControllers.js";
 
 // 1. Demo orders: processing -> readyForPickup, automatically.
 const advanceDemoOrders = async () => {
@@ -44,7 +46,26 @@ const advanceDemoOrders = async () => {
         message: "Your order has been prepared and is ready for pickup.",
         relatedOrder: order._id,
       });
+
+      // Demo customers skip the admin driver-assignment queue: try once,
+      // auto-cancel if nobody's available right now.
+      if (customer.isDemo) {
+        const driverAssigned = await tryAutoAssignDriver(order);
+
+        if (!driverAssigned) {
+          await autoCancelOrder({
+            order,
+            customer,
+            reason: "No driver was available for this order",
+          });
+
+          // Order is now cancelled — skip the admin notification below,
+          // there's nothing for an admin to act on.
+          continue;
+        }
+      }
     }
+
     await notifyAdmin({
       type: "readyForPickup",
       title: "Order Ready for Pickup",

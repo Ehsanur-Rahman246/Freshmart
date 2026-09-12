@@ -44,3 +44,11 @@ export const DEMO_RESTOCK_GAP_HOURS = 6;
 // How long a REAL farmer has to respond to an expired listing's
 // company-sale offer before it's auto-rejected.
 export const FARMER_RESPONSE_WINDOW_HOURS = 72;
+
+// --- Demo customer automation timing ---
+
+// How often the demo customer job runs. This is real wall-clock time,
+// unrelated to HOUR_IN_MS (which only scales the delivery simulation) —
+// "once per day" here always means a real 24-hour period regardless of
+// demo/real delivery speed.
+export const DEMO_CUSTOMER_CRON_INTERVAL = "0 0 * * *"; // every day at midnight

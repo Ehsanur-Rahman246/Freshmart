@@ -13,6 +13,7 @@ import transporter from "../config/nodemailer.js";
 import computeDeliveryEstimate from "../utils/computeDeliveryEstimate.js";
 import { HOUR_IN_MS, DEMO_PROCESSING_HOURS } from "../config/time.js";
 import notifyAdmin from "../utils/notifyAdmin.js";
+import { tryAutoAssignDriver } from "./deliveryControllers.js";
 
 export const getOrderById = async (req, res) => {
   try {
@@ -905,6 +906,20 @@ export const updateOrderStatus = async (req, res) => {
           relatedOrder: order._id,
         });
       }
+
+      // Demo customers skip the admin driver-assignment queue: try once,
+      // auto-cancel if nobody's available right now.
+      if (customer.isDemo) {
+        const driverAssigned = await tryAutoAssignDriver(order);
+
+        if (!driverAssigned) {
+          await autoCancelOrder({
+            order,
+            customer,
+            reason: "No driver was available for this order",
+          });
+        }
+      }
     }
 
     await notifyAdmin({
@@ -992,7 +1007,7 @@ export const acceptOrder = async (req, res) => {
       }
     }
 
-    if (customer.user.email) {
+    if (!customer.isDemo && customer.user.email) {
       try {
         await transporter.sendMail({
           from: process.env.EMAIL_USER,
@@ -1275,5 +1290,374 @@ export const getOrdersByFarm = async (req, res) => {
       success: false,
       message: "Internal server error",
     });
+  }
+};
+
+// Places an order on behalf of a demo customer. Duplicates createOrder's
+// logic rather than reusing it, since this always forces cashOnDelivery
+// and never redeems points, and doesn't have a req/res to work with.
+export const placeDemoOrder = async ({ userId, addressId }) => {
+  try {
+    const customer = await Customer.findOne({
+      user: userId,
+    }).populate("cart.product");
+
+    if (!customer) {
+      return { success: false, message: "Customer profile not found" };
+    }
+
+    if (customer.cart.length === 0) {
+      return { success: false, message: "Cart is empty" };
+    }
+
+    const selectedAddress = customer.addresses.id(addressId);
+
+    if (!selectedAddress) {
+      return { success: false, message: "Delivery address not found" };
+    }
+
+    const destinationZone = await Zone.findOne({
+      districts: selectedAddress.district,
+    });
+
+    if (!destinationZone) {
+      return { success: false, message: "Delivery zone not found for this district" };
+    }
+
+    // Group cart items by farm
+    const farmOrders = new Map();
+
+    for (const cartItem of customer.cart) {
+      const product = cartItem.product;
+
+      if (!product) continue;
+      if (product.status !== "active") continue;
+      if (product.expiresAt && product.expiresAt <= new Date()) continue;
+      if (product.stock < cartItem.quantity) continue;
+
+      const farmId = product.farm.toString();
+
+      if (!farmOrders.has(farmId)) {
+        farmOrders.set(farmId, []);
+      }
+
+      farmOrders.get(farmId).push({
+        product,
+        quantity: cartItem.quantity,
+      });
+    }
+
+    if (farmOrders.size === 0) {
+      return { success: false, message: "No valid items in cart" };
+    }
+
+    const farmData = [];
+
+    for (const [farmId, items] of farmOrders.entries()) {
+      const farm = await Farm.findById(farmId);
+      if (!farm) continue;
+
+      const farmer = await Farmer.findById(farm.farmer);
+      if (!farmer) continue;
+
+      const originZone = await Zone.findOne({
+        districts: farm.location.district,
+      });
+      if (!originZone) continue;
+
+      const orderItems = [];
+      let itemsTotal = 0;
+      let discountAmount = 0;
+
+      for (const item of items) {
+        const originalUnitPrice = item.product.price;
+        const discountPct = item.product.discountPercentage || 0;
+
+        const effectiveUnitPrice =
+          Math.round(originalUnitPrice * (1 - discountPct / 100) * 100) / 100;
+
+        const subtotal =
+          Math.round(effectiveUnitPrice * item.quantity * 100) / 100;
+
+        const originalSubtotal = originalUnitPrice * item.quantity;
+
+        discountAmount += originalSubtotal - subtotal;
+        itemsTotal += subtotal;
+
+        orderItems.push({
+          product: item.product._id,
+          name: item.product.name,
+          price: effectiveUnitPrice,
+          quantity: item.quantity,
+          unit: item.product.unit,
+          subtotal,
+        });
+      }
+
+      farmData.push({
+        farm,
+        farmer,
+        originZone,
+        orderItems,
+        itemsTotal,
+        discountAmount,
+        items,
+      });
+    }
+
+    if (farmData.length === 0) {
+      return { success: false, message: "No valid farm orders could be created" };
+    }
+
+    const orderGroup = new mongoose.Types.ObjectId();
+    const createdOrders = [];
+
+    for (const data of farmData) {
+      const { estimatedHours, deliveryCharge } = computeDeliveryEstimate(
+        data.originZone,
+        destinationZone,
+      );
+
+      const total = data.itemsTotal + deliveryCharge;
+
+      const estimatedDeliveryAt = new Date(
+        Date.now() + estimatedHours * 60 * 60 * 1000,
+      );
+
+      const isDemoFarmer = data.farmer.isDemo === true;
+      const orderNumber = await generateOrderNumber();
+
+      const order = await Order.create({
+        customer: customer._id,
+        orderGroup,
+        orderNumber,
+        farmer: data.farmer._id,
+        farm: data.farm._id,
+        items: data.orderItems,
+
+        deliveryAddress: {
+          name: selectedAddress.recipientName,
+          phone: selectedAddress.phone,
+          district: selectedAddress.district,
+          upazila: selectedAddress.upazila,
+          village: selectedAddress.village,
+          address: selectedAddress.address,
+        },
+
+        pricing: {
+          itemsTotal: data.itemsTotal,
+          deliveryCharge,
+          discount: data.discountAmount,
+          pointsRedeemed: 0,
+          total,
+        },
+
+        payment: {
+          method: "cashOnDelivery",
+          status: "pending",
+        },
+
+        delivery: {
+          originZone: data.originZone._id,
+          destinationZone: destinationZone._id,
+          estimatedHours,
+          estimatedDeliveryAt,
+        },
+
+        status: isDemoFarmer ? "processing" : "pendingAcceptance",
+        isDemoOrder: isDemoFarmer,
+        processingReadyAt: isDemoFarmer
+          ? new Date(Date.now() + DEMO_PROCESSING_HOURS * HOUR_IN_MS)
+          : null,
+      });
+
+      await createNotification({
+        recipient: data.farmer.user,
+        recipientRole: "farmer",
+        type: "orderPlaced",
+        title: "New Order Received",
+        message: "You have received a new order from a customer.",
+        relatedOrder: order._id,
+      });
+
+      await notifyAdmin({
+        type: "orderPlaced",
+        title: "New Order Placed",
+        message: `Order ${order.orderNumber} was placed for ${data.farm.name}.`,
+        relatedOrder: order._id,
+      });
+
+      if (isDemoFarmer) {
+        await createNotification({
+          recipient: customer.user,
+          recipientRole: "customer",
+          type: "orderAccepted",
+          title: "Order Accepted",
+          message: "The farmer has accepted your order and is preparing it.",
+          relatedOrder: order._id,
+        });
+      }
+
+      createdOrders.push(order);
+
+      for (const item of data.items) {
+        await Product.updateOne(
+          { _id: item.product._id },
+          { $inc: { stock: -item.quantity } },
+        );
+      }
+    }
+
+    customer.cart = [];
+    await customer.save();
+
+    return {
+      success: true,
+      message: "Demo order placed successfully",
+      orderGroup,
+      orders: createdOrders,
+    };
+  } catch (error) {
+    console.error("placeDemoOrder error:", error);
+
+    return { success: false, message: "Internal server error" };
+  }
+};
+
+// Cancels an order outside the normal customer-initiated HTTP flow (e.g.
+// no driver was available). Duplicates cancelOrder's logic since there's
+// no req/res here, and adds an optional system-generated reason.
+export const autoCancelOrder = async ({order, customer, reason}) => {
+  try {
+    const REFUND_TIERS = {
+      pendingAcceptance: 100,
+      processing: 100,
+      readyForPickup: 100,
+      pickedUp: 70,
+      toOriginCenter: 40,
+      inTransit: 40,
+      toDestinationCenter: 40,
+    };
+
+    if (!(order.status in REFUND_TIERS)) {
+      return { success: false, message: "This order can no longer be cancelled" };
+    }
+
+    const refundPercentage = REFUND_TIERS[order.status];
+    const wasPrePickup = [
+      "pendingAcceptance",
+      "processing",
+      "readyForPickup",
+    ].includes(order.status);
+
+    order.status = "cancelled";
+    order.cancelledAt = new Date();
+
+    if (order.pricing.pointsRedeemed > 0) {
+      customer.pointsBalance += order.pricing.pointsRedeemed;
+    }
+
+    const refundAmount = Math.round(
+      order.pricing.total * (refundPercentage / 100),
+    );
+
+    if (order.payment.method === "online") {
+      if (order.payment.status === "paid") {
+        customer.pointsBalance += refundAmount;
+        order.payment.status = "refunded";
+      }
+    } else if (order.payment.method === "cashOnDelivery") {
+      const forfeitedPercentage = 100 - refundPercentage;
+
+      if (forfeitedPercentage > 0) {
+        customer.debtBalance += Math.round(
+          order.pricing.total * (forfeitedPercentage / 100),
+        );
+      }
+    }
+
+    order.refund = {
+      percentage: refundPercentage,
+      amount: refundAmount,
+    };
+
+    await order.save();
+    await customer.save();
+
+    if (wasPrePickup) {
+      for (const item of order.items) {
+        await Product.updateOne(
+          { _id: item.product },
+          { $inc: { stock: item.quantity } },
+        );
+      }
+    }
+    if (order.delivery.driver?.driverId) {
+      await Driver.updateOne(
+        { _id: order.delivery.driver.driverId },
+        { $set: { isAvailable: true } },
+      );
+    }
+
+    const farmer = await Farmer.findById(order.farmer).populate("user");
+    if (farmer) {
+      await createNotification({
+        recipient: farmer.user._id,
+        recipientRole: "farmer",
+        type: "orderCancelled",
+        title: "Order Cancelled",
+        message: reason
+          ? `Order ${order.orderNumber} was cancelled: ${reason}`
+          : "An order has been cancelled.",
+        relatedOrder: order._id,
+      });
+
+      if (!farmer.isDemo && farmer.user?.email) {
+        try {
+          await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: farmer.user.email,
+            subject: "An Order Has Been Cancelled",
+            html: `
+              <h2>Order Cancelled</h2>
+              <p>Hello ${farmer.user.name || "Farmer"},</p>
+              <p>
+                Order <strong>${order.orderNumber}</strong> has been cancelled${
+                  reason ? `: ${reason}` : "."
+                }
+              </p>
+            `,
+          });
+        } catch (emailError) {
+          console.error("Failed to send order-cancelled email:", emailError);
+        }
+      }
+    }
+
+    if (reason) {
+      await createNotification({
+        recipient: customer.user._id || customer.user,
+        recipientRole: "customer",
+        type: "orderCancelled",
+        title: "Order Cancelled",
+        message: reason,
+        relatedOrder: order._id,
+      });
+    }
+
+    await notifyAdmin({
+      type: "orderCancelled",
+      title: "Order Cancelled",
+      message: reason
+        ? `Order ${order.orderNumber} was auto-cancelled: ${reason}`
+        : `Order ${order.orderNumber} was cancelled.`,
+      relatedOrder: order._id,
+    });
+
+    return { success: true, message: "Order cancelled successfully", order };
+  } catch (error) {
+    console.error("autoCancelOrder error:", error);
+
+    return { success: false, message: "Internal server error" };
   }
 };
