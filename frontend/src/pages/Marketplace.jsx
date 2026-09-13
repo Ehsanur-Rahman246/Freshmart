@@ -4,6 +4,9 @@ import ProductCardSkeleton from "../components/ProductCardSkeleton";
 import Pagination from "../components/Pagination";
 import { useProducts } from "../hooks/useProducts";
 import { getCategoryIcon } from "../utils/categoryIcons";
+import { getWishlist } from "../api/customer";
+import { useViewer } from "../hooks/useViewer";
+import { useQuery } from "@tanstack/react-query";
 
 const SKELETON_COUNT = 10;
 
@@ -11,8 +14,20 @@ const Marketplace = () => {
   const [page, setPage] = useState(1);
   const { data, isLoading, isError } = useProducts(page, 50);
 
+  const { role } = useViewer();
+
+  const { data: wishlistData } = useQuery({
+    queryKey: ["wishlist"],
+    queryFn: () => getWishlist().then((res) => res.data),
+    enabled: role === "customer",
+  });
+
   const products = data?.products ?? [];
   const totalPages = data?.totalPages ?? 1;
+
+  const wishlistedIds = new Set(
+    (wishlistData?.wishlist ?? []).map((p) => p._id),
+  );
 
   const handlePageChange = (nextPage) => {
     setPage(nextPage);
@@ -51,12 +66,17 @@ const Marketplace = () => {
               price={product.price}
               unit={product.unit}
               badge={getCategoryIcon(product.source)}
+              isWishlisted={wishlistedIds.has(product._id)}
             />
           ))}
       </div>
 
       {!isLoading && !isError && (
-        <Pagination page={page} totalPages={totalPages} onPageChange={handlePageChange} />
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+        />
       )}
     </div>
   );

@@ -121,7 +121,7 @@ const ProductCard = ({
       </div>
 
       <div className="flex items-center ml-1 gap-0.5 min-w-0">
-        <p className="pt-2 ml-1 text-2xl truncate">{name}</p>
+        <p className="pt-2 ml-1 text-[20px] truncate">{name}</p>
         {Badge && (
           <Badge className="size-4 ml-auto mr-1 text-primary-active shrink-0" />
         )}
@@ -130,7 +130,7 @@ const ProductCard = ({
         <CiLocationOn className="shrink-0 text-[12px] text-muted" />
         <p className="text-[12px] text-muted truncate">{src}</p>
       </div>
-      <p className="font-medium pb-2.5 ml-1 text-3xl">
+      <p className="font-medium pb-2.5 ml-1 text-2xl">
         <sup>&#2547;</sup>
         {price}
         <span className="text-muted"> / {unit}</span>

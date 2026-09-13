@@ -1,7 +1,13 @@
 import { useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FiBell, FiCheck, FiTrash2, FiCheckCircle, FiInbox } from "react-icons/fi";
+import {
+  FiBell,
+  FiCheck,
+  FiTrash2,
+  FiCheckCircle,
+  FiInbox,
+} from "react-icons/fi";
 import {
   getMyNotifications,
   markNotificationAsRead,
@@ -13,15 +19,30 @@ import {
 // Only these types currently point somewhere (all order-related).
 // productExpired / reviewReceived are farmer-side; no customer target yet.
 const ORDER_RELATED_TYPES = [
-  "orderPlaced", "orderAccepted", "orderRejected", "orderCancelled",
-  "orderProcessing", "readyForPickup", "paymentRequired", "driverAssigned",
-  "pickedUp", "toOriginCenter", "inTransit", "toDestinationCenter",
-  "outForDelivery", "delivered", "paymentSuccess", "paymentFailed",
+  "orderPlaced",
+  "orderAccepted",
+  "orderRejected",
+  "orderCancelled",
+  "orderProcessing",
+  "readyForPickup",
+  "paymentRequired",
+  "driverAssigned",
+  "pickedUp",
+  "toOriginCenter",
+  "inTransit",
+  "toDestinationCenter",
+  "outForDelivery",
+  "delivered",
+  "paymentSuccess",
+  "paymentFailed",
 ];
 
 // ADJUST THIS to your real customer order-detail route
 const getNotificationLink = (notification) => {
-  if (ORDER_RELATED_TYPES.includes(notification.type) && notification.relatedOrder) {
+  if (
+    ORDER_RELATED_TYPES.includes(notification.type) &&
+    notification.relatedOrder
+  ) {
     return `/customer/orders/${notification.relatedOrder}`;
   }
   return null;
@@ -30,8 +51,11 @@ const getNotificationLink = (notification) => {
 const timeAgo = (date) => {
   const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
   const units = [
-    ["year", 31536000], ["month", 2592000], ["day", 86400],
-    ["hour", 3600], ["minute", 60],
+    ["year", 31536000],
+    ["month", 2592000],
+    ["day", 86400],
+    ["hour", 3600],
+    ["minute", 60],
   ];
   for (const [label, secs] of units) {
     const value = Math.floor(seconds / secs);
@@ -40,7 +64,14 @@ const timeAgo = (date) => {
   return "just now";
 };
 
-const NotificationCard = ({ notification, isHighlighted, cardRef, onRead, onDelete, onNavigate }) => (
+const NotificationCard = ({
+  notification,
+  isHighlighted,
+  cardRef,
+  onRead,
+  onDelete,
+  onNavigate,
+}) => (
   <div
     ref={cardRef}
     className={`rounded-box border p-4 flex justify-between gap-4 transition-all duration-500
@@ -52,7 +83,10 @@ const NotificationCard = ({ notification, isHighlighted, cardRef, onRead, onDele
             : "border-theme-light bg-secondary-soft/40"
       }`}
   >
-    <button onClick={() => onNavigate(notification)} className="text-left flex-1 min-w-0">
+    <button
+      onClick={() => onNavigate(notification)}
+      className="text-left flex-1 min-w-0"
+    >
       <div className="flex items-center gap-2 mb-1">
         {!notification.isRead && (
           <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
@@ -60,7 +94,9 @@ const NotificationCard = ({ notification, isHighlighted, cardRef, onRead, onDele
         <p className="font-bold text-sm">{notification.title}</p>
       </div>
       <p className="text-sm text-muted mb-1">{notification.message}</p>
-      <p className="text-xs text-muted-light">{timeAgo(notification.createdAt)}</p>
+      <p className="text-xs text-muted-light">
+        {timeAgo(notification.createdAt)}
+      </p>
     </button>
 
     <div className="flex flex-col gap-1.5 items-end shrink-0">
@@ -107,13 +143,14 @@ export default function CustomerNotifications() {
       });
 
       const timeout = setTimeout(() => {
-        searchParams.delete("highlight");
-        setSearchParams(searchParams, { replace: true });
+        const params = new URLSearchParams(searchParams);
+        params.delete("highlight");
+        setSearchParams(params, { replace: true });
       }, 2500);
 
       return () => clearTimeout(timeout);
     }
-  }, [highlightId, notifications]);
+  }, [highlightId, notifications, searchParams, setSearchParams]);
 
   const handleRead = async (id) => {
     try {
@@ -143,7 +180,8 @@ export default function CustomerNotifications() {
   };
 
   const handleDeleteAll = async () => {
-    if (!window.confirm("Delete all notifications? This cannot be undone.")) return;
+    if (!window.confirm("Delete all notifications? This cannot be undone."))
+      return;
     try {
       await deleteAllNotifications();
       invalidate();

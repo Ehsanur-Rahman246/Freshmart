@@ -3,11 +3,11 @@ import { FaCartShopping } from "react-icons/fa6";
 import { FaSearch } from "react-icons/fa";
 import { FiLogOut, FiMenu, FiUser } from "react-icons/fi";
 import Sidebar from "./Sidebar";
-import { logout } from "../api/auth";
-import { NavLink, useNavigate } from "react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { NavLink } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import { getCustomerProfile } from "../api/customer";
 import NotificationBell from "./NotificationBell";
+import useLogout from "../hooks/useLogout";
 
 const SearchBar = () => {
   return (
@@ -27,18 +27,7 @@ const SearchBar = () => {
 
 const ProfileMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      queryClient.invalidateQueries({ queryKey: ["viewer"] });
-      navigate("/login");
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
-  };
+  const handleLogout = useLogout();
 
   const { data: customer } = useQuery({
     queryKey: ["customerProfile"],
@@ -129,7 +118,6 @@ const CutomerNavbar = () => {
       <nav
         className={`navbar sticky top-0 z-55 px-4 sm:px-6 lg:px-10 transition-all duration-300 ease-in-out ${scrolled ? "bg-primary/30 backdrop-blur-md border-none bg-linear-to-b from-secondary-soft/70 via-secondary-soft/30 via-65% to-transparent" : "bg-base-100"}`}
       >
-        <div className="tooltip tooltip-bottom" data-tip="Menu">
           <button
             type="button"
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -138,7 +126,6 @@ const CutomerNavbar = () => {
           >
             <FiMenu className="text-primary" />
           </button>
-        </div>
 
         {/* Logo */}
         <div className="flex flex-1 items-center align-middle">
@@ -162,7 +149,6 @@ const CutomerNavbar = () => {
           </button>
 
           {/* Cart */}
-          <div className="tooltip tooltip-bottom" data-tip="Cart">
             <button
               className="btn btn-ghost btn-circle text-2xl"
               aria-label="Cart"
@@ -171,7 +157,6 @@ const CutomerNavbar = () => {
                 <FaCartShopping className="text-primary" />
               </NavLink>
             </button>
-          </div>
 
           {/* Notifications */}
           <NotificationBell/>

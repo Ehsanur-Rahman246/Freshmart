@@ -1,8 +1,9 @@
+import Reviews from "../Reviews"
 
-const Reviews = () => {
+const FarmerReviews = () => {
   return (
-    <div>Reviews</div>
+    <Reviews/>
   )
 }
 
-export default Reviews
+export default FarmerReviews

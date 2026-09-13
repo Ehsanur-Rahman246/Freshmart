@@ -1,4 +1,5 @@
 import { FiChevronRight, FiPlus } from "react-icons/fi";
+import { NavLink } from "react-router";
 
 const listings = [
   {
@@ -51,12 +52,14 @@ const Listings = () => {
           </p>
           </div>
 
+<NavLink to={"/farmer/listings/add"}>
           <button
           type="button"
           className="flex items-center justify-center gap-2 rounded-box border border-dashed border-primary bg-primary-soft px-4 py-4 text-sm font-bold text-primary transition hover:bg-primary hover:text-primary-content"
         >
           <FiPlus size={17} /> Add new listing
         </button>
+        </NavLink>
       </div>
 
       {/* Listings Content */}

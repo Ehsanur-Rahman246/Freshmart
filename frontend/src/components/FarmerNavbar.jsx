@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   FiCreditCard,
   FiPackage,
@@ -10,8 +9,8 @@ import {
   FiLogOut,
 } from "react-icons/fi";
 import { IoNotifications } from "react-icons/io5";
-import { Link, NavLink, useNavigate } from "react-router";
-import { logout } from "../api/auth";
+import { Link, NavLink } from "react-router";
+import useLogout from "../hooks/useLogout";
 
 const menuItems = [
   {
@@ -126,18 +125,7 @@ const MobileMenu = () => {
 
 const ProfileMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      queryClient.invalidateQueries({ queryKey: ["viewer"] });
-      navigate("/login");
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
-  };
+  const handleLogout = useLogout();
 
   return (
     <div className="relative ml-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-content">

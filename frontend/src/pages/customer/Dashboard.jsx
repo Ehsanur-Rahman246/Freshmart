@@ -1,11 +1,11 @@
 import HeroSlider from "../../components/HeroSlider";
-import Marketplace from "../Marketplace";
+import CustomerMarketplace from "./Marketplace";
 
 const Dashboard = () => {
   return (
     <div>
       <HeroSlider />
-      <Marketplace/>
+      <CustomerMarketplace/>
     </div>
   );
 };

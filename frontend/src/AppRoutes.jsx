@@ -31,6 +31,7 @@ import OrderConfirmation from "./pages/customer/OrderConfirmation";
 import CustomerOrders from "./pages/customer/Orders";
 import CustomerOrderDetails from "./pages/customer/OrderDetails";
 import CustomerReviews from "./pages/customer/Reviews";
+import Wishlist from "./pages/customer/Wishlist";
 import CustomerNotifications from "./pages/customer/Notifications";
 import CustomerProfile from "./pages/customer/Profile";
 
@@ -125,6 +126,11 @@ const AppRoutes = () => {
           <Route
             path="reviews"
             element={<CustomerReviews />}
+          />
+
+          <Route
+            path="wishlist"
+            element={<Wishlist />}
           />
 
           <Route
