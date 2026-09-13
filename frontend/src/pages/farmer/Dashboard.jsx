@@ -65,7 +65,7 @@ export default function FarmerDashboard() {
             <div className="mt-7 flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={() => setShowListings(true)}
+                onClick={() => navigate("/listings/add")}
                 className="btn border-0 bg-primary text-primary-content hover:bg-primary-hover"
               >
                 <FiPlus size={17} />
