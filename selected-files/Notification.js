@@ -37,6 +37,7 @@ const notificationSchema = new mongoose.Schema(
         "reviewReceived",
         "newCustomerRegistered",
         "newFarmerRegistered",
+        "reviewReported",
       ],
       required: true,
     },

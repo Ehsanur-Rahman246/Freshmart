@@ -10,7 +10,10 @@ export const getCustomerProfile = async (req, res) => {
       user: req.user.userId,
     })
       .populate("user", "-password")
-      .populate("wishlist");
+      .populate({
+        path: "wishlist",
+        populate: { path: "farm", select: "name" },
+      });
 
     if (!customer) {
       return res.status(404).json({
@@ -344,7 +347,10 @@ export const getWishlist = async (req, res) => {
   try {
     const customer = await Customer.findOne({
       user: req.user.userId,
-    }).populate("wishlist");
+    }).populate({
+      path: "wishlist",
+      populate: { path: "farm", select: "name" },
+    });
 
     if (!customer) {
       return res.status(404).json({
