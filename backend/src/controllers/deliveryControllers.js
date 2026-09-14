@@ -72,18 +72,6 @@ export const tryAutoAssignDriver = async (order) => {
       });
     }
 
-    const farmer = await Farmer.findById(order.farmer).populate("user");
-    if (farmer) {
-      await createNotification({
-        recipient: farmer.user._id,
-        recipientRole: "farmer",
-        type: "pickedUp",
-        title: "Order Picked Up",
-        message: "Your order has been picked up by the assigned driver.",
-        relatedOrder: order._id,
-      });
-    }
-
     return true;
   } catch (error) {
     console.error("tryAutoAssignDriver error:", error);
@@ -256,18 +244,6 @@ export const assignDriverToOrder = async (req, res) => {
         type: "driverAssigned",
         title: "Driver Assigned",
         message: "A driver has been assigned and picked up your order.",
-        relatedOrder: order._id,
-      });
-    }
-
-    const farmer = await Farmer.findById(order.farmer).populate("user");
-    if (farmer) {
-      await createNotification({
-        recipient: farmer.user._id,
-        recipientRole: "farmer",
-        type: "pickedUp",
-        title: "Order Picked Up",
-        message: "Your order has been picked up by the assigned driver.",
         relatedOrder: order._id,
       });
     }

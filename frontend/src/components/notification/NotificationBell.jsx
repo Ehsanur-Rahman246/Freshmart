@@ -6,11 +6,14 @@ import {
   getMyNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
-} from "../api/notification";
+} from "../../api/notification";
 
 const MAX_PREVIEW = 8;
 
-const NotificationBell = () => {
+// `notificationsPath` is the full notifications page for whichever role
+// renders this bell, e.g. "/customer/notifications", "/farmer/notifications",
+// "/driver/notifications". Drop it in each role's navbar with its own path.
+const NotificationBell = ({ notificationsPath = "/notifications" }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
   const navigate = useNavigate();
@@ -47,7 +50,7 @@ const NotificationBell = () => {
     } catch (err) {
       console.error(err);
     } finally {
-      navigate(`/customer/notifications?highlight=${notification._id}`);
+      navigate(`${notificationsPath}?highlight=${notification._id}`);
     }
   };
 

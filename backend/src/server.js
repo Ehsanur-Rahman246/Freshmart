@@ -18,6 +18,7 @@ import { startDeliveryScheduler } from "./jobs/deliveryProgression.js";
 import { startDemoFarmerScheduler } from "./jobs/demoFarmerAutomation.js";
 import { startDemoCustomerScheduler } from "./jobs/demoCustomerAutomation.js";
 import { multerErrorHandling } from "./middlewares/multerError.middleware.js";
+import { startRestockProcessingScheduler } from "./jobs/restockProcessing.js";
 
 
 const app = express();
@@ -50,5 +51,6 @@ connectDB().then(() => {
         startDeliveryScheduler();
         startDemoFarmerScheduler();
         startDemoCustomerScheduler();
+        startRestockProcessingScheduler(); 
     });
 });

@@ -1,10 +1,5 @@
-import Reviews from "../Reviews"
+import ReviewsPage from "../../components/review/ReviewsPage";
 
-
-const AdminReviews = () => {
-  return (
-    <Reviews/>
-  )
+export default function AdminReviews() {
+  return <ReviewsPage title="All Reviews" emptyMessage="No reviews yet." />;
 }
-
-export default AdminReviews

@@ -14,6 +14,7 @@ import computeDeliveryEstimate from "../utils/computeDeliveryEstimate.js";
 import { HOUR_IN_MS, DEMO_PROCESSING_HOURS } from "../config/time.js";
 import notifyAdmin from "../utils/notifyAdmin.js";
 import { tryAutoAssignDriver } from "./deliveryControllers.js";
+import scheduleRestock from "../utils/scheduleRestock.js";
 
 export const getOrderById = async (req, res) => {
   try {
@@ -646,11 +647,6 @@ export const cancelOrder = async (req, res) => {
     }
 
     const refundPercentage = REFUND_TIERS[order.status];
-    const wasPrePickup = [
-      "pendingAcceptance",
-      "processing",
-      "readyForPickup",
-    ].includes(order.status);
 
     order.status = "cancelled";
     order.cancelledAt = new Date();
@@ -686,13 +682,8 @@ export const cancelOrder = async (req, res) => {
     await order.save();
     await customer.save();
 
-    if (wasPrePickup) {
-      for (const item of order.items) {
-        await Product.updateOne(
-          { _id: item.product },
-          { $inc: { stock: item.quantity } },
-        );
-      }
+    for (const item of order.items) {
+      await scheduleRestock(item.product, item.quantity);
     }
     if (order.delivery.driver?.driverId) {
       await Driver.updateOne(
@@ -712,6 +703,14 @@ export const cancelOrder = async (req, res) => {
         relatedOrder: order._id,
       });
     }
+    await createNotification({
+      recipient: req.user.userId,
+      recipientRole: "customer",
+      type: "orderCancelled",
+      title: "Order Cancelled",
+      message: "Your order has been cancelled successfully.",
+      relatedOrder: order._id,
+    });
     await notifyAdmin({
       type: "orderCancelled",
       title: "Order Cancelled",
@@ -1321,7 +1320,10 @@ export const placeDemoOrder = async ({ userId, addressId }) => {
     });
 
     if (!destinationZone) {
-      return { success: false, message: "Delivery zone not found for this district" };
+      return {
+        success: false,
+        message: "Delivery zone not found for this district",
+      };
     }
 
     // Group cart items by farm
@@ -1406,7 +1408,10 @@ export const placeDemoOrder = async ({ userId, addressId }) => {
     }
 
     if (farmData.length === 0) {
-      return { success: false, message: "No valid farm orders could be created" };
+      return {
+        success: false,
+        message: "No valid farm orders could be created",
+      };
     }
 
     const orderGroup = new mongoose.Types.ObjectId();
@@ -1527,7 +1532,7 @@ export const placeDemoOrder = async ({ userId, addressId }) => {
 // Cancels an order outside the normal customer-initiated HTTP flow (e.g.
 // no driver was available). Duplicates cancelOrder's logic since there's
 // no req/res here, and adds an optional system-generated reason.
-export const autoCancelOrder = async ({order, customer, reason}) => {
+export const autoCancelOrder = async ({ order, customer, reason }) => {
   try {
     const REFUND_TIERS = {
       pendingAcceptance: 100,
@@ -1540,7 +1545,10 @@ export const autoCancelOrder = async ({order, customer, reason}) => {
     };
 
     if (!(order.status in REFUND_TIERS)) {
-      return { success: false, message: "This order can no longer be cancelled" };
+      return {
+        success: false,
+        message: "This order can no longer be cancelled",
+      };
     }
 
     const refundPercentage = REFUND_TIERS[order.status];

@@ -6,7 +6,7 @@ import Sidebar from "./Sidebar";
 import { NavLink } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getCustomerProfile } from "../api/customer";
-import NotificationBell from "./NotificationBell";
+import NotificationBell from "./notification/NotificationBell";
 import useLogout from "../hooks/useLogout";
 
 const SearchBar = () => {

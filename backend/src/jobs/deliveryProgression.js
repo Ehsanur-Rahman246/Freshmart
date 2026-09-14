@@ -46,18 +46,6 @@ const advanceOrder = async (order) => {
         }
       }
 
-      const farmer = await Farmer.findById(order.farmer).populate("user");
-      if (farmer) {
-        await createNotification({
-          recipient: farmer.user._id,
-          recipientRole: "farmer",
-          type: "toOriginCenter",
-          title: "Order En Route to Origin Center",
-          message:
-            "The order has left the farm and is heading to the origin zone center.",
-          relatedOrder: order._id,
-        });
-      }
       break;
     }
 
@@ -108,6 +96,12 @@ const advanceOrder = async (order) => {
           relatedOrder: order._id,
         });
       }
+      await notifyAdmin({
+        type: "inTransit",
+        title: "Order In Transit",
+        message: `Order ${order.orderNumber} is now in transit.`,
+        relatedOrder: order._id,
+      });
       break;
     }
 

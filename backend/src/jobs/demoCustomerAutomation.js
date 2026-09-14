@@ -1,9 +1,7 @@
 import cron from "node-cron";
 import Customer from "../models/Customer.js";
 import Product from "../models/Product.js";
-import Farm from "../models/Farm.js";
 import { placeDemoOrder } from "../controllers/orderControllers.js";
-import { DEMO_CUSTOMER_CRON_INTERVAL } from "../config/time.js";
 import {
   DEMO_CUSTOMERS_ACTIVE_PER_DAY,
   DEMO_WISHLIST_DAILY_ADD_MIN,
@@ -12,6 +10,7 @@ import {
   DEMO_CART_PRODUCT_QTY_MIN,
   DEMO_CART_PRODUCT_QTY_MAX,
 } from "../config/business.js";
+import {DEMO_CUSTOMER_CHECK_INTERVAL} from "../config/time.js"
 
 const randomInt = (min, max) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
@@ -176,8 +175,23 @@ const runDemoCustomerAutomation = async () => {
 };
 
 export const startDemoCustomerScheduler = () => {
-  cron.schedule(DEMO_CUSTOMER_CRON_INTERVAL, async () => {
+  cron.schedule(DEMO_CUSTOMER_CHECK_INTERVAL, async () => {
     try {
+      const jobState = await JobState.findOneAndUpdate(
+        { jobName: "demoCustomerAutomation" },
+        { $setOnInsert: { lastRunAt: null } },
+        { upsert: true, new: true },
+      );
+
+      const lastRun = jobState.lastRunAt ? jobState.lastRunAt.getTime() : 0;
+
+      if (Date.now() - lastRun < DEMO_CUSTOMER_RUN_GAP_MS) return;
+
+      await JobState.updateOne(
+        { jobName: "demoCustomerAutomation" },
+        { $set: { lastRunAt: new Date() } },
+      );
+
       await runDemoCustomerAutomation();
     } catch (error) {
       console.error("Demo customer automation error:", error);

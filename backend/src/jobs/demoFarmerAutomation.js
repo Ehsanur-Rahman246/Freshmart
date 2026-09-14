@@ -8,7 +8,6 @@ import transporter from "../config/nodemailer.js";
 import {
   HOUR_IN_MS,
   CRON_INTERVAL,
-  DEMO_RESTOCK_GAP_HOURS,
   FARMER_RESPONSE_WINDOW_HOURS,
 } from "../config/time.js";
 import {
@@ -89,9 +88,7 @@ const handleOutOfStock = async () => {
     product.status = "soldOut";
 
     if (product.farmer?.isDemo) {
-      product.nextRestockAt = new Date(
-        now.getTime() + DEMO_RESTOCK_GAP_HOURS * HOUR_IN_MS,
-      );
+      product.nextRestockAt = product.expiresAt;
     }
 
     await product.save();
@@ -109,49 +106,86 @@ const handleRestocking = async () => {
     nextRestockAt: { $lte: now },
   });
 
-  for (const oldProduct of dueRestocks) {
+  // after
+  for (const product of dueRestocks) {
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + oldProduct.listingDuration);
+    expiresAt.setDate(expiresAt.getDate() + product.listingDuration);
 
-    const newProduct = await Product.create({
-      farmer: oldProduct.farmer,
-      farm: oldProduct.farm,
-      name: oldProduct.name,
-      description: oldProduct.description,
-      images: oldProduct.images,
-      category: oldProduct.category,
-      subCategory: oldProduct.subCategory,
-      season: oldProduct.season,
-      source: oldProduct.source,
-      price: oldProduct.price,
-      unit: oldProduct.unit,
-      stock: DEMO_RESTOCK_QUANTITY,
-      discountPercentage: oldProduct.discountPercentage,
-      listingDuration: oldProduct.listingDuration,
-      expiresAt,
-      status: "active",
-    });
+    product.stock = DEMO_RESTOCK_QUANTITY;
+    product.status = "active";
+    product.expiresAt = expiresAt;
+    product.nextRestockAt = null;
 
-    const farm = await Farm.findById(oldProduct.farm);
-    if (farm) {
-      farm.products[oldProduct.season].push(newProduct._id);
-      await farm.save();
-    }
-
-    oldProduct.nextRestockAt = null;
-    await oldProduct.save();
+    await product.save();
   }
 };
 
 // 4. Listings that expired with stock still remaining.
 // Demo farmer -> instantly sold to a fixed placeholder company.
 // Real farmer -> emailed with a company-sale offer, awaiting their response.
-const handleExpiredProducts = async () => {
+// NEW — exported so the restock-maturity job can reuse this
+export const processExpiredProduct = async (product) => {
   const now = new Date();
+  const companySalePrice =
+    Math.round(product.price * (1 - COMPANY_SALE_DISCOUNT) * 100) / 100;
 
+  if (product.farmer?.isDemo) {
+    const quantitySold = product.stock;
+
+    product.companySalePrice = companySalePrice;
+    product.company = DEMO_COMPANY_NAME;
+    product.soldToCompanyAt = now;
+    product.companySaleStage = "sold";
+
+    await recordCompanySaleRevenue(product, quantitySold);
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + product.listingDuration);
+
+    product.stock = DEMO_RESTOCK_QUANTITY;
+    product.status = "active";
+    product.expiresAt = expiresAt;
+
+    await product.save();
+  } else {
+    product.status = "expired";
+    product.companySaleStage = "awaitingFarmerResponse";
+    product.companySalePrice = companySalePrice;
+    product.companySaleRespondBy = new Date(
+      now.getTime() + FARMER_RESPONSE_WINDOW_HOURS * HOUR_IN_MS,
+    );
+
+    await product.save();
+
+    if (product.farmer?.user?.email) {
+      try {
+        await transporter.sendMail({
+          /* unchanged existing template */
+        });
+      } catch (emailError) {
+        console.error("Failed to send listing-expired email:", emailError);
+      }
+    }
+
+    if (product.farmer?.user?._id) {
+      await createNotification({
+        /* unchanged existing farmer notification */
+      });
+    }
+
+    await notifyAdmin({
+      type: "productExpired",
+      title: "Listing Expired — Awaiting Farmer Response",
+      message: `${product.name} expired and a company-sale offer was sent to the farmer.`,
+      relatedProduct: product._id,
+    });
+  }
+};
+
+const handleExpiredProducts = async () => {
   const expiredProducts = await Product.find({
     status: "active",
-    expiresAt: { $lte: now },
+    expiresAt: { $lte: new Date() },
     stock: { $gt: 0 },
   }).populate({
     path: "farmer",
@@ -160,98 +194,7 @@ const handleExpiredProducts = async () => {
   });
 
   for (const product of expiredProducts) {
-    const companySalePrice =
-      Math.round(product.price * (1 - COMPANY_SALE_DISCOUNT) * 100) / 100;
-
-    if (product.farmer?.isDemo) {
-      const quantitySold = product.stock;
-
-      product.status = "soldToCompany";
-      product.companySaleStage = "sold";
-      product.companySalePrice = companySalePrice;
-      product.company = DEMO_COMPANY_NAME;
-      product.soldToCompanyAt = now;
-      product.stock = 0;
-
-      await product.save();
-
-      await recordCompanySaleRevenue(product, quantitySold);
-
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + product.listingDuration);
-
-      const newProduct = await Product.create({
-        farmer: product.farmer,
-        farm: product.farm,
-        name: product.name,
-        description: product.description,
-        images: product.images,
-        category: product.category,
-        subCategory: product.subCategory,
-        season: product.season,
-        source: product.source,
-        price: product.price,
-        unit: product.unit,
-        stock: DEMO_RESTOCK_QUANTITY,
-        discountPercentage: product.discountPercentage,
-        listingDuration: product.listingDuration,
-        expiresAt,
-        status: "active",
-      });
-
-      const farm = await Farm.findById(product.farm);
-
-      if (farm) {
-        farm.products[product.season].push(newProduct._id);
-        await farm.save();
-      }
-    } else {
-      product.status = "expired";
-      product.companySaleStage = "awaitingFarmerResponse";
-      product.companySalePrice = companySalePrice;
-      product.companySaleRespondBy = new Date(
-        now.getTime() + FARMER_RESPONSE_WINDOW_HOURS * HOUR_IN_MS,
-      );
-
-      await product.save();
-
-      if (product.farmer?.user?.email) {
-        try {
-          await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: product.farmer.user.email,
-            subject: "Your FreshMart Listing Has Expired",
-            html: `
-              <h2>Listing Expired</h2>
-              <p>Hello ${product.farmer.user.name || "Farmer"},</p>
-              <p>
-                Your listing for <strong>${product.name}</strong> has expired
-                with ${product.stock} ${product.unit} left unsold.
-              </p>
-              <p>
-                FreshMart can purchase the remaining stock directly at
-                ${companySalePrice} per ${product.unit}. Accept this offer
-                from your dashboard to proceed, or it will be automatically
-                declined if there is no response within a few days.
-              </p>
-            `,
-          });
-        } catch (emailError) {
-          console.error("Failed to send listing-expired email:", emailError);
-        }
-      }
-
-      if (product.farmer?.user?._id) {
-        await createNotification({
-          recipient: product.farmer.user._id,
-          recipientRole: "farmer",
-          type: "productExpired",
-          title: "Listing Expired",
-          message: `Your listing for ${product.name} has expired. You can accept FreshMart's company-sale offer from your dashboard.`,
-          relatedProduct: product._id,
-        });
-      }
-    }
+    await processExpiredProduct(product);
   }
 };
 
@@ -267,6 +210,7 @@ const handleUnansweredOffers = async () => {
   for (const product of overdue) {
     product.companySaleStage = "rejected";
     product.status = "inactive";
+    product.stock = 0;
     product.companySaleRespondBy = null;
     await product.save();
   }

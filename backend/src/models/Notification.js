@@ -38,6 +38,8 @@ const notificationSchema = new mongoose.Schema(
         "newCustomerRegistered",
         "newFarmerRegistered",
         "reviewReported",
+        "productAdded",         
+      "companySaleOfferAccepted",
       ],
       required: true,
     },

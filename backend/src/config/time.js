@@ -37,9 +37,12 @@ export const DELIVERY_RATE_PER_HOUR = 5;
 // readyForPickup.
 export const DEMO_PROCESSING_HOURS = 2;
 
-// How long a demo product stays "soldOut" before a fresh listing is
-// auto-created to replace it.
-export const DEMO_RESTOCK_GAP_HOURS = 6;
+// add:
+export const RESTOCK_DELAY_HOURS = 10; // simulated hours before cancelled stock returns to the pool
+
+// change DEMO_CUSTOMER_CRON_INTERVAL usage: check hourly, gate by a real 24h wall-clock gap
+export const DEMO_CUSTOMER_CHECK_INTERVAL = "0 * * * *"; // check every hour
+export const DEMO_CUSTOMER_RUN_GAP_MS = 24 * 60 * 60 * 1000; // real 24h between runs
 
 // How long a REAL farmer has to respond to an expired listing's
 // company-sale offer before it's auto-rejected.

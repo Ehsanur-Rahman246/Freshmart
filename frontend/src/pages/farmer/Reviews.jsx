@@ -1,9 +1,12 @@
-import Reviews from "../Reviews"
+import ReviewsPage from "../../components/review/ReviewsPage";
+import RatingSummary from "../../components/review/RatingSummary";
 
-const FarmerReviews = () => {
+export default function FarmerReviews() {
   return (
-    <Reviews/>
-  )
+    <ReviewsPage
+      title="Reviews"
+      emptyMessage="No reviews on your farms or products yet."
+      renderSummary={(reviews) => <RatingSummary reviews={reviews} />}
+    />
+  );
 }
-
-export default FarmerReviews

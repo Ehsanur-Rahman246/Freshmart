@@ -6,6 +6,7 @@ import {
   uploadBufferToCloudinary,
   deleteFromCloudinary,
 } from "../utils/uploadToCloudinary.js";
+import notifyAdmin from "../utils/notifyAdmin.js";
 
 const IMAGE_UPLOAD_CONCURRENCY = 3;
 
@@ -110,6 +111,13 @@ export const createProduct = async (req, res) => {
 
     farm.products[season].push(product._id);
     await farm.save();
+
+    await notifyAdmin({
+      type: "productAdded",
+      title: "New Product Listed",
+      message: `${farm.name} listed a new product: ${product.name}.`,
+      relatedProduct: product._id,
+    });
 
     return res.status(201).json({
       success: true,
@@ -343,6 +351,10 @@ export const updateProduct = async (req, res) => {
       );
 
       product.images.push(...uploaded);
+    }
+
+    if (product.stock > 0 && product.status === "soldOut") {
+      product.status = "active";
     }
 
     await product.save();
