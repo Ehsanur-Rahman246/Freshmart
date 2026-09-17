@@ -127,9 +127,6 @@ export const respondToCompanySaleOffer = async (req, res) => {
       product.stock = 0;
     }
 
-    product.companySaleRespondBy = null;
-    await product.save();
-
     if (accept) {
       await notifyAdmin({
         type: "companySaleOfferAccepted",
@@ -140,7 +137,6 @@ export const respondToCompanySaleOffer = async (req, res) => {
     }
 
     product.companySaleRespondBy = null;
-
     await product.save();
 
     return res.status(200).json({

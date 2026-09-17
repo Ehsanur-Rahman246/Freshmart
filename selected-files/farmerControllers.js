@@ -5,6 +5,7 @@ import {
   uploadBufferToCloudinary,
   deleteFromCloudinary,
 } from "../utils/uploadToCloudinary.js";
+import notifyAdmin from "../utils/notifyAdmin.js";
 
 export const getFarmerProfile = async (req, res) => {
   try {
@@ -123,10 +124,19 @@ export const respondToCompanySaleOffer = async (req, res) => {
     } else {
       product.companySaleStage = "rejected";
       product.status = "inactive";
+      product.stock = 0;
+    }
+
+    if (accept) {
+      await notifyAdmin({
+        type: "companySaleOfferAccepted",
+        title: "Company Sale Offer Accepted",
+        message: `A farmer accepted the company sale offer for ${product.name}.`,
+        relatedProduct: product._id,
+      });
     }
 
     product.companySaleRespondBy = null;
-
     await product.save();
 
     return res.status(200).json({

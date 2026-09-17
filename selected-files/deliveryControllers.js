@@ -20,23 +20,25 @@ export const tryAutoAssignDriver = async (order) => {
       return false;
     }
 
+    const originZone = await Zone.findById(order.delivery.originZone);
     const destinationZone = await Zone.findById(order.delivery.destinationZone);
 
-    if (!destinationZone) {
+    if (!originZone || !destinationZone) {
       return false;
     }
 
+    const originZoneId = originZone.zoneId;
     const destinationZoneId = destinationZone.zoneId;
 
     const couriers = await Courier.find({
-      zonesCovered: destinationZoneId,
+      zonesCovered: { $all: [originZoneId, destinationZoneId] },
     });
 
     const courierIds = couriers.map((courier) => courier._id);
 
     const driver = await Driver.findOne({
       courier: { $in: courierIds },
-      currentZone: destinationZoneId,
+      currentZone: originZoneId,
       isAvailable: true,
     });
 
@@ -68,18 +70,6 @@ export const tryAutoAssignDriver = async (order) => {
         type: "driverAssigned",
         title: "Driver Assigned",
         message: "A driver has been assigned and picked up your order.",
-        relatedOrder: order._id,
-      });
-    }
-
-    const farmer = await Farmer.findById(order.farmer).populate("user");
-    if (farmer) {
-      await createNotification({
-        recipient: farmer.user._id,
-        recipientRole: "farmer",
-        type: "pickedUp",
-        title: "Order Picked Up",
-        message: "Your order has been picked up by the assigned driver.",
         relatedOrder: order._id,
       });
     }
@@ -142,17 +132,18 @@ export const getAvailableDriversForOrder = async (req, res) => {
       });
     }
 
+    const originZoneId = order.delivery.originZone.zoneId;
     const destinationZoneId = order.delivery.destinationZone.zoneId;
 
     const couriers = await Courier.find({
-      zonesCovered: destinationZoneId,
+      zonesCovered: { $all: [originZoneId, destinationZoneId] },
     });
 
     const courierIds = couriers.map((courier) => courier._id);
 
     const drivers = await Driver.find({
       courier: { $in: courierIds },
-      currentZone: destinationZoneId,
+      currentZone: originZoneId,
       isAvailable: true,
     }).populate("courier", "name courierCode");
 
@@ -256,18 +247,6 @@ export const assignDriverToOrder = async (req, res) => {
         type: "driverAssigned",
         title: "Driver Assigned",
         message: "A driver has been assigned and picked up your order.",
-        relatedOrder: order._id,
-      });
-    }
-
-    const farmer = await Farmer.findById(order.farmer).populate("user");
-    if (farmer) {
-      await createNotification({
-        recipient: farmer.user._id,
-        recipientRole: "farmer",
-        type: "pickedUp",
-        title: "Order Picked Up",
-        message: "Your order has been picked up by the assigned driver.",
         relatedOrder: order._id,
       });
     }

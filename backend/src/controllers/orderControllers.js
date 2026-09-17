@@ -908,25 +908,35 @@ export const updateOrderStatus = async (req, res) => {
 
       // Demo customers skip the admin driver-assignment queue: try once,
       // auto-cancel if nobody's available right now.
+      let driverAutoAssigned = false;
       if (customer.isDemo) {
-        const driverAssigned = await tryAutoAssignDriver(order);
+        driverAutoAssigned = await tryAutoAssignDriver(order);
 
-        if (!driverAssigned) {
+        if (!driverAutoAssigned) {
           await autoCancelOrder({
             order,
             customer,
             reason: "No driver was available for this order",
           });
+
+          return res.status(200).json({
+            success: true,
+            message:
+              "Order status updated, but was auto-cancelled — no driver was available",
+            order,
+          });
         }
       }
     }
 
-    await notifyAdmin({
-      type: "readyForPickup",
-      title: "Order Ready for Pickup",
-      message: `Order ${order.orderNumber} is ready for pickup and needs a driver assigned.`,
-      relatedOrder: order._id,
-    });
+    if (!driverAutoAssigned) {
+      await notifyAdmin({
+        type: "readyForPickup",
+        title: "Order Ready for Pickup",
+        message: `Order ${order.orderNumber} is ready for pickup and needs a driver assigned.`,
+        relatedOrder: order._id,
+      });
+    }
 
     return res.status(200).json({
       success: true,
@@ -1004,15 +1014,13 @@ export const acceptOrder = async (req, res) => {
           relatedOrder: order._id,
         });
       }
-    }
-
-    if (!customer.isDemo && customer.user.email) {
-      try {
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: customer.user.email,
-          subject: "Your FreshMart Order Has Been Accepted",
-          html: `
+      if (!customer.isDemo && customer.user.email) {
+        try {
+          await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: customer.user.email,
+            subject: "Your FreshMart Order Has Been Accepted",
+            html: `
               <h2>Order Accepted</h2>
 
               <p>Hello ${customer.user.name || "Customer"},</p>
@@ -1034,9 +1042,10 @@ export const acceptOrder = async (req, res) => {
                 Thank you for shopping with FreshMart!
               </p>
             `,
-        });
-      } catch (emailError) {
-        console.error("Failed to send order acceptance email:", emailError);
+          });
+        } catch (emailError) {
+          console.error("Failed to send order acceptance email:", emailError);
+        }
       }
     }
 

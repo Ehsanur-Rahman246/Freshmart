@@ -95,7 +95,7 @@ const ReviewCard = ({
           <p className="font-bold text-sm">
             {review.customer?.user?.name || "Customer"}
           </p>
-          <div className="flex items-center gap-2 mt-0.5">
+          <div className="flex flex-wrap items-center gap-2 mt-0.5">
             <Stars rating={review.rating} />
             <span className="text-xs text-muted-light">
               {timeAgo(review.createdAt)}

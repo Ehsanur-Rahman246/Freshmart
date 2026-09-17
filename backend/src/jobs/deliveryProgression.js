@@ -8,6 +8,8 @@ import createNotification from "../utils/createNotification.js";
 import { recordSaleRevenue } from "../utils/recordRevenue.js";
 import transporter from "../config/nodemailer.js";
 import notifyAdmin from "../utils/notifyAdmin.js";
+import Review from "../models/Review.js";
+import { maybeAddFarmerReply } from "../utils/farmerAutoReply.js";
 import {
   HOUR_IN_MS,
   CRON_INTERVAL,
@@ -26,6 +28,80 @@ const ACTIVE_STATUSES = [
 ];
 
 const randomInRange = (min, max) => Math.random() * (max - min) + min;
+
+const PRODUCT_REVIEW_COMMENTS = {
+  3: [
+    "Decent quality, did the job.",
+    "Fresh enough, nothing special.",
+    "Average experience, would consider buying again.",
+  ],
+  4: [
+    "Really good quality, fresher than expected.",
+    "Happy with this purchase, will buy again.",
+    "Good value for the price.",
+  ],
+  5: [
+    "Excellent quality! Couldn't ask for better.",
+    "Absolutely fresh and delicious, highly recommend.",
+    "Perfect every time, this is my go-to.",
+  ],
+};
+
+const FARM_REVIEW_COMMENTS = {
+  3: [
+    "An okay experience overall, nothing stood out.",
+    "Products were fine, delivery was on time.",
+  ],
+  4: [
+    "Good farm, reliable quality across products.",
+    "Consistently good produce from this farm.",
+  ],
+  5: [
+    "Amazing farm, consistently top-notch produce!",
+    "One of the best farms I've ordered from.",
+  ],
+};
+
+const randomRating = () => Math.floor(Math.random() * 3) + 3; // 3, 4, or 5
+const pickComment = (pool, rating) =>
+  pool[rating][Math.floor(Math.random() * pool[rating].length)];
+
+// Demo customer -> auto-reviews every product + the farm for this order,
+// then lets the demo farmer auto-reply if applicable.
+const createDemoReviewsForOrder = async (order, customer, farmer) => {
+  try {
+    for (const item of order.items) {
+      const rating = randomRating();
+
+      const review = await Review.create({
+        customer: customer._id,
+        order: order._id,
+        product: item.product,
+        rating,
+        comment: pickComment(PRODUCT_REVIEW_COMMENTS, rating),
+      });
+
+      await maybeAddFarmerReply(review, farmer);
+    }
+
+    const farmRating = randomRating();
+
+    const farmReview = await Review.create({
+      customer: customer._id,
+      order: order._id,
+      farm: order.farm,
+      rating: farmRating,
+      comment: pickComment(FARM_REVIEW_COMMENTS, farmRating),
+    });
+
+    await maybeAddFarmerReply(farmReview, farmer);
+  } catch (error) {
+    console.error(
+      `Demo review creation failed for order ${order._id}:`,
+      error,
+    );
+  }
+};
 
 const advanceOrder = async (order) => {
   const now = new Date();
@@ -239,6 +315,10 @@ const advanceOrder = async (order) => {
             );
           }
         }
+      }
+
+      if (customer?.isDemo) {                    
+        await createDemoReviewsForOrder(order, customer, farmer);
       }
 
       await recordSaleRevenue(order);

@@ -112,6 +112,13 @@ const productSchema = new mongoose.Schema(
     companySaleRespondBy: { type: Date, default: null },
 
     nextRestockAt: { type: Date, default: null },
+
+    pendingRestocks: [
+      {
+        quantity: { type: Number, required: true, min: 1 },
+        availableAt: { type: Date, required: true },
+      },
+    ],
   },
   {
     timestamps: true,

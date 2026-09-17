@@ -353,7 +353,10 @@ export const updateProduct = async (req, res) => {
       product.images.push(...uploaded);
     }
 
-    if (product.stock > 0 && product.status === "soldOut") {
+    if (
+      product.stock > 0 &&
+      ["soldOut", "soldToCompany"].includes(product.status)
+    ) {
       product.status = "active";
     }
 
@@ -447,5 +450,84 @@ export const deleteProduct = async (req, res) => {
     return res
       .status(500)
       .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const getRelatedProducts = async (req, res) => {
+  try {
+    const { productId } = req.params;
+
+    const product = await Product.findById(productId);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    const farmProducts = await Product.find({
+      _id: { $ne: product._id },
+      farm: product.farm,
+      status: "active",
+    })
+      .sort({ createdAt: -1 })
+      .limit(2)
+      .populate("farm", "name")
+      .populate({
+        path: "farmer",
+        select: "profileImage",
+        populate: { path: "user", select: "name" },
+      });
+
+    const excludeIds = [product._id, ...farmProducts.map((p) => p._id)];
+
+    const categoryProducts = await Product.find({
+      _id: { $nin: excludeIds },
+      category: product.category,
+      status: "active",
+    })
+      .sort({ createdAt: -1 })
+      .limit(2)
+      .populate("farm", "name")
+      .populate({
+        path: "farmer",
+        select: "profileImage",
+        populate: { path: "user", select: "name" },
+      });
+
+    let related = [...farmProducts, ...categoryProducts];
+
+    // Backfill if either bucket came up short
+    if (related.length < 4) {
+      const backfillExcludeIds = [product._id, ...related.map((p) => p._id)];
+
+      const backfill = await Product.find({
+        _id: { $nin: backfillExcludeIds },
+        status: "active",
+      })
+        .sort({ createdAt: -1 })
+        .limit(4 - related.length)
+        .populate("farm", "name")
+        .populate({
+          path: "farmer",
+          select: "profileImage",
+          populate: { path: "user", select: "name" },
+        });
+
+      related = [...related, ...backfill];
+    }
+
+    return res.status(200).json({
+      success: true,
+      products: related,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };

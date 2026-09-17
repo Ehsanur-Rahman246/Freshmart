@@ -20,23 +20,25 @@ export const tryAutoAssignDriver = async (order) => {
       return false;
     }
 
+    const originZone = await Zone.findById(order.delivery.originZone);
     const destinationZone = await Zone.findById(order.delivery.destinationZone);
 
-    if (!destinationZone) {
+    if (!originZone || !destinationZone) {
       return false;
     }
 
+    const originZoneId = originZone.zoneId;
     const destinationZoneId = destinationZone.zoneId;
 
     const couriers = await Courier.find({
-      zonesCovered: destinationZoneId,
+      zonesCovered: { $all: [originZoneId, destinationZoneId] },
     });
 
     const courierIds = couriers.map((courier) => courier._id);
 
     const driver = await Driver.findOne({
       courier: { $in: courierIds },
-      currentZone: destinationZoneId,
+      currentZone: originZoneId,
       isAvailable: true,
     });
 
@@ -120,7 +122,7 @@ export const getAvailableDriversForOrder = async (req, res) => {
     }
 
     const order = await Order.findById(orderId).populate(
-      "delivery.destinationZone",
+      "delivery.originZone delivery.destinationZone",
     );
 
     if (!order) {
@@ -130,17 +132,18 @@ export const getAvailableDriversForOrder = async (req, res) => {
       });
     }
 
+    const originZoneId = order.delivery.originZone.zoneId;
     const destinationZoneId = order.delivery.destinationZone.zoneId;
 
     const couriers = await Courier.find({
-      zonesCovered: destinationZoneId,
+      zonesCovered: { $all: [originZoneId, destinationZoneId] },
     });
 
     const courierIds = couriers.map((courier) => courier._id);
 
     const drivers = await Driver.find({
       courier: { $in: courierIds },
-      currentZone: destinationZoneId,
+      currentZone: originZoneId,
       isAvailable: true,
     }).populate("courier", "name courierCode");
 

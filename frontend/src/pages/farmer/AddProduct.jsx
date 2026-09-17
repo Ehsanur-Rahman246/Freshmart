@@ -109,8 +109,8 @@ export default function AddProduct() {
 
   const handleImages = (e) => {
     const selected = Array.from(e.target.files);
-    if (selected.length > 6) {
-      alert("You can select maximum 6 images");
+    if (selected.length > 4) {
+      alert("You can select maximum 4 images");
       return;
     }
     setImages(selected);
@@ -132,7 +132,7 @@ export default function AddProduct() {
     try {
       await createProduct(data);
       alert("Product added successfully!");
-      navigate("/seller/listing");
+      navigate("/farmer/listings", { replace: true });
     } catch (error) {
       alert(error.response?.data?.message || "Something went wrong");
     } finally {
@@ -148,7 +148,7 @@ export default function AddProduct() {
       <main className="max-w-3xl mx-auto px-4 py-8">
         {/* Back */}
         <button
-          onClick={() => navigate("/seller/listing")}
+          onClick={() => navigate("/farmer/listings", {replace:true})}
           className="flex items-center gap-2 mb-6 px-4 py-2 rounded-xl border border-theme bg-base-200 text-muted hover:border-primary hover:text-primary"
         >
           <FiArrowLeft /> Back
@@ -231,7 +231,7 @@ export default function AddProduct() {
             <label className="flex flex-col items-center justify-center gap-2 py-10 px-4 rounded-2xl border-2 border-dashed border-theme bg-base-100 cursor-pointer text-muted hover:border-primary hover:bg-primary-soft hover:text-primary">
               <FiImage size={32} />
               <strong className="text-sm font-bold text-base-content">Choose product images</strong>
-              <span className="text-xs text-muted-light">Maximum 6 images, 2MB each</span>
+              <span className="text-xs text-muted-light">Maximum 4 images, 2MB each</span>
               <input type="file" accept="image/*" multiple onChange={handleImages} className="hidden" />
             </label>
 

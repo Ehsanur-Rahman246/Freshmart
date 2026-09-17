@@ -45,6 +45,14 @@ app.use("/api/delivery", deliveryRouter);
 
 app.use(multerErrorHandling);
 
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || "Internal server error",
+  });
+});
+
 connectDB().then(() => {
     app.listen(PORT, () => {
         console.log("Server started on PORT:", PORT);

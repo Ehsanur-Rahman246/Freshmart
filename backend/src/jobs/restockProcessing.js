@@ -8,7 +8,6 @@ const applyMaturedRestocks = async () => {
 
   const products = await Product.find({
     pendingRestocks: { $elemMatch: { availableAt: { $lte: now } } },
-    status: { $in: ["soldOut", "active"] }, // skip anything mid company-sale pipeline
   }).populate({
     path: "farmer",
     select: "isDemo user",
@@ -30,12 +29,23 @@ const applyMaturedRestocks = async () => {
     product.stock += restoredQty;
     product.pendingRestocks = futureEntries;
 
-    if (product.expiresAt <= now) {
-      await processExpiredProduct(product); // saves internally
-      continue;
-    }
+    const isDemo = product.farmer?.isDemo === true;
+    const reactivatable = ["soldOut", "active", "soldToCompany"].includes(
+      product.status,
+    );
 
-    product.status = "active";
+    if (isDemo && reactivatable) {
+      if (product.expiresAt <= now) {
+        await processExpiredProduct(product); // saves internally
+        continue;
+      }
+      product.status = "active";
+    }
+    // Real farmer, or a non-reactivatable status (expired/inactive): just
+    // credit the stock back. Status changes are the farmer's call via
+    // updateProduct — the scheduler never auto-reactivates a real farmer's
+    // listing.
+
     await product.save();
   }
 };

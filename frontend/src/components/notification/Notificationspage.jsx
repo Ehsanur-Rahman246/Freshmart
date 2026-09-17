@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FiBell, FiCheckCircle, FiTrash2, FiInbox } from "react-icons/fi";
+import Loader from "../Loader";
 import {
   getMyNotifications,
   markNotificationAsRead,
@@ -106,9 +107,10 @@ export default function NotificationsPage({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <span className="loading loading-spinner loading-lg text-primary" />
-      </div>
+      // <div className="min-h-screen flex items-center justify-center">
+      //   <span className="loading loading-spinner loading-lg text-primary" />
+      // </div>
+      <Loader/>
     );
   }
 

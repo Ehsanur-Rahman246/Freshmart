@@ -9,7 +9,7 @@ import {
   getMyFarms,
   updateFarm,
 } from "../controllers/farmControllers.js";
-
+import { getAllFarms } from "../controllers/userControllers.js";
 const farmRouter = express.Router();
 
 farmRouter.post(
@@ -28,6 +28,7 @@ farmRouter.patch(
   upload.array("images", 6),
   updateFarm,
 );
+farmRouter.get("/", getAllFarms);
 farmRouter.delete("/:farmId", userAuth, roleAuth("farmer"), deleteFarm);
 
 export default farmRouter;

@@ -18,7 +18,7 @@ const getFarmerNotificationLink = (notification) => {
     FARMER_REVIEW_TYPES.includes(notification.type) &&
     notification.relatedProduct
   ) {
-    return `/farmer/products/${notification.relatedProduct}#reviews`;
+    return `/farmer/reviews`;
   }
 
   if (

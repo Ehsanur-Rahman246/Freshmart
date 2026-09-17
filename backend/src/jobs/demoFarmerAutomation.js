@@ -1,7 +1,6 @@
 import cron from "node-cron";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
-import Farm from "../models/Farm.js";
 import Customer from "../models/Customer.js";
 import createNotification from "../utils/createNotification.js";
 import transporter from "../config/nodemailer.js";
@@ -36,6 +35,7 @@ const advanceDemoOrders = async () => {
     await order.save();
 
     const customer = await Customer.findById(order.customer).populate("user");
+    let driverAutoAssigned = false;
     if (customer) {
       await createNotification({
         recipient: customer.user._id,
@@ -49,9 +49,9 @@ const advanceDemoOrders = async () => {
       // Demo customers skip the admin driver-assignment queue: try once,
       // auto-cancel if nobody's available right now.
       if (customer.isDemo) {
-        const driverAssigned = await tryAutoAssignDriver(order);
+        driverAutoAssigned = await tryAutoAssignDriver(order);
 
-        if (!driverAssigned) {
+        if (!driverAutoAssigned) {
           await autoCancelOrder({
             order,
             customer,
@@ -65,6 +65,10 @@ const advanceDemoOrders = async () => {
       }
     }
 
+    // Driver already auto-assigned — order is past readyForPickup, nothing
+    // for the admin driver-assignment queue to act on.
+    if(driverAutoAssigned) continue;
+
     await notifyAdmin({
       type: "readyForPickup",
       title: "Order Ready for Pickup",
@@ -77,8 +81,6 @@ const advanceDemoOrders = async () => {
 // 2. Listings that ran out of stock before expiring: mark soldOut,
 // schedule a restock if the farmer is a demo farmer.
 const handleOutOfStock = async () => {
-  const now = new Date();
-
   const zeroStockProducts = await Product.find({
     status: "active",
     stock: { $lte: 0 },
@@ -106,7 +108,6 @@ const handleRestocking = async () => {
     nextRestockAt: { $lte: now },
   });
 
-  // after
   for (const product of dueRestocks) {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + product.listingDuration);
@@ -160,7 +161,23 @@ export const processExpiredProduct = async (product) => {
     if (product.farmer?.user?.email) {
       try {
         await transporter.sendMail({
-          /* unchanged existing template */
+          from: process.env.EMAIL_USER,
+          to: product.farmer.user.email,
+          subject: "Your Listing Expired — Company Sale Offer",
+          html: `
+            <h2>Listing Expired</h2>
+            <p>Hello ${product.farmer.user.name || "Farmer"},</p>
+            <p>
+              Your listing <strong>${product.name}</strong> expired with
+              ${product.stock} unit(s) still unsold.
+            </p>
+            <p>
+              We're offering to buy the remaining stock at
+              <strong>${companySalePrice}</strong> per unit. Please respond
+              from your FreshMart account within
+              ${FARMER_RESPONSE_WINDOW_HOURS} hours.
+            </p>
+          `,
         });
       } catch (emailError) {
         console.error("Failed to send listing-expired email:", emailError);
@@ -169,7 +186,12 @@ export const processExpiredProduct = async (product) => {
 
     if (product.farmer?.user?._id) {
       await createNotification({
-        /* unchanged existing farmer notification */
+        recipient: product.farmer.user._id,
+        recipientRole: "farmer",
+        type: "productExpired",
+        title: "Listing Expired — Company Sale Offer",
+        message: `${product.name} expired with stock remaining. Respond to the company sale offer within ${FARMER_RESPONSE_WINDOW_HOURS} hours.`,
+        relatedProduct: product._id,
       });
     }
 

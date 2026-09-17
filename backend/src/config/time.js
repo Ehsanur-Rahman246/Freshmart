@@ -11,7 +11,7 @@
 //    checking every 10 seconds is pointless once hops take real hours.
 // Nothing else in the codebase needs to change; every other file reads hours
 // through HOUR_IN_MS.
-export const HOUR_IN_MS = 60 * 1000;
+export const HOUR_IN_MS = 5 * 1000;
 
 // How often the delivery scheduler checks for orders ready to advance.
 export const CRON_INTERVAL = "*/10 * * * * *";
@@ -54,4 +54,4 @@ export const FARMER_RESPONSE_WINDOW_HOURS = 72;
 // unrelated to HOUR_IN_MS (which only scales the delivery simulation) —
 // "once per day" here always means a real 24-hour period regardless of
 // demo/real delivery speed.
-export const DEMO_CUSTOMER_CRON_INTERVAL = "0 0 * * *"; // every day at midnight
+//export const DEMO_CUSTOMER_CRON_INTERVAL = "0 0 * * *"; // every day at midnight

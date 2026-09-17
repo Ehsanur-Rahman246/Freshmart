@@ -2,15 +2,18 @@ import cron from "node-cron";
 import Customer from "../models/Customer.js";
 import Product from "../models/Product.js";
 import { placeDemoOrder } from "../controllers/orderControllers.js";
+import JobState from "../models/JobState.js";
 import {
-  DEMO_CUSTOMERS_ACTIVE_PER_DAY,
   DEMO_WISHLIST_DAILY_ADD_MIN,
   DEMO_WISHLIST_DAILY_ADD_MAX,
   DEMO_CART_FARM_PRODUCT_COUNT,
   DEMO_CART_PRODUCT_QTY_MIN,
   DEMO_CART_PRODUCT_QTY_MAX,
 } from "../config/business.js";
-import {DEMO_CUSTOMER_CHECK_INTERVAL} from "../config/time.js"
+import {
+  DEMO_CUSTOMER_CHECK_INTERVAL,
+  DEMO_CUSTOMER_RUN_GAP_MS,
+} from "../config/time.js";
 
 const randomInt = (min, max) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
@@ -108,7 +111,10 @@ const addRandomFarmItemsToCart = async (customer) => {
   );
 
   for (const product of chosenProducts) {
-    const rawQty = randomInt(DEMO_CART_PRODUCT_QTY_MIN, DEMO_CART_PRODUCT_QTY_MAX);
+    const rawQty = randomInt(
+      DEMO_CART_PRODUCT_QTY_MIN,
+      DEMO_CART_PRODUCT_QTY_MAX,
+    );
     const quantity = Math.min(rawQty, product.stock);
 
     if (quantity <= 0) continue;
@@ -155,14 +161,7 @@ const runDemoCustomerAutomation = async () => {
 
   if (demoCustomers.length === 0) return;
 
-  const activeCount = Math.min(
-    DEMO_CUSTOMERS_ACTIVE_PER_DAY,
-    demoCustomers.length,
-  );
-
-  const chosenCustomers = pickRandom(demoCustomers, activeCount);
-
-  for (const customer of chosenCustomers) {
+  for (const customer of demoCustomers) {
     try {
       await runDemoCustomerForToday(customer);
     } catch (error) {

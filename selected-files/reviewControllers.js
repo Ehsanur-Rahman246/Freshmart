@@ -528,12 +528,20 @@ export const addReviewReply = async (req, res) => {
       }
     } else if (req.user.role === "farmer") {
       const farmer = await Farmer.findOne({ user: req.user.userId });
+
+      if (!farmer) {
+        return res
+          .status(403)
+          .json({ success: false, message: "Not authorized to reply" });
+      }
+
       const ownsProduct =
         review.product &&
-        review.product.farmer.toString() === farmer?._id.toString();
+        review.product.farmer.toString() === farmer._id.toString();
       const ownsFarm =
-        review.farm && review.farm.farmer.toString() === farmer?._id.toString();
-      if (!farmer || (!ownsProduct && !ownsFarm)) {
+        review.farm && review.farm.farmer.toString() === farmer._id.toString();
+
+      if (!ownsProduct && !ownsFarm) {
         return res
           .status(403)
           .json({ success: false, message: "Not authorized to reply" });
