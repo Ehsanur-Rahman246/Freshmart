@@ -1,9 +1,23 @@
+import NotificationsPage from "../../components/notification/Notificationspage";
+import { CUSTOMER_ORDER_TYPES } from "../../components/notification/notificationTypes";
 
+// ADJUST THIS to your real customer order-detail route
+const getCustomerNotificationLink = (notification) => {
+  if (
+    CUSTOMER_ORDER_TYPES.includes(notification.type) &&
+    notification.relatedOrder
+  ) {
+    return `/customer/orders/${notification.relatedOrder}`;
+  }
+  return null;
+};
 
-const Notifications = () => {
+export default function CustomerNotifications() {
   return (
-    <div>Notifications</div>
-  )
+    <NotificationsPage
+      title="Notifications"
+      emptyMessage="You have no notifications."
+      getNotificationLink={getCustomerNotificationLink}
+    />
+  );
 }
-
-export default Notifications

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   FiTrendingUp,
   FiTrendingDown,
@@ -8,6 +7,7 @@ import {
   FiChevronRight,
 } from "react-icons/fi";
 import { useNavigate } from "react-router";
+import { PiFarm } from "react-icons/pi";
 
 // Demo Data
 const crops = [
@@ -38,12 +38,9 @@ const statusColor = {
 
 export default function FarmerDashboard() {
   const navigate = useNavigate();
-  const [showListings, setShowListings] = useState(false);
 
   return (
     <div className="min-h-screen bg-base-100 text-base-content">
-      {/* Main Content */}
-      <div className={`transition-all duration-200 ${showListings ? "scale-[0.995] blur-sm" : ""}`}>
         
         {/* Hero Section */}
         <section className="mx-auto max-w-7xl grid grid-cols-1 gap-10 px-6 py-14 lg:grid-cols-[1.1fr_0.9fr]">
@@ -65,7 +62,7 @@ export default function FarmerDashboard() {
             <div className="mt-7 flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={() => setShowListings(true)}
+                onClick={() => navigate("/farmer/listings")}
                 className="btn border-0 bg-primary text-primary-content hover:bg-primary-hover"
               >
                 <FiPlus size={17} />
@@ -109,8 +106,8 @@ export default function FarmerDashboard() {
             {[
               { icon: FiPlus, text: "List a product", sub: "Add stock, set your baseline-linked price", action: () => navigate("/farmer/listings") },
               { icon: null, text: "Request payout", sub: "৳18,240 available to withdraw", action: () => navigate("/farmer/revenue") },
+              { icon: PiFarm, text: "Manage Your Farms", sub: "View your farms, manage it accrodingly", action: () => navigate("/farmer/farms") },
               { icon: FiArrowUpRight, text: "Request price increase", sub: "Flag weather or yield conditions", action: () => navigate("/farmer/listings") },
-              { icon: null, text: "Verification status", sub: "Documents approved · listing live" },
             ].map((item, idx) => (
               <button
                 key={idx}
@@ -179,7 +176,6 @@ export default function FarmerDashboard() {
             ))}
           </div>
         </section>
-      </div>
 
       {/* Listings Overlay */}
     </div>

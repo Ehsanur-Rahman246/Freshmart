@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { FaCartShopping } from "react-icons/fa6";
-import { IoNotifications } from "react-icons/io5";
 import { FaSearch } from "react-icons/fa";
 import { FiLogOut, FiMenu, FiUser } from "react-icons/fi";
 import Sidebar from "./Sidebar";
-import { logout } from "../api/auth";
-import { NavLink, useNavigate } from "react-router";
+import { NavLink } from "react-router";
+import { useQuery } from "@tanstack/react-query";
+import { getCustomerProfile } from "../api/customer";
+import NotificationBell from "./notification/NotificationBell";
+import useLogout from "../hooks/useLogout";
 
 const SearchBar = () => {
   return (
@@ -25,27 +27,31 @@ const SearchBar = () => {
 
 const ProfileMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate();
+  const handleLogout = useLogout();
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate("/login");
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
-  };
+  const { data: customer } = useQuery({
+    queryKey: ["customerProfile"],
+    queryFn: async () => (await getCustomerProfile()).data.customer,
+  });
 
   return (
     <div className="relative ml-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-content">
       {/* Menu Button */}
       <button
         type="button"
-        className="btn btn-ghost btn-circle m-1 text-2xl"
+        className="btn btn-ghost btn-circle m-1 p-0 overflow-hidden"
         onClick={() => setIsOpen((prev) => !prev)}
         aria-label="Menu"
       >
-        <FiUser className="text-2xl" />
+        {customer?.profileImage?.url ? (
+          <img
+            src={customer.profileImage.url}
+            alt={customer.user?.name}
+            className="w-full h-full object-cover rounded-full"
+          />
+        ) : (
+          <FiUser className="text-2xl" />
+        )}
       </button>
 
       {/* Menu */}
@@ -112,7 +118,6 @@ const CutomerNavbar = () => {
       <nav
         className={`navbar sticky top-0 z-55 px-4 sm:px-6 lg:px-10 transition-all duration-300 ease-in-out ${scrolled ? "bg-primary/30 backdrop-blur-md border-none bg-linear-to-b from-secondary-soft/70 via-secondary-soft/30 via-65% to-transparent" : "bg-base-100"}`}
       >
-        <div className="tooltip tooltip-bottom" data-tip="Menu">
           <button
             type="button"
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -121,7 +126,6 @@ const CutomerNavbar = () => {
           >
             <FiMenu className="text-primary" />
           </button>
-        </div>
 
         {/* Logo */}
         <div className="flex flex-1 items-center align-middle">
@@ -145,29 +149,20 @@ const CutomerNavbar = () => {
           </button>
 
           {/* Cart */}
-          <div className="tooltip tooltip-bottom" data-tip="Cart">
             <button
               className="btn btn-ghost btn-circle text-2xl"
               aria-label="Cart"
             >
-              <FaCartShopping className="text-primary" />
+              <NavLink to={"/customer/cart"}>
+                <FaCartShopping className="text-primary" />
+              </NavLink>
             </button>
-          </div>
 
           {/* Notifications */}
-          <div className="tooltip tooltip-bottom" data-tip="Notifications">
-            <button
-              className="btn btn-ghost btn-circle text-2xl"
-              aria-label="Notifications"
-            >
-              <IoNotifications className="text-primary" />
-            </button>
-          </div>
+          <NotificationBell/>
 
           {/* Profile */}
-          <div className="tooltip tooltip-bottom" data-tip="Profile">
-            <ProfileMenu/>
-          </div>
+            <ProfileMenu />
         </div>
       </nav>
 

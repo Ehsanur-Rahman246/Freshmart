@@ -31,6 +31,7 @@ import OrderConfirmation from "./pages/customer/OrderConfirmation";
 import CustomerOrders from "./pages/customer/Orders";
 import CustomerOrderDetails from "./pages/customer/OrderDetails";
 import CustomerReviews from "./pages/customer/Reviews";
+import Wishlist from "./pages/customer/Wishlist";
 import CustomerNotifications from "./pages/customer/Notifications";
 import CustomerProfile from "./pages/customer/Profile";
 
@@ -45,6 +46,9 @@ import RevenueBalance from "./pages/farmer/RevenueBalance";
 import FarmerReviews from "./pages/farmer/Reviews";
 import FarmerNotifications from "./pages/farmer/Notifications";
 import FarmerProfileSettings from "./pages/farmer/Profile";
+import Farms from "./pages/farmer/Farms";
+import FarmAdd from "./pages/farmer/FarmAdd";
+import FarmManage from "./pages/farmer/FarmManage";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -65,88 +69,64 @@ import NotFound from "./pages/NotFound";
 const AppRoutes = () => {
   return (
     <Routes>
-
       {/* ================= PUBLIC ROUTES ================= */}
 
-
-      <Route element={<GuestRoute/>}>
+      <Route element={<GuestRoute />}>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
       </Route>
       <Route path="/about" element={<About />} />
       <Route path="/marketplace" element={<Marketplace />} />
-      <Route path="/products/:id" element={<ProductDetails />} />
-      <Route path="/farms" element={<FarmInfo/>} />
+      <Route path="/products/:productId" element={<ProductDetails />} />
+      <Route path="/farms" element={<FarmInfo />} />
       <Route path="/farms/:id" element={<FarmProfile />} />
 
-
       <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route
-        path="/terms-and-conditions"
-        element={<TermsConditions />}
-      />
-      <Route
-        path="/privacy-policy"
-        element={<PrivacyPolicy />}
-      />
-
+      <Route path="/terms-and-conditions" element={<TermsConditions />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
       {/* ================= CUSTOMER ROUTES ================= */}
-       {/*  */}
+      {/*  */}
 
       <Route element={<ProtectedRoute role="customer" />}>
         <Route path="/customer" element={<CustomerLayout />}>
-
           <Route index element={<CustomerDashboard />} />
 
-          <Route
-            path="marketplace"
-            element={<CustomerMarketplace />}
-          />
+          <Route path="marketplace" element={<CustomerMarketplace />} />
 
           <Route path="cart" element={<Cart />} />
 
           <Route path="checkout" element={<Checkout />} />
 
-          <Route
-            path="order-confirmation"
-            element={<OrderConfirmation />}
-          />
+          <Route path="order-confirmation" element={<OrderConfirmation />} />
 
           <Route path="orders">
             <Route index element={<CustomerOrders />} />
-            <Route
-              path=":id"
-              element={<CustomerOrderDetails />}
-            />
+            <Route path=":id" element={<CustomerOrderDetails />} />
           </Route>
 
-          <Route
-            path="reviews"
-            element={<CustomerReviews />}
-          />
+          <Route path="reviews" element={<CustomerReviews />} />
 
-          <Route
-            path="notifications"
-            element={<CustomerNotifications />}
-          />
+          <Route path="wishlist" element={<Wishlist />} />
 
-          <Route
-            path="profile"
-            element={<CustomerProfile />}
-          />
+          <Route path="notifications" element={<CustomerNotifications />} />
 
+          <Route path="profile" element={<CustomerProfile />} />
         </Route>
       </Route>
-
 
       {/* ================= FARMER ROUTES ================= */}
 
       <Route element={<ProtectedRoute role="farmer" />}>
         <Route path="/farmer" element={<FarmerLayout />}>
-
           <Route index element={<FarmerDashboard />} />
+
+          <Route path="farms">
+            <Route index element={<Farms />} />
+            <Route path="new" element={<FarmAdd />} />
+            <Route path=":farmId" element={<FarmManage />} />
+          </Route>
 
           <Route path="listings">
             <Route index element={<Listings />} />
@@ -156,104 +136,50 @@ const AppRoutes = () => {
 
           <Route path="orders">
             <Route index element={<FarmerOrders />} />
-            <Route
-              path=":id"
-              element={<FarmerOrderDetails />}
-            />
+            <Route path=":id" element={<FarmerOrderDetails />} />
           </Route>
 
-          <Route
-            path="revenue"
-            element={<RevenueBalance />}
-          />
+          <Route path="revenue" element={<RevenueBalance />} />
 
-          <Route
-            path="reviews"
-            element={<FarmerReviews />}
-          />
+          <Route path="reviews" element={<FarmerReviews />} />
 
-          <Route
-            path="notifications"
-            element={<FarmerNotifications />}
-          />
+          <Route path="notifications" element={<FarmerNotifications />} />
 
-          <Route
-            path="profile"
-            element={<FarmerProfileSettings />}
-          />
-
+          <Route path="profile" element={<FarmerProfileSettings />} />
         </Route>
       </Route>
-
 
       {/* ================= ADMIN ROUTES ================= */}
 
       <Route element={<ProtectedRoute role="admin" />}>
         <Route path="/admin" element={<AdminLayout />}>
-
           <Route index element={<AdminDashboard />} />
 
-          <Route
-            path="farmers"
-            element={<Farmers />}
-          />
+          <Route path="farmers" element={<Farmers />} />
 
-          <Route
-            path="customers"
-            element={<Customers />}
-          />
+          <Route path="customers" element={<Customers />} />
 
-          <Route
-            path="products"
-            element={<Products />}
-          />
+          <Route path="products" element={<Products />} />
 
-          <Route
-            path="orders"
-            element={<Orders />}
-          />
+          <Route path="orders" element={<Orders />} />
 
-          <Route
-            path="live-deliveries"
-            element={<LiveDeliveries />}
-          />
+          <Route path="live-deliveries" element={<LiveDeliveries />} />
 
-          <Route
-            path="analytics"
-            element={<Analytics />}
-          />
+          <Route path="analytics" element={<Analytics />} />
 
-          <Route
-            path="reviews"
-            element={<AdminReviews />}
-          />
+          <Route path="reviews" element={<AdminReviews />} />
 
-          <Route
-            path="notifications"
-            element={<AdminNotifications />}
-          />
+          <Route path="notifications" element={<AdminNotifications />} />
 
-          <Route
-            path="profile"
-            element={<AdminProfile />}
-          />
-
+          <Route path="profile" element={<AdminProfile />} />
         </Route>
       </Route>
 
-
       {/* ================= ERROR ROUTES ================= */}
 
-      <Route
-        path="/unauthorized"
-        element={<Unauthorized />}
-      />
+      <Route path="/unauthorized" element={<Unauthorized />} />
 
-      <Route
-        path="*"
-        element={<NotFound />}
-      />
-
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 };

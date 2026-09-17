@@ -16,7 +16,9 @@ import adminRouter from "./routes/adminRoutes.js";
 import deliveryRouter from "./routes/deliveryRoutes.js";
 import { startDeliveryScheduler } from "./jobs/deliveryProgression.js";
 import { startDemoFarmerScheduler } from "./jobs/demoFarmerAutomation.js";
+import { startDemoCustomerScheduler } from "./jobs/demoCustomerAutomation.js";
 import { multerErrorHandling } from "./middlewares/multerError.middleware.js";
+import { startRestockProcessingScheduler } from "./jobs/restockProcessing.js";
 
 
 const app = express();
@@ -43,10 +45,20 @@ app.use("/api/delivery", deliveryRouter);
 
 app.use(multerErrorHandling);
 
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || "Internal server error",
+  });
+});
+
 connectDB().then(() => {
     app.listen(PORT, () => {
         console.log("Server started on PORT:", PORT);
         startDeliveryScheduler();
         startDemoFarmerScheduler();
+        startDemoCustomerScheduler();
+        startRestockProcessingScheduler(); 
     });
 });

@@ -11,7 +11,7 @@
 //    checking every 10 seconds is pointless once hops take real hours.
 // Nothing else in the codebase needs to change; every other file reads hours
 // through HOUR_IN_MS.
-export const HOUR_IN_MS = 60 * 1000;
+export const HOUR_IN_MS = 5 * 1000;
 
 // How often the delivery scheduler checks for orders ready to advance.
 export const CRON_INTERVAL = "*/10 * * * * *";
@@ -37,10 +37,21 @@ export const DELIVERY_RATE_PER_HOUR = 5;
 // readyForPickup.
 export const DEMO_PROCESSING_HOURS = 2;
 
-// How long a demo product stays "soldOut" before a fresh listing is
-// auto-created to replace it.
-export const DEMO_RESTOCK_GAP_HOURS = 6;
+// add:
+export const RESTOCK_DELAY_HOURS = 10; // simulated hours before cancelled stock returns to the pool
+
+// change DEMO_CUSTOMER_CRON_INTERVAL usage: check hourly, gate by a real 24h wall-clock gap
+export const DEMO_CUSTOMER_CHECK_INTERVAL = "0 * * * *"; // check every hour
+export const DEMO_CUSTOMER_RUN_GAP_MS = 24 * 60 * 60 * 1000; // real 24h between runs
 
 // How long a REAL farmer has to respond to an expired listing's
 // company-sale offer before it's auto-rejected.
 export const FARMER_RESPONSE_WINDOW_HOURS = 72;
+
+// --- Demo customer automation timing ---
+
+// How often the demo customer job runs. This is real wall-clock time,
+// unrelated to HOUR_IN_MS (which only scales the delivery simulation) —
+// "once per day" here always means a real 24-hour period regardless of
+// demo/real delivery speed.
+//export const DEMO_CUSTOMER_CRON_INTERVAL = "0 0 * * *"; // every day at midnight

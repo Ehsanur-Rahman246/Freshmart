@@ -3,12 +3,29 @@ import { BsThreeDots } from "react-icons/bs";
 import { FaCartShopping, FaHeart } from "react-icons/fa6";
 import { useState, useRef } from "react";
 import { Link } from "react-router";
+import toast from "react-hot-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import ProductCardSkeleton from "./ProductCardSkeleton";
+import { useViewer } from "../hooks/useViewer";
+import { addToCart } from "../api/cart";
+import { addToWishlist, removeFromWishlist } from "../api/customer";
 
 const MIN_SKELETON_MS = 300;
 
-const ProductCard = ({ id, image, name, src, price, badge: Badge }) => {
-  const [favorites, setFavorites] = useState(false);
+const ProductCard = ({
+  id,
+  image,
+  name,
+  src,
+  price,
+  unit,
+  badge: Badge,
+  isWishlisted = false,
+}) => {
+  const { role } = useViewer();
+  const queryClient = useQueryClient();
+
+  const [favorites, setFavorites] = useState(isWishlisted);
   const [imgLoaded, setImgLoaded] = useState(false);
 
   // eslint-disable-next-line react-hooks/purity
@@ -23,6 +40,37 @@ const ProductCard = ({ id, image, name, src, price, badge: Badge }) => {
     } else {
       setImgLoaded(true);
     }
+  };
+
+  const addToCartMutation = useMutation({
+    mutationFn: () => addToCart({ productId: id, quantity: 1 }),
+    onSuccess: () => {
+      toast.success("Added to cart");
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+    },
+    onError: (error) => {
+      toast.error(error?.response?.data?.message || "Could not add to cart");
+    },
+  });
+
+  const wishlistMutation = useMutation({
+    mutationFn: () => (favorites ? removeFromWishlist(id) : addToWishlist(id)),
+    onSuccess: () => {
+      setFavorites((prev) => !prev);
+      queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+    },
+    onError: (error) => {
+      toast.error(error?.response?.data?.message || "Something went wrong");
+    },
+  });
+
+  const handleCartClick = () => {
+    if (role === "guest") {
+      toast("Please log in to add items to your cart", { icon: "🔐" });
+      return;
+    }
+
+    addToCartMutation.mutate();
   };
 
   // Hidden <img> so it keeps loading (and can fire onLoad) even while
@@ -46,6 +94,9 @@ const ProductCard = ({ id, image, name, src, price, badge: Badge }) => {
     );
   }
 
+  const showCart = role !== "farmer";
+  const showHeart = role === "customer";
+
   return (
     <div className="product-card w-[calc((100vw-28px)/2)] max-w-50 h-70 flex flex-col bg-base-300 rounded-[10px] shadow-md transition-[transform,box-shadow] duration-300 ease-out hover:-translate-y-1.5 hover:[box-shadow:0_14px_30px_color-mix(in_srgb,var(--color-primary)_30%,transparent)] p-1 my-2 text-left overflow-hidden">
       <div className="relative w-full h-30 rounded-tl-md rounded-tr-md overflow-hidden bg-base-200">
@@ -56,18 +107,21 @@ const ProductCard = ({ id, image, name, src, price, badge: Badge }) => {
           className="w-full h-30 object-cover rounded-tl-md rounded-tr-md"
         />
 
-        <button
-          onClick={() => setFavorites(!favorites)}
-          className="absolute right-0 top-0 btn btn-ghost btn-circle"
-        >
-          <FaHeart
-            className={`text-2xl ${favorites ? "text-red-400" : "text-white"}`}
-          />
-        </button>
+        {showHeart && (
+          <button
+            onClick={() => wishlistMutation.mutate()}
+            disabled={wishlistMutation.isPending}
+            className="absolute right-0 top-0 btn btn-ghost btn-circle"
+          >
+            <FaHeart
+              className={`text-2xl ${favorites ? "text-red-400" : "text-white"}`}
+            />
+          </button>
+        )}
       </div>
 
       <div className="flex items-center ml-1 gap-0.5 min-w-0">
-        <p className="pt-2 ml-1 text-2xl truncate">{name}</p>
+        <p className="pt-2 ml-1 text-[20px] truncate">{name}</p>
         {Badge && (
           <Badge className="size-4 ml-auto mr-1 text-primary-active shrink-0" />
         )}
@@ -76,21 +130,39 @@ const ProductCard = ({ id, image, name, src, price, badge: Badge }) => {
         <CiLocationOn className="shrink-0 text-[12px] text-muted" />
         <p className="text-[12px] text-muted truncate">{src}</p>
       </div>
-      <p className="font-medium pb-2.5 ml-1 text-3xl">
+      <p className="font-medium pb-2.5 ml-1 text-2xl">
         <sup>&#2547;</sup>
         {price}
-        <span className="text-muted"> / kg</span>
+        <span className="text-muted"> / {unit}</span>
       </p>
       <div className="flex gap-2 mt-auto">
-        <button className="btn btn-primary flex-1 flex items-center justify-center gap-2">
-          <FaCartShopping className="text-base shrink-0" />
-          <span className="truncate text-xs sm:text-sm">Add to cart</span>
-        </button>
-        <Link to={`/products/${id}`}>
-          <button className="btn btn-square btn-ghost">
-            <BsThreeDots />
-          </button>
-        </Link>
+        {role === "farmer" ? (
+          <Link to={`/products/${id}`} className="flex-1">
+            <button className="btn btn-primary w-full flex items-center justify-center gap-2">
+              <span className="truncate text-xs sm:text-sm">View Details</span>
+            </button>
+          </Link>
+        ) : (
+          <>
+            {showCart && (
+              <button
+                onClick={handleCartClick}
+                disabled={addToCartMutation.isPending}
+                className="btn btn-primary flex-1 flex items-center justify-center gap-2"
+              >
+                <FaCartShopping className="text-base shrink-0" />
+                <span className="truncate text-xs sm:text-sm">Add to cart</span>
+              </button>
+            )}
+            <Link to={`/products/${id}`} className={showCart ? "" : "flex-1"}>
+              <button
+                className={`btn btn-square btn-ghost ${showCart ? "" : "w-full"}`}
+              >
+                <BsThreeDots />
+              </button>
+            </Link>
+          </>
+        )}
       </div>
     </div>
   );

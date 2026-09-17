@@ -42,6 +42,23 @@ const reviewSchema = new mongoose.Schema(
       default: "",
       maxlength: 1000,
     },
+
+    replies: [
+      {
+        author: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        authorRole: {
+          type: String,
+          enum: ["customer", "farmer", "admin"],
+          required: true,
+        },
+        message: { type: String, required: true, trim: true, maxlength: 500 },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   {
     timestamps: true,

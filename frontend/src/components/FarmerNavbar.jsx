@@ -8,9 +8,11 @@ import {
   FiUser,
   FiLogOut,
 } from "react-icons/fi";
-import { IoNotifications } from "react-icons/io5";
-import { Link, NavLink, useNavigate } from "react-router";
-import { logout } from "../api/auth";
+import { useQuery } from "@tanstack/react-query";
+import { getFarmerProfile } from "../api/farmer";
+import { NavLink } from "react-router";
+import useLogout from "../hooks/useLogout";
+import NotificationBell from "./notification/NotificationBell";
 
 const menuItems = [
   {
@@ -125,27 +127,31 @@ const MobileMenu = () => {
 
 const ProfileMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate();
+  const handleLogout = useLogout();
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate("/login");
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
-  };
+  const { data: farmer } = useQuery({
+    queryKey: ["farmerProfile"],
+    queryFn: async () => (await getFarmerProfile()).data.farmer,
+  });
 
   return (
     <div className="relative ml-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-content">
       {/* Menu Button */}
       <button
         type="button"
-        className="btn btn-ghost btn-circle m-1 text-2xl"
+        className="btn btn-ghost btn-circle m-1 p-0 overflow-hidden"
         onClick={() => setIsOpen((prev) => !prev)}
         aria-label="Menu"
       >
-        <FiUser className="text-2xl" />
+        {farmer?.profileImage?.url ? (
+          <img
+            src={farmer.profileImage.url}
+            alt={farmer.user?.name}
+            className="w-full h-full object-cover rounded-full"
+          />
+        ) : (
+          <FiUser className="text-2xl" />
+        )}
       </button>
 
       {/* Menu */}
@@ -178,7 +184,10 @@ const ProfileMenu = () => {
             </NavLink>
           </li>
           <li key={"logout"}>
-            <div className="relative flex items-center gap-3 rounded-lg px-3 py-2.5 font-semibold transition-colors duration-200 text-base-content hover:bg-error/60 hover:text-error-content" onClick={handleLogout}>
+            <div
+              className="relative flex items-center gap-3 rounded-lg px-3 py-2.5 font-semibold transition-colors duration-200 text-base-content hover:bg-error/60 hover:text-error-content"
+              onClick={handleLogout}
+            >
               <FiLogOut className="text-[17px]" />
               <span>Log Out</span>
             </div>
@@ -191,7 +200,7 @@ const ProfileMenu = () => {
 
 const FarmerNavbar = () => {
   return (
-    <nav className="navbar border-b border-theme-light bg-base-100 px-4 sm:px-6 lg:px-10">
+    <nav className="navbar sticky top-0 border-b border-theme-light bg-base-100 px-4 sm:px-6 lg:px-10">
       {/* Logo */}
       <div className="flex flex-1 items-center align-middle">
         <img src="/logo.png" alt="Logo" className="w-7 h-7 mr-2" />
@@ -207,13 +216,7 @@ const FarmerNavbar = () => {
         <MobileMenu />
 
         {/* Notifications */}
-        <Link
-          to="/farmer/notifications"
-          className="btn btn-ghost btn-circle text-2xl"
-          aria-label="Notifications"
-        >
-          <IoNotifications className="text-primary" />
-        </Link>
+        <NotificationBell />
 
         {/* Profile */}
         <ProfileMenu />

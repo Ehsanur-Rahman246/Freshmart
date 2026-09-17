@@ -1,9 +1,5 @@
+import ReviewsPage from "../../components/review/ReviewsPage";
 
-
-const Reviews = () => {
-  return (
-    <div>Reviews</div>
-  )
+export default function CustomerReviews() {
+  return <ReviewsPage title="My Reviews" emptyMessage="You haven't left any reviews yet." />;
 }
-
-export default Reviews

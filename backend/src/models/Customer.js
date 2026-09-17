@@ -108,6 +108,11 @@ const customerSchema = new mongoose.Schema(
         ref: "Product",
       },
     ],
+
+    isDemo: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

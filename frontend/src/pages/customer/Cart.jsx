@@ -1,14 +1,24 @@
+<<<<<<< HEAD
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import {
   FiArrowRight,
   FiCheck,
+=======
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
+import {
+  FiArrowRight,
+>>>>>>> 2917153390ec8cf2fe10391893afb65676bb3fcf
   FiMinus,
   FiPlus,
   FiShoppingCart,
   FiTag,
   FiTrash2,
 } from "react-icons/fi";
+<<<<<<< HEAD
 
 const INITIAL_CART = [
   {
@@ -68,12 +78,62 @@ const Cart = () => {
       (total, item) => total + item.price * item.quantity,
       0
     );
+=======
+import { getCart, updateCartItem, removeFromCart } from "../../api/cart";
+
+const Cart = () => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const [promoCode, setPromoCode] = useState("");
+  const [promoApplied, setPromoApplied] = useState(false);
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["cart"],
+    queryFn: async () => (await getCart()).data.cart,
+  });
+
+  const cartItems = data ?? [];
+
+  const updateQuantityMutation = useMutation({
+    mutationFn: ({ productId, quantity }) =>
+      updateCartItem(productId, { quantity }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+    },
+    onError: (error) => {
+      toast.error(error?.response?.data?.message || "Could not update quantity");
+    },
+  });
+
+  const removeItemMutation = useMutation({
+    mutationFn: (productId) => removeFromCart(productId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+    },
+    onError: (error) => {
+      toast.error(error?.response?.data?.message || "Could not remove item");
+    },
+  });
+
+  const getEffectivePrice = (product) => {
+    const discountPct = product.discountPercentage || 0;
+    return Math.round(product.price * (1 - discountPct / 100) * 100) / 100;
+  };
+
+  const subtotal = useMemo(() => {
+    return cartItems.reduce((total, item) => {
+      if (!item.product) return total;
+      return total + getEffectivePrice(item.product) * item.quantity;
+    }, 0);
+>>>>>>> 2917153390ec8cf2fe10391893afb65676bb3fcf
   }, [cartItems]);
 
   const discount = promoApplied ? Math.round(subtotal * 0.1) : 0;
   const deliveryFee = subtotal > 0 ? 50 : 0;
   const total = subtotal - discount + deliveryFee;
 
+<<<<<<< HEAD
   const updateQuantity = (id, change) => {
     setCartItems((items) =>
       items
@@ -91,6 +151,29 @@ const Cart = () => {
 
   const removeItem = (id) => {
     setCartItems((items) => items.filter((item) => item.id !== id));
+=======
+  const updateQuantity = (item, change) => {
+    const newQuantity = item.quantity + change;
+
+    if (newQuantity < 1) {
+      removeItemMutation.mutate(item.product._id);
+      return;
+    }
+
+    if (newQuantity > item.product.stock) {
+      toast.error("Requested quantity exceeds available stock");
+      return;
+    }
+
+    updateQuantityMutation.mutate({
+      productId: item.product._id,
+      quantity: newQuantity,
+    });
+  };
+
+  const removeItem = (productId) => {
+    removeItemMutation.mutate(productId);
+>>>>>>> 2917153390ec8cf2fe10391893afb65676bb3fcf
   };
 
   const applyPromo = () => {
@@ -102,10 +185,36 @@ const Cart = () => {
   };
 
   const handleCheckout = () => {
+<<<<<<< HEAD
     localStorage.setItem("freshmart-cart", JSON.stringify(cartItems));
     navigate("/customer/checkout");
   };
 
+=======
+    navigate("/customer/checkout");
+  };
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-base-200/40 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl text-center py-16 text-muted">
+          Loading your cart...
+        </div>
+      </main>
+    );
+  }
+
+  if (isError) {
+    return (
+      <main className="min-h-screen bg-base-200/40 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl text-center py-16 text-error">
+          Couldn't load your cart. Please try again.
+        </div>
+      </main>
+    );
+  }
+
+>>>>>>> 2917153390ec8cf2fe10391893afb65676bb3fcf
   return (
     <main className="min-h-screen bg-base-200/40 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
@@ -124,7 +233,11 @@ const Cart = () => {
               Your Cart
             </h1>
             <p className="mt-1 text-sm text-muted">
+<<<<<<< HEAD
               Fresh vegetables, ready for your kitchen.
+=======
+              Fresh groceries, farm to your door
+>>>>>>> 2917153390ec8cf2fe10391893afb65676bb3fcf
             </p>
           </div>
 
@@ -160,6 +273,7 @@ const Cart = () => {
             {/* ================= CART ITEMS ================= */}
             <section className="overflow-hidden rounded-2xl border border-theme bg-base-100 shadow-sm">
 
+<<<<<<< HEAD
               {/* Select all */}
               <div className="flex items-center justify-between border-b border-theme-light px-5 py-4 sm:px-6">
                 <div className="flex items-center gap-3">
@@ -171,6 +285,12 @@ const Cart = () => {
                     Select All
                   </span>
                 </div>
+=======
+              <div className="flex items-center justify-between border-b border-theme-light px-5 py-4 sm:px-6">
+                <span className="text-sm font-bold sm:text-base">
+                  Items in Cart
+                </span>
+>>>>>>> 2917153390ec8cf2fe10391893afb65676bb3fcf
 
                 <span className="text-sm text-muted">
                   {cartItems.length} products
@@ -179,6 +299,7 @@ const Cart = () => {
 
               {/* Items */}
               <div>
+<<<<<<< HEAD
                 {cartItems.map((item, index) => (
                   <div
                     key={item.id}
@@ -260,6 +381,99 @@ const Cart = () => {
                     </button>
                   </div>
                 ))}
+=======
+                {cartItems.map((item, index) => {
+                  const product = item.product;
+
+                  if (!product) return null;
+
+                  const effectivePrice = getEffectivePrice(product);
+
+                  return (
+                    <div
+                      key={item._id}
+                      className={`flex gap-4 px-5 py-5 sm:px-6 ${
+                        index !== cartItems.length - 1
+                          ? "border-b border-theme-light"
+                          : ""
+                      }`}
+                    >
+                      {/* Product Image */}
+                      <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-base-200 sm:h-28 sm:w-28">
+                        <img
+                          src={product.images?.[0]?.url}
+                          alt={product.name}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+
+                      {/* Product Info */}
+                      <div className="flex min-w-0 flex-1 flex-col justify-between gap-3">
+                        <div className="pr-1">
+                          <p className="text-xs font-semibold text-primary">
+                            {product.farm?.name}
+                          </p>
+
+                          <h3 className="mt-0.5 text-base font-extrabold sm:text-lg">
+                            {product.name}
+                          </h3>
+
+                          <p className="mt-1 text-sm text-muted">
+                            ৳{effectivePrice} / {product.unit}
+                          </p>
+
+                          {product.status !== "active" && (
+                            <p className="mt-1 text-xs font-bold text-error">
+                              This item is no longer available
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <p className="text-lg font-extrabold">
+                            ৳{Math.round(effectivePrice * item.quantity * 100) / 100}
+                          </p>
+
+                          {/* Quantity */}
+                          <div className="flex h-9 items-center overflow-hidden rounded-lg border border-theme bg-base-100">
+                            <button
+                              onClick={() => updateQuantity(item, -1)}
+                              disabled={updateQuantityMutation.isPending}
+                              className="flex h-full w-9 items-center justify-center text-muted transition hover:bg-primary-soft hover:text-primary"
+                              aria-label={`Decrease ${product.name}`}
+                            >
+                              <FiMinus size={14} />
+                            </button>
+
+                            <span className="flex min-w-10 items-center justify-center border-x border-theme px-2 text-sm font-bold">
+                              {item.quantity}
+                            </span>
+
+                            <button
+                              onClick={() => updateQuantity(item, 1)}
+                              disabled={updateQuantityMutation.isPending}
+                              className="flex h-full w-9 items-center justify-center text-muted transition hover:bg-primary-soft hover:text-primary"
+                              aria-label={`Increase ${product.name}`}
+                            >
+                              <FiPlus size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Delete */}
+                      <button
+                        onClick={() => removeItem(product._id)}
+                        disabled={removeItemMutation.isPending}
+                        className="self-start rounded-lg p-2 text-error transition hover:bg-error-soft"
+                        aria-label={`Remove ${product.name}`}
+                      >
+                        <FiTrash2 size={18} />
+                      </button>
+                    </div>
+                  );
+                })}
+>>>>>>> 2917153390ec8cf2fe10391893afb65676bb3fcf
               </div>
 
               {/* Continue Shopping */}

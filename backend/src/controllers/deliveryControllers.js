@@ -6,6 +6,81 @@ import Customer from "../models/Customer.js";
 import Farmer from "../models/Farmer.js";
 import createNotification from "../utils/createNotification.js";
 import { HOUR_IN_MS, LOCAL_PICKUP_HOURS } from "../config/time.js";
+import Zone from "../models/Zone.js";
+
+// Looks up an available driver for the order's destination zone and, if
+// found, performs the same assignment mutation assignDriverToOrder does
+// manually. Returns true if a driver was assigned, false if none were
+// available. Used both by the admin's manual flow (indirectly, via
+// assignDriverToOrder) and by demo-customer automation, which needs to
+// assign without an admin in the loop.
+export const tryAutoAssignDriver = async (order) => {
+  try {
+    if (order.status !== "readyForPickup" || order.delivery.courier) {
+      return false;
+    }
+
+    const originZone = await Zone.findById(order.delivery.originZone);
+    const destinationZone = await Zone.findById(order.delivery.destinationZone);
+
+    if (!originZone || !destinationZone) {
+      return false;
+    }
+
+    const originZoneId = originZone.zoneId;
+    const destinationZoneId = destinationZone.zoneId;
+
+    const couriers = await Courier.find({
+      zonesCovered: { $all: [originZoneId, destinationZoneId] },
+    });
+
+    const courierIds = couriers.map((courier) => courier._id);
+
+    const driver = await Driver.findOne({
+      courier: { $in: courierIds },
+      currentZone: originZoneId,
+      isAvailable: true,
+    });
+
+    if (!driver) {
+      return false;
+    }
+
+    order.delivery.courier = driver.courier;
+    order.delivery.driver = {
+      driverId: driver._id,
+      name: driver.name,
+      phone: driver.phone,
+    };
+    order.status = "pickedUp";
+    order.delivery.nextTransitionAt = new Date(
+      Date.now() + LOCAL_PICKUP_HOURS * HOUR_IN_MS,
+    );
+
+    await order.save();
+
+    driver.isAvailable = false;
+    await driver.save();
+
+    const customer = await Customer.findById(order.customer).populate("user");
+    if (customer) {
+      await createNotification({
+        recipient: customer.user._id,
+        recipientRole: "customer",
+        type: "driverAssigned",
+        title: "Driver Assigned",
+        message: "A driver has been assigned and picked up your order.",
+        relatedOrder: order._id,
+      });
+    }
+
+    return true;
+  } catch (error) {
+    console.error("tryAutoAssignDriver error:", error);
+
+    return false;
+  }
+};
 
 export const getOrdersAwaitingAssignment = async (req, res) => {
   try {
@@ -47,7 +122,7 @@ export const getAvailableDriversForOrder = async (req, res) => {
     }
 
     const order = await Order.findById(orderId).populate(
-      "delivery.destinationZone",
+      "delivery.originZone delivery.destinationZone",
     );
 
     if (!order) {
@@ -57,17 +132,18 @@ export const getAvailableDriversForOrder = async (req, res) => {
       });
     }
 
+    const originZoneId = order.delivery.originZone.zoneId;
     const destinationZoneId = order.delivery.destinationZone.zoneId;
 
     const couriers = await Courier.find({
-      zonesCovered: destinationZoneId,
+      zonesCovered: { $all: [originZoneId, destinationZoneId] },
     });
 
     const courierIds = couriers.map((courier) => courier._id);
 
     const drivers = await Driver.find({
       courier: { $in: courierIds },
-      currentZone: destinationZoneId,
+      currentZone: originZoneId,
       isAvailable: true,
     }).populate("courier", "name courierCode");
 
@@ -171,18 +247,6 @@ export const assignDriverToOrder = async (req, res) => {
         type: "driverAssigned",
         title: "Driver Assigned",
         message: "A driver has been assigned and picked up your order.",
-        relatedOrder: order._id,
-      });
-    }
-
-    const farmer = await Farmer.findById(order.farmer).populate("user");
-    if (farmer) {
-      await createNotification({
-        recipient: farmer.user._id,
-        recipientRole: "farmer",
-        type: "pickedUp",
-        title: "Order Picked Up",
-        message: "Your order has been picked up by the assigned driver.",
         relatedOrder: order._id,
       });
     }
