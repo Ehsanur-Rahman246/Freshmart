@@ -1,84 +1,15 @@
-<<<<<<< HEAD
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router";
-import {
-  FiArrowRight,
-  FiCheck,
-=======
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
   FiArrowRight,
->>>>>>> 2917153390ec8cf2fe10391893afb65676bb3fcf
   FiMinus,
   FiPlus,
   FiShoppingCart,
   FiTag,
   FiTrash2,
 } from "react-icons/fi";
-<<<<<<< HEAD
-
-const INITIAL_CART = [
-  {
-    id: 1,
-    name: "Fresh Tomatoes",
-    category: "Fresh Vegetables",
-    price: 85,
-    unit: "kg",
-    quantity: 2,
-    image:
-      "https://images.unsplash.com/photo-1546094096-0df4bcaaa337?auto=format&fit=crop&w=300&q=80",
-  },
-  {
-    id: 2,
-    name: "Fresh Broccoli",
-    category: "Green Vegetables",
-    price: 140,
-    unit: "kg",
-    quantity: 1,
-    image:
-      "https://images.unsplash.com/photo-1459411621453-7b03977f4bfc?auto=format&fit=crop&w=300&q=80",
-  },
-  {
-    id: 3,
-    name: "Fresh Carrots",
-    category: "Root Vegetables",
-    price: 110,
-    unit: "kg",
-    quantity: 1,
-    image:
-      "https://images.unsplash.com/photo-1445282768818-728615cc910a?auto=format&fit=crop&w=300&q=80",
-  },
-];
-
-const Cart = () => {
-  const navigate = useNavigate();
-
-  const [cartItems, setCartItems] = useState(() => {
-    try {
-      const savedCart = localStorage.getItem("freshmart-cart");
-
-      return savedCart ? JSON.parse(savedCart) : INITIAL_CART;
-    } catch {
-      return INITIAL_CART;
-    }
-  });
-
-  const [promoCode, setPromoCode] = useState("");
-  const [promoApplied, setPromoApplied] = useState(false);
-
-  useEffect(() => {
-    localStorage.setItem("freshmart-cart", JSON.stringify(cartItems));
-  }, [cartItems]);
-
-  const subtotal = useMemo(() => {
-    return cartItems.reduce(
-      (total, item) => total + item.price * item.quantity,
-      0
-    );
-=======
 import { getCart, updateCartItem, removeFromCart } from "../../api/cart";
 
 const Cart = () => {
@@ -126,32 +57,12 @@ const Cart = () => {
       if (!item.product) return total;
       return total + getEffectivePrice(item.product) * item.quantity;
     }, 0);
->>>>>>> 2917153390ec8cf2fe10391893afb65676bb3fcf
   }, [cartItems]);
 
   const discount = promoApplied ? Math.round(subtotal * 0.1) : 0;
   const deliveryFee = subtotal > 0 ? 50 : 0;
   const total = subtotal - discount + deliveryFee;
 
-<<<<<<< HEAD
-  const updateQuantity = (id, change) => {
-    setCartItems((items) =>
-      items
-        .map((item) => {
-          if (item.id !== id) return item;
-
-          return {
-            ...item,
-            quantity: Math.max(1, item.quantity + change),
-          };
-        })
-        .filter((item) => item.quantity > 0)
-    );
-  };
-
-  const removeItem = (id) => {
-    setCartItems((items) => items.filter((item) => item.id !== id));
-=======
   const updateQuantity = (item, change) => {
     const newQuantity = item.quantity + change;
 
@@ -173,7 +84,6 @@ const Cart = () => {
 
   const removeItem = (productId) => {
     removeItemMutation.mutate(productId);
->>>>>>> 2917153390ec8cf2fe10391893afb65676bb3fcf
   };
 
   const applyPromo = () => {
@@ -185,12 +95,6 @@ const Cart = () => {
   };
 
   const handleCheckout = () => {
-<<<<<<< HEAD
-    localStorage.setItem("freshmart-cart", JSON.stringify(cartItems));
-    navigate("/customer/checkout");
-  };
-
-=======
     navigate("/customer/checkout");
   };
 
@@ -214,7 +118,6 @@ const Cart = () => {
     );
   }
 
->>>>>>> 2917153390ec8cf2fe10391893afb65676bb3fcf
   return (
     <main className="min-h-screen bg-base-200/40 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
@@ -233,11 +136,7 @@ const Cart = () => {
               Your Cart
             </h1>
             <p className="mt-1 text-sm text-muted">
-<<<<<<< HEAD
-              Fresh vegetables, ready for your kitchen.
-=======
               Fresh groceries, farm to your door
->>>>>>> 2917153390ec8cf2fe10391893afb65676bb3fcf
             </p>
           </div>
 
@@ -273,24 +172,10 @@ const Cart = () => {
             {/* ================= CART ITEMS ================= */}
             <section className="overflow-hidden rounded-2xl border border-theme bg-base-100 shadow-sm">
 
-<<<<<<< HEAD
-              {/* Select all */}
-              <div className="flex items-center justify-between border-b border-theme-light px-5 py-4 sm:px-6">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-5 w-5 items-center justify-center rounded border-2 border-primary bg-primary text-white">
-                    <FiCheck size={13} strokeWidth={3} />
-                  </div>
-
-                  <span className="text-sm font-bold sm:text-base">
-                    Select All
-                  </span>
-                </div>
-=======
               <div className="flex items-center justify-between border-b border-theme-light px-5 py-4 sm:px-6">
                 <span className="text-sm font-bold sm:text-base">
                   Items in Cart
                 </span>
->>>>>>> 2917153390ec8cf2fe10391893afb65676bb3fcf
 
                 <span className="text-sm text-muted">
                   {cartItems.length} products
@@ -299,89 +184,6 @@ const Cart = () => {
 
               {/* Items */}
               <div>
-<<<<<<< HEAD
-                {cartItems.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className={`flex gap-4 px-5 py-5 sm:px-6 ${
-                      index !== cartItems.length - 1
-                        ? "border-b border-theme-light"
-                        : ""
-                    }`}
-                  >
-                    {/* Checkbox */}
-                    <div className="hidden pt-2 sm:block">
-                      <div className="flex h-5 w-5 items-center justify-center rounded border-2 border-primary bg-primary text-white">
-                        <FiCheck size={13} strokeWidth={3} />
-                      </div>
-                    </div>
-
-                    {/* Product Image */}
-                    <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-base-200 sm:h-28 sm:w-28">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-
-                    {/* Product Info */}
-                    <div className="flex min-w-0 flex-1 flex-col justify-between gap-3">
-                      <div className="pr-1">
-                        <p className="text-xs font-semibold text-primary">
-                          {item.category}
-                        </p>
-
-                        <h3 className="mt-0.5 text-base font-extrabold sm:text-lg">
-                          {item.name}
-                        </h3>
-
-                        <p className="mt-1 text-sm text-muted">
-                          ৳{item.price} / {item.unit}
-                        </p>
-                      </div>
-
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <p className="text-lg font-extrabold">
-                          ৳{item.price * item.quantity}
-                        </p>
-
-                        {/* Quantity */}
-                        <div className="flex h-9 items-center overflow-hidden rounded-lg border border-theme bg-base-100">
-                          <button
-                            onClick={() => updateQuantity(item.id, -1)}
-                            className="flex h-full w-9 items-center justify-center text-muted transition hover:bg-primary-soft hover:text-primary"
-                            aria-label={`Decrease ${item.name}`}
-                          >
-                            <FiMinus size={14} />
-                          </button>
-
-                          <span className="flex min-w-10 items-center justify-center border-x border-theme px-2 text-sm font-bold">
-                            {item.quantity}
-                          </span>
-
-                          <button
-                            onClick={() => updateQuantity(item.id, 1)}
-                            className="flex h-full w-9 items-center justify-center text-muted transition hover:bg-primary-soft hover:text-primary"
-                            aria-label={`Increase ${item.name}`}
-                          >
-                            <FiPlus size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Delete */}
-                    <button
-                      onClick={() => removeItem(item.id)}
-                      className="self-start rounded-lg p-2 text-error transition hover:bg-error-soft"
-                      aria-label={`Remove ${item.name}`}
-                    >
-                      <FiTrash2 size={18} />
-                    </button>
-                  </div>
-                ))}
-=======
                 {cartItems.map((item, index) => {
                   const product = item.product;
 
@@ -473,7 +275,6 @@ const Cart = () => {
                     </div>
                   );
                 })}
->>>>>>> 2917153390ec8cf2fe10391893afb65676bb3fcf
               </div>
 
               {/* Continue Shopping */}

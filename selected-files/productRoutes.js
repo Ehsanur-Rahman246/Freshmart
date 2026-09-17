@@ -8,6 +8,7 @@ import {
   getMyProducts,
   getProductById,
   getProducts,
+  getRelatedProducts,
   updateProduct,
 } from "../controllers/productControllers.js";
 
@@ -22,6 +23,7 @@ productRouter.post(
 );
 productRouter.get("/my-products", userAuth, roleAuth("farmer"), getMyProducts);
 productRouter.get("/", getProducts);
+productRouter.get("/:productId/related", getRelatedProducts);
 productRouter.get("/:productId", getProductById);
 productRouter.patch(
   "/:productId",

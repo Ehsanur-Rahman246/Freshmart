@@ -466,10 +466,16 @@ export const getMyOrders = async (req, res) => {
     const orders = await Order.find({
       customer: customer._id,
     })
-      .populate("farm", "name")
-      .populate("farmer", "user")
+      .populate("farm", "name location")
+      .populate({
+        path: "farmer",
+        select: "user",
+        populate: { path: "user", select: "name" },
+      })
+      .populate("items.product", "name images")
       .populate("delivery.originZone")
       .populate("delivery.destinationZone")
+      .populate("delivery.courier", "name courierCode")
       .sort({
         createdAt: -1,
       });
@@ -732,7 +738,6 @@ export const cancelOrder = async (req, res) => {
     });
   }
 };
-
 export const getFarmerOrders = async (req, res) => {
   try {
     const farmer = await Farmer.findOne({
@@ -749,8 +754,14 @@ export const getFarmerOrders = async (req, res) => {
     const orders = await Order.find({
       farmer: farmer._id,
     })
-      .populate("customer", "user")
+      .populate({
+        path: "customer",
+        select: "user",
+        populate: { path: "user", select: "name" },
+      })
       .populate("items.product", "name images")
+      .populate("delivery.originZone")
+      .populate("delivery.destinationZone")
       .sort({
         createdAt: -1,
       });

@@ -5,6 +5,7 @@ import { getFarmById } from "../api/farm";
 import { getProductById } from "../api/product";
 import { getFarmReviews } from "../api/review";
 import ProductCard from "../components/ProductCard";
+import Loader from "../components/Loader";
 
 const FarmProfile = () => {
   const { id } = useParams();
@@ -48,7 +49,7 @@ const FarmProfile = () => {
 
   const products = productQueries.map((q) => q.data).filter(Boolean);
 
-  if (isLoading || !farm) return <p className="p-4">Loading farm...</p>;
+  if (isLoading || !farm) return <Loader/>;
 
   const avgRating = reviews.length
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length

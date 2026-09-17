@@ -908,10 +908,11 @@ export const updateOrderStatus = async (req, res) => {
 
       // Demo customers skip the admin driver-assignment queue: try once,
       // auto-cancel if nobody's available right now.
+      let driverAutoAssigned = false;
       if (customer.isDemo) {
-        const driverAssigned = await tryAutoAssignDriver(order);
+        driverAutoAssigned = await tryAutoAssignDriver(order);
 
-        if (!driverAssigned) {
+        if (!driverAutoAssigned) {
           await autoCancelOrder({
             order,
             customer,
@@ -928,12 +929,14 @@ export const updateOrderStatus = async (req, res) => {
       }
     }
 
-    await notifyAdmin({
-      type: "readyForPickup",
-      title: "Order Ready for Pickup",
-      message: `Order ${order.orderNumber} is ready for pickup and needs a driver assigned.`,
-      relatedOrder: order._id,
-    });
+    if (!driverAutoAssigned) {
+      await notifyAdmin({
+        type: "readyForPickup",
+        title: "Order Ready for Pickup",
+        message: `Order ${order.orderNumber} is ready for pickup and needs a driver assigned.`,
+        relatedOrder: order._id,
+      });
+    }
 
     return res.status(200).json({
       success: true,

@@ -7,6 +7,7 @@ import Farm from "../models/Farm.js";
 import Farmer from "../models/Farmer.js";
 import createNotification from "../utils/createNotification.js";
 import notifyAdmin from "../utils/notifyAdmin.js";
+import { maybeAddFarmerReply } from "../utils/farmerAutoReply.js";
 
 // Reply.author is a User ref, but profile images live on Customer/Farmer docs,
 // so after populating name we do a second batch lookup for images.
@@ -161,6 +162,7 @@ export const createProductReview = async (req, res) => {
         relatedOrder: order._id,
         relatedProduct: product._id,
       });
+      await maybeAddFarmerReply(review, farmer);
     }
 
     return res.status(201).json({
@@ -275,6 +277,7 @@ export const createFarmReview = async (req, res) => {
         message: `A customer left a ${rating}-star review for your farm.`,
         relatedOrder: order._id,
       });
+      await maybeAddFarmerReply(review, farmer);
     }
 
     return res.status(201).json({

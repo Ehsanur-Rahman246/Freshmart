@@ -122,7 +122,7 @@ export const getAvailableDriversForOrder = async (req, res) => {
     }
 
     const order = await Order.findById(orderId).populate(
-      "delivery.destinationZone",
+      "delivery.originZone delivery.destinationZone",
     );
 
     if (!order) {
