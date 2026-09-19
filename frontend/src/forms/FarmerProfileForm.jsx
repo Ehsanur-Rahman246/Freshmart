@@ -29,7 +29,11 @@ export default function FarmerProfileForm({ farmer, onSuccess }) {
           {status && <p className="text-red-600 text-sm">{status}</p>}
 
           {farmer?.profileImage?.url && (
-            <img src={farmer.profileImage.url} alt="" className="w-24 h-24 rounded-full object-cover" />
+            <img
+              src={farmer.profileImage.url}
+              alt=""
+              className="w-24 h-24 rounded-full object-cover"
+            />
           )}
 
           <input

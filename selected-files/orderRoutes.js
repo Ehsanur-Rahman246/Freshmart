@@ -1,5 +1,4 @@
 import express from "express";
-
 import {
   createOrder,
   getMyOrders,
@@ -15,8 +14,8 @@ import {
   rejectOrder,
   getFarmOrders,
   getOrdersByFarm,
+  getCheckoutPreview,
 } from "../controllers/orderControllers.js";
-
 import userAuth from "../middlewares/userAuth.js";
 import roleAuth from "../middlewares/roleAuth.js";
 
@@ -37,6 +36,13 @@ orderRouter.patch(
   roleAuth("customer"),
   confirmPayment,
 );
+orderRouter.post(
+  "/preview",
+  userAuth,
+  roleAuth("customer"),
+  getCheckoutPreview,
+);
+
 // FARMER
 orderRouter.get(
   "/farmer/my-orders",
@@ -63,6 +69,7 @@ orderRouter.patch(
   roleAuth("farmer"),
   rejectOrder,
 );
+
 // ADMIN
 orderRouter.get("/admin/all", userAuth, roleAuth("admin"), getAllOrders);
 orderRouter.get(
@@ -83,6 +90,7 @@ orderRouter.get(
   roleAuth("admin"),
   getOrdersByFarm,
 );
+
 // ALL
 orderRouter.get(
   "/:orderId",

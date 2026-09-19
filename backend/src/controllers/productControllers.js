@@ -8,7 +8,7 @@ import {
 } from "../utils/uploadToCloudinary.js";
 import notifyAdmin from "../utils/notifyAdmin.js";
 
-const IMAGE_UPLOAD_CONCURRENCY = 3;
+const IMAGE_UPLOAD_CONCURRENCY = 4;
 
 export const createProduct = async (req, res) => {
   try {
@@ -209,9 +209,25 @@ export const getProducts = async (req, res) => {
     const page = Math.max(Number(req.query.page) || 1, 1);
     const limit = Math.min(Number(req.query.limit) || 10, 50);
     const skip = (page - 1) * limit;
+    const search = (req.query.search || "").trim();
+
+    const filter = { status: "active" };
+
+    if (search) {
+      const regex = new RegExp(search, "i");
+
+      const matchingFarmIds = await Farm.find({ name: regex }).select("_id");
+
+      filter.$or = [
+        { name: regex },
+        { category: regex },
+        { subCategory: regex },
+        { farm: { $in: matchingFarmIds.map((f) => f._id) } },
+      ];
+    }
 
     const [products, total] = await Promise.all([
-      Product.find({ status: "active" })
+      Product.find(filter)
         .populate("farm", "name")
         .populate({
           path: "farmer",
@@ -221,7 +237,7 @@ export const getProducts = async (req, res) => {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
-      Product.countDocuments({ status: "active" }),
+      Product.countDocuments(filter),
     ]);
 
     return res.status(200).json({
@@ -277,17 +293,20 @@ export const updateProduct = async (req, res) => {
       unit,
       stock,
       discountPercentage,
+      listingDuration,
       removeImages,
     } = req.body;
 
-    // Snapshot the "before" state so we know what to remove from Farm.products
     const oldFarmId = product.farm.toString();
     const oldSeason = product.season;
 
-    let newFarm = null; // only set if farmId is actually changing
+    let newFarm = null;
 
     if (farmId !== undefined) {
-      const farm = await Farm.findOne({ _id: farmId, farmer: farmer._id });
+      const farm = await Farm.findOne({
+        _id: farmId,
+        farmer: farmer._id,
+      });
 
       if (!farm) {
         return res.status(404).json({
@@ -311,12 +330,19 @@ export const updateProduct = async (req, res) => {
     if (price !== undefined) product.price = price;
     if (unit !== undefined) product.unit = unit;
     if (stock !== undefined) product.stock = stock;
-
     if (discountPercentage !== undefined) {
       product.discountPercentage = discountPercentage;
     }
 
-    // Remove requested images (by publicId) from Cloudinary + the array
+    if (listingDuration !== undefined) {
+      product.listingDuration = Number(listingDuration);
+
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + product.listingDuration);
+
+      product.expiresAt = expiresAt;
+    }
+
     if (removeImages) {
       let removeIds = [];
 
@@ -338,7 +364,6 @@ export const updateProduct = async (req, res) => {
       }
     }
 
-    // Append newly uploaded images
     if (req.files && req.files.length > 0) {
       const limit = pLimit(IMAGE_UPLOAD_CONCURRENCY);
 
@@ -365,7 +390,6 @@ export const updateProduct = async (req, res) => {
     const newFarmId = product.farm.toString();
     const newSeason = product.season;
 
-    // Only touch Farm.products if the farm or season actually changed
     if (newFarmId !== oldFarmId || newSeason !== oldSeason) {
       const oldFarm = newFarm ? await Farm.findById(oldFarmId) : null;
 
@@ -395,9 +419,11 @@ export const updateProduct = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };
 

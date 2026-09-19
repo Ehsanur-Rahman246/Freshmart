@@ -2,6 +2,8 @@ import { FiMapPin, FiPackage } from "react-icons/fi";
 import { useNavigate } from "react-router";
 import { getStatusMeta } from "../utils/orderStatus";
 
+const PRE_PROCESSING_STATUSES = ["pendingAcceptance", "paymentPending"];
+
 const OrderCard = ({ order }) => {
   const navigate = useNavigate();
 
@@ -10,10 +12,8 @@ const OrderCard = ({ order }) => {
   const image = firstItem?.product?.images?.[0]?.url;
   const statusMeta = getStatusMeta(order.status);
 
-  const originLabel =
-    order.delivery?.originZone?.label || order.farm?.location?.district;
-  const destinationLabel =
-    order.delivery?.destinationZone?.label || order.deliveryAddress?.district;
+  const originLabel = `${order.farm?.location?.upazila}, ${order.farm?.location?.district}`;
+  const destinationLabel = `${order.deliveryAddress?.upazila}, ${order.deliveryAddress?.district}`;
 
   return (
     <div className="bg-base-100 border border-theme-light rounded-box p-4 hover:shadow-md transition">
@@ -42,7 +42,11 @@ const OrderCard = ({ order }) => {
       <div className="bg-base-200 rounded-field p-3 mt-3 flex items-center gap-3">
         <div className="w-12 h-12 rounded-field bg-base-100 flex items-center justify-center overflow-hidden shrink-0">
           {image ? (
-            <img src={image} alt={firstItem?.name} className="w-full h-full object-cover" />
+            <img
+              src={image}
+              alt={firstItem?.name}
+              className="w-full h-full object-cover"
+            />
           ) : (
             <FiPackage className="text-muted-light text-xl" />
           )}
@@ -64,7 +68,13 @@ const OrderCard = ({ order }) => {
         </span>
 
         <button
-          onClick={() => navigate(`/customer/orders/${order._id}`)}
+          onClick={() =>
+            navigate(
+              PRE_PROCESSING_STATUSES.includes(order.status)
+                ? `/customer/order-confirmation/${order._id}`
+                : `/customer/orders/${order._id}`,
+            )
+          }
           className="btn btn-sm btn-outline"
         >
           Details

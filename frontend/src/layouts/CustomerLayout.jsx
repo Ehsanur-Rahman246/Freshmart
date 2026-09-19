@@ -1,12 +1,15 @@
 import { Outlet } from "react-router";
-import CutomerNavbar from "../components/CustomerNavbar";
+import CustomerNavbar from "../components/CustomerNavbar";
 
 const CustomerLayout = () => {
   return (
-    <>
-      <CutomerNavbar />
-      <Outlet/>
-    </>
+    <div className="min-h-screen flex flex-col">
+      <CustomerNavbar />
+
+      <main className="flex-1">
+        <Outlet />
+      </main>
+    </div>
   );
 };
 

@@ -121,7 +121,21 @@ export const getFarmerById = async (req, res) => {
 
 export const getAllFarms = async (req, res) => {
   try {
-    const farms = await Farm.find().populate({
+    const search = (req.query.search || "").trim();
+    const filter = {};
+
+    if (search) {
+      const regex = new RegExp(search, "i");
+      filter.$or = [
+        { name: regex },
+        { "location.district": regex },
+        { "location.upazila": regex },
+        { "location.village": regex },
+        { farmType: regex },
+      ];
+    }
+
+    const farms = await Farm.find(filter).populate({
       path: "farmer",
       select: "profileImage",
       populate: {

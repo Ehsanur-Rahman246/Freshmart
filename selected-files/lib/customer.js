@@ -1,4 +1,4 @@
-import api from "../api/api";
+import api from "./api";
 
 export const getCustomerProfile = () => api.get("/customer/profile");
 export const updateCustomerProfile = (data) =>

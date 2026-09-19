@@ -13,6 +13,8 @@ import { getFarmerProfile } from "../api/farmer";
 import { NavLink } from "react-router";
 import useLogout from "../hooks/useLogout";
 import NotificationBell from "./notification/NotificationBell";
+import { PiFarmLight } from "react-icons/pi";
+import { BsShop } from "react-icons/bs";
 
 const menuItems = [
   {
@@ -34,6 +36,16 @@ const menuItems = [
     name: "Payouts",
     icon: FiCreditCard,
     path: "/farmer/revenue",
+  },
+  {
+    name: "Farms",
+    icon: PiFarmLight,
+    path: "/farms",
+  },
+  {
+    name: "Market",
+    icon: BsShop,
+    path: "/marketplace",
   },
 ];
 
@@ -200,11 +212,20 @@ const ProfileMenu = () => {
 
 const FarmerNavbar = () => {
   return (
-    <nav className="navbar sticky top-0 border-b border-theme-light bg-base-100 px-4 sm:px-6 lg:px-10">
+    <nav className="navbar sticky top-0 border-b border-theme-light bg-base-100 px-4 sm:px-6 lg:px-10 z-30">
       {/* Logo */}
       <div className="flex flex-1 items-center align-middle">
-        <img src="/logo.png" alt="Logo" className="w-7 h-7 mr-2" />
-        <div className="logo max-sm:hidden">FreshMart</div>
+        <a
+          href="/farmer"
+          onClick={(e) => {
+            e.preventDefault();
+            window.location.replace("/farmer");
+          }}
+          className="flex items-center"
+        >
+          <img src="/logo.png" alt="Logo" className="w-7 h-7 mr-2" />
+          <div className="logo max-sm:hidden">FreshMart</div>
+        </a>
       </div>
 
       {/* Actions */}
@@ -216,7 +237,7 @@ const FarmerNavbar = () => {
         <MobileMenu />
 
         {/* Notifications */}
-        <NotificationBell />
+        <NotificationBell notificationsPath="/farmer/notifications" />
 
         {/* Profile */}
         <ProfileMenu />

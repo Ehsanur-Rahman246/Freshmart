@@ -16,5 +16,6 @@ export const markCompanySalePickedUp = (productId) =>
 export const finalizeCompanySale = (productId, company) =>
   api.patch(`/admin/company-sales/${productId}/finalize`, { company });
 export const getAdminRevenueSummary = () => api.get("/admin/revenue");
+export const getRevenueOverTime = () => api.get("/admin/revenue/over-time");
 export const getFarmRevenue = (farmId) =>
   api.get(`/admin/revenue/farm/${farmId}`);

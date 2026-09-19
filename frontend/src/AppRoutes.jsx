@@ -41,7 +41,7 @@ import Listings from "./pages/farmer/Listings";
 import AddProduct from "./pages/farmer/AddProduct";
 import EditProduct from "./pages/farmer/EditProduct";
 import FarmerOrders from "./pages/farmer/Orders";
-import FarmerOrderDetails from "./pages/farmer/OrderDetails";
+// import FarmerOrderDetails from "./pages/farmer/OrderDetails";
 import RevenueBalance from "./pages/farmer/RevenueBalance";
 import FarmerReviews from "./pages/farmer/Reviews";
 import FarmerNotifications from "./pages/farmer/Notifications";
@@ -57,7 +57,6 @@ import Customers from "./pages/admin/Customers";
 import Products from "./pages/admin/Products";
 import Orders from "./pages/admin/Orders";
 import LiveDeliveries from "./pages/admin/LiveDeliveries";
-import Analytics from "./pages/admin/Analytics";
 import AdminReviews from "./pages/admin/Reviews";
 import AdminNotifications from "./pages/admin/Notifications";
 import AdminProfile from "./pages/admin/Profile";
@@ -87,7 +86,6 @@ const AppRoutes = () => {
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
       {/* ================= CUSTOMER ROUTES ================= */}
-      {/*  */}
 
       <Route element={<ProtectedRoute role="customer" />}>
         <Route path="/customer" element={<CustomerLayout />}>
@@ -99,7 +97,10 @@ const AppRoutes = () => {
 
           <Route path="checkout" element={<Checkout />} />
 
-          <Route path="order-confirmation" element={<OrderConfirmation />} />
+          <Route
+            path="order-confirmation/:id?"
+            element={<OrderConfirmation />}
+          />
 
           <Route path="orders">
             <Route index element={<CustomerOrders />} />
@@ -130,13 +131,13 @@ const AppRoutes = () => {
 
           <Route path="listings">
             <Route index element={<Listings />} />
-            <Route path="add" element={<AddProduct />} />
+            <Route path="add/:farmId" element={<AddProduct />} />
             <Route path="edit/:id" element={<EditProduct />} />
           </Route>
 
           <Route path="orders">
             <Route index element={<FarmerOrders />} />
-            <Route path=":id" element={<FarmerOrderDetails />} />
+            {/* <Route path=":id" element={<FarmerOrderDetails />} /> */}
           </Route>
 
           <Route path="revenue" element={<RevenueBalance />} />
@@ -164,8 +165,6 @@ const AppRoutes = () => {
           <Route path="orders" element={<Orders />} />
 
           <Route path="live-deliveries" element={<LiveDeliveries />} />
-
-          <Route path="analytics" element={<Analytics />} />
 
           <Route path="reviews" element={<AdminReviews />} />
 

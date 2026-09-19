@@ -10,9 +10,6 @@ import {
 
 const MAX_PREVIEW = 8;
 
-// `notificationsPath` is the full notifications page for whichever role
-// renders this bell, e.g. "/customer/notifications", "/farmer/notifications",
-// "/driver/notifications". Drop it in each role's navbar with its own path.
 const NotificationBell = ({ notificationsPath = "/notifications" }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
@@ -50,7 +47,7 @@ const NotificationBell = ({ notificationsPath = "/notifications" }) => {
     } catch (err) {
       console.error(err);
     } finally {
-      navigate(`${notificationsPath}?highlight=${notification._id}`);
+      navigate(`${notificationsPath}`);
     }
   };
 
@@ -82,7 +79,7 @@ const NotificationBell = ({ notificationsPath = "/notifications" }) => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full z-20 mt-2 w-80 rounded-xl border border-theme-light bg-base-300 shadow-lg flex flex-col max-h-[28rem]">
+        <div className="absolute right-0 top-full z-20 mt-2 w-80 rounded-xl border border-theme-light bg-base-300 shadow-lg flex flex-col max-h-112">
           <div className="px-4 py-3 border-b border-theme-light flex items-center justify-between">
             <h4 className="font-bold text-sm">Notifications</h4>
             {unreadCount > 0 && (

@@ -72,6 +72,7 @@ const orderSchema = new mongoose.Schema(
       deliveryCharge: { type: Number, required: true, default: 0, min: 0 },
       discount: { type: Number, default: 0, min: 0 },
       pointsRedeemed: { type: Number, default: 0, min: 0 },
+      debtSettled: { type: Number, default: 0, min: 0 },
       total: { type: Number, required: true, min: 0 },
     },
 
@@ -151,16 +152,13 @@ const orderSchema = new mongoose.Schema(
       default: null,
     },
 
-    // True when this order's farmer is a demo farmer — lets the demo
-    // automation job find these orders without a populate on every sweep.
+    // for demo farmer
     isDemoOrder: {
       type: Boolean,
       default: false,
     },
 
-    // When a demo order in "processing" should auto-advance to
-    // readyForPickup. Null for real-farmer orders (they use acceptOrder/
-    // updateOrderStatus instead).
+    // for demo order
     processingReadyAt: {
       type: Date,
       default: null,

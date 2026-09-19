@@ -283,3 +283,93 @@ export const getFarmRevenue = async (req, res) => {
     });
   }
 };
+
+export const getRevenueOverTime = async (req, res) => {
+  try {
+    const now = new Date();
+
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29); // include today = 30 days
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+    const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+
+    const [dailyRaw, monthlyRaw] = await Promise.all([
+      Revenue.aggregate([
+        { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+            },
+            totalSales: { $sum: "$grossAmount" },
+            adminRevenue: { $sum: "$adminRevenue" },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      Revenue.aggregate([
+        { $match: { createdAt: { $gte: twelveMonthsAgo } } },
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: "%Y-%m", date: "$createdAt" },
+            },
+            totalSales: { $sum: "$grossAmount" },
+            adminRevenue: { $sum: "$adminRevenue" },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+    ]);
+
+    // Fill in gaps so the chart always has a full 30-day / 12-month series
+    const dailyMap = new Map(dailyRaw.map((d) => [d._id, d]));
+    const daily = [];
+
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(thirtyDaysAgo);
+      date.setDate(date.getDate() + i);
+      const key = date.toISOString().slice(0, 10);
+      const entry = dailyMap.get(key);
+
+      daily.push({
+        date: key,
+        totalSales: entry?.totalSales || 0,
+        adminRevenue: entry?.adminRevenue || 0,
+      });
+    }
+
+    const monthlyMap = new Map(monthlyRaw.map((m) => [m._id, m]));
+    const monthly = [];
+
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(
+        twelveMonthsAgo.getFullYear(),
+        twelveMonthsAgo.getMonth() + i,
+        1,
+      );
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      const entry = monthlyMap.get(key);
+
+      monthly.push({
+        month: key,
+        totalSales: entry?.totalSales || 0,
+        adminRevenue: entry?.adminRevenue || 0,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      daily,
+      monthly,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};

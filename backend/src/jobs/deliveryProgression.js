@@ -66,8 +66,7 @@ const randomRating = () => Math.floor(Math.random() * 3) + 3; // 3, 4, or 5
 const pickComment = (pool, rating) =>
   pool[rating][Math.floor(Math.random() * pool[rating].length)];
 
-// Demo customer -> auto-reviews every product + the farm for this order,
-// then lets the demo farmer auto-reply if applicable.
+// Demo customer -> auto-reviews
 const createDemoReviewsForOrder = async (order, customer, farmer) => {
   try {
     for (const item of order.items) {
@@ -96,10 +95,7 @@ const createDemoReviewsForOrder = async (order, customer, farmer) => {
 
     await maybeAddFarmerReply(farmReview, farmer);
   } catch (error) {
-    console.error(
-      `Demo review creation failed for order ${order._id}:`,
-      error,
-    );
+    console.error(`Demo review creation failed for order ${order._id}:`, error);
   }
 };
 
@@ -187,8 +183,7 @@ const advanceOrder = async (order) => {
         now.getTime() + DESTINATION_PROCESSING_HOURS * HOUR_IN_MS,
       );
 
-      // Driver's currentZone updates now, on arrival at the destination
-      // zone center.
+      // Driver currect zone update
       if (order.delivery.driver?.driverId) {
         const destinationZone = await Zone.findById(
           order.delivery.destinationZone,
@@ -317,7 +312,7 @@ const advanceOrder = async (order) => {
         }
       }
 
-      if (customer?.isDemo) {                    
+      if (customer?.isDemo) {
         await createDemoReviewsForOrder(order, customer, farmer);
       }
 
@@ -339,16 +334,34 @@ const advanceOrder = async (order) => {
   await order.save();
 };
 
+// wait, so new tick don't process the same order
+const CLAIM_LEASE_MS = 30 * 1000;
+
+const claimDueOrder = () =>
+  Order.findOneAndUpdate(
+    {
+      status: { $in: ACTIVE_STATUSES },
+      "delivery.nextTransitionAt": { $lte: new Date() },
+    },
+    {
+      $set: {
+        "delivery.nextTransitionAt": new Date(Date.now() + CLAIM_LEASE_MS),
+      },
+    },
+    { returnDocument: "after", sort: { "delivery.nextTransitionAt": 1 } },
+  );
+
 export const startDeliveryScheduler = () => {
   cron.schedule(CRON_INTERVAL, async () => {
     try {
-      const dueOrders = await Order.find({
-        status: { $in: ACTIVE_STATUSES },
-        "delivery.nextTransitionAt": { $lte: new Date() },
-      });
+      let order;
 
-      for (const order of dueOrders) {
-        await advanceOrder(order);
+      while ((order = await claimDueOrder())) {
+        try {
+          await advanceOrder(order);
+        } catch (error) {
+          console.error(`advanceOrder failed for ${order._id}:`, error);
+        }
       }
     } catch (error) {
       console.error("Delivery scheduler error:", error);

@@ -6,7 +6,6 @@ import CutomerNavbar from "../components/CustomerNavbar";
 import FarmerNavbar from "../components/FarmerNavbar";
 import AdminNavbar from "../components/AdminNavbar";
 import HomeNavbar from "../components/HomeNavbar";
-// add to imports at top of ProductDetails.jsx
 import ProductCard from "../components/ProductCard";
 import { getRelatedProducts } from "../api/product";
 import {
@@ -417,7 +416,7 @@ const ProductDetails = () => {
                     className="h-14 w-14 shrink-0 rounded-full object-cover ring-2 ring-base-200"
                   />
                 ) : (
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-stone-300 via-stone-500 to-stone-700 text-lg font-extrabold text-white ring-2 ring-base-200">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-stone-300 via-stone-500 to-stone-700 text-lg font-extrabold text-white ring-2 ring-base-200">
                     {product.farm?.name?.slice(0, 2).toUpperCase()}
                   </div>
                 )}

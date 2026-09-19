@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import FarmCard from "../../components/FarmCard";
 import { getMyFarms } from "../../api/farm";
 import { Link } from "react-router";
+import Loader from "../../components/Loader";
 
 const Farms = () => {
   const { data, isLoading } = useQuery({
@@ -12,7 +13,7 @@ const Farms = () => {
     },
   });
 
-  if (isLoading) return <p className="p-4">Loading your farms...</p>;
+  if (isLoading) return <Loader/>;
 
   return (
     <div className="p-4">

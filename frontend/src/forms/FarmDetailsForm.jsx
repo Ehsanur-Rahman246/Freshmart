@@ -1,5 +1,6 @@
 import { Formik, Form, Field, FieldArray, ErrorMessage } from "formik";
 import * as Yup from "yup";
+import { FiX } from "react-icons/fi";
 import { createFarm, updateFarm } from "../api/farm";
 
 const SIZE_UNITS = ["acre", "hectare", "decimal"];
@@ -18,8 +19,6 @@ const validationSchema = Yup.object({
   farmType: Yup.array().of(Yup.string()).min(1, "Add at least one farm type"),
 });
 
-// mode: "create" | "update"
-// farm: existing farm doc, required when mode === "update"
 export default function FarmDetailsForm({ mode = "create", farm, onSuccess }) {
   const initialValues = {
     name: farm?.name || "",
@@ -44,9 +43,6 @@ export default function FarmDetailsForm({ mode = "create", farm, onSuccess }) {
       payload.establishedYear =
         values.establishedYear === "" ? null : Number(values.establishedYear);
 
-      // products is backend-managed (populated as individual products get
-      // created under this farm), so only seed it as empty on create —
-      // never send it on update, so updateFarm leaves it untouched.
       if (mode === "create") {
         payload.products = { allYear: [], winter: [], summer: [], monsoon: [] };
       }
@@ -72,120 +68,198 @@ export default function FarmDetailsForm({ mode = "create", farm, onSuccess }) {
       enableReinitialize
     >
       {({ values, isSubmitting, status }) => (
-        <Form className="space-y-4">
-          {status && <p className="text-red-600 text-sm">{status}</p>}
+        <Form className="flex flex-col gap-6">
+          {status && (
+            <p className="px-4 py-3 rounded-xl bg-error-soft text-error text-sm font-bold">
+              {status}
+            </p>
+          )}
 
-          <div>
-            <label>Farm Name</label>
-            <Field name="name" />
-            <ErrorMessage
-              name="name"
-              component="p"
-              className="text-red-600 text-sm"
-            />
-          </div>
+          {/* Farm Info */}
+          <section className="rounded-2xl border border-theme bg-base-200 p-6">
+            <h2 className="text-lg font-bold mb-4">Farm Information</h2>
 
-          <div>
-            <label>Description</label>
-            <Field as="textarea" name="description" />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Field type="checkbox" name="isActive" />
-            <label>Active</label>
-          </div>
-
-          <div>
-            <label>Established Year</label>
-            <Field type="number" name="establishedYear" />
-          </div>
-
-          <div className="flex gap-4">
-            <div>
-              <label>Size</label>
-              <Field type="number" name="size.value" min="0" />
-              <ErrorMessage
-                name="size.value"
-                component="p"
-                className="text-red-600 text-sm"
-              />
-            </div>
-            <div>
-              <label>Size Unit</label>
-              <Field as="select" name="size.unit">
-                <option value="">Select unit</option>
-                {SIZE_UNITS.map((u) => (
-                  <option key={u} value={u}>
-                    {u}
-                  </option>
-                ))}
-              </Field>
-              <ErrorMessage
-                name="size.unit"
-                component="p"
-                className="text-red-600 text-sm"
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            <div>
-              <label>District</label>
-              <Field name="location.district" />
-              <ErrorMessage
-                name="location.district"
-                component="p"
-                className="text-red-600 text-sm"
-              />
-            </div>
-            <div>
-              <label>Upazila</label>
-              <Field name="location.upazila" />
-              <ErrorMessage
-                name="location.upazila"
-                component="p"
-                className="text-red-600 text-sm"
-              />
-            </div>
-            <div>
-              <label>Village</label>
-              <Field name="location.village" />
-              <ErrorMessage
-                name="location.village"
-                component="p"
-                className="text-red-600 text-sm"
-              />
-            </div>
-          </div>
-
-          <FieldArray name="farmType">
-            {({ push, remove }) => (
-              <div>
-                <label>Farm Type</label>
-                {values.farmType.map((_, index) => (
-                  <div key={index} className="flex gap-2 items-center">
-                    <Field
-                      name={`farmType.${index}`}
-                      placeholder="e.g. organic"
-                    />
-                    <button type="button" onClick={() => remove(index)}>
-                      Remove
-                    </button>
-                  </div>
-                ))}
-                <button type="button" onClick={() => push("")}>
-                  + Add Farm Type
-                </button>
-                <ErrorMessage
-                  name="farmType"
-                  component="p"
-                  className="text-red-600 text-sm"
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <label className="flex flex-col gap-2 text-sm font-semibold">
+                Farm Name *
+                <Field
+                  name="name"
+                  className="w-full px-4 py-3 rounded-xl border border-theme bg-base-100 outline-none focus:border-primary"
                 />
-              </div>
-            )}
-          </FieldArray>
+                <ErrorMessage
+                  name="name"
+                  component="p"
+                  className="text-error text-xs"
+                />
+              </label>
 
-          <button type="submit" disabled={isSubmitting}>
+              <label className="flex flex-col gap-2 text-sm font-semibold">
+                Established Year
+                <Field
+                  type="number"
+                  name="establishedYear"
+                  className="w-full px-4 py-3 rounded-xl border border-theme bg-base-100 outline-none focus:border-primary"
+                />
+              </label>
+            </div>
+
+            <label className="flex flex-col gap-2 text-sm font-semibold mb-4">
+              Description
+              <Field
+                as="textarea"
+                name="description"
+                rows="3"
+                className="w-full px-4 py-3 rounded-xl border border-theme bg-base-100 outline-none focus:border-primary resize-y"
+              />
+            </label>
+
+            <label className="flex items-center gap-2 text-sm font-semibold">
+              <Field type="checkbox" name="isActive" className="w-4 h-4" />
+              Farm is active
+            </label>
+          </section>
+
+          {/* Size */}
+          <section className="rounded-2xl border border-theme bg-base-200 p-6">
+            <h2 className="text-lg font-bold mb-4">Farm Size</h2>
+
+            <div className="grid grid-cols-2 gap-4">
+              <label className="flex flex-col gap-2 text-sm font-semibold">
+                Size *
+                <Field
+                  type="number"
+                  name="size.value"
+                  min="0"
+                  className="w-full px-4 py-3 rounded-xl border border-theme bg-base-100 outline-none focus:border-primary"
+                />
+                <ErrorMessage
+                  name="size.value"
+                  component="p"
+                  className="text-error text-xs"
+                />
+              </label>
+
+              <label className="flex flex-col gap-2 text-sm font-semibold">
+                Unit *
+                <Field
+                  as="select"
+                  name="size.unit"
+                  className="w-full px-4 py-3 rounded-xl border border-theme bg-base-100 outline-none focus:border-primary"
+                >
+                  <option value="">Select unit</option>
+                  {SIZE_UNITS.map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </Field>
+                <ErrorMessage
+                  name="size.unit"
+                  component="p"
+                  className="text-error text-xs"
+                />
+              </label>
+            </div>
+          </section>
+
+          {/* Location */}
+          <section className="rounded-2xl border border-theme bg-base-200 p-6">
+            <h2 className="text-lg font-bold mb-4">Location</h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <label className="flex flex-col gap-2 text-sm font-semibold">
+                District *
+                <Field
+                  name="location.district"
+                  className="w-full px-4 py-3 rounded-xl border border-theme bg-base-100 outline-none focus:border-primary"
+                />
+                <ErrorMessage
+                  name="location.district"
+                  component="p"
+                  className="text-error text-xs"
+                />
+              </label>
+
+              <label className="flex flex-col gap-2 text-sm font-semibold">
+                Upazila *
+                <Field
+                  name="location.upazila"
+                  className="w-full px-4 py-3 rounded-xl border border-theme bg-base-100 outline-none focus:border-primary"
+                />
+                <ErrorMessage
+                  name="location.upazila"
+                  component="p"
+                  className="text-error text-xs"
+                />
+              </label>
+
+              <label className="flex flex-col gap-2 text-sm font-semibold">
+                Village *
+                <Field
+                  name="location.village"
+                  className="w-full px-4 py-3 rounded-xl border border-theme bg-base-100 outline-none focus:border-primary"
+                />
+                <ErrorMessage
+                  name="location.village"
+                  component="p"
+                  className="text-error text-xs"
+                />
+              </label>
+            </div>
+          </section>
+
+          {/* Farm Type */}
+          <section className="rounded-2xl border border-theme bg-base-200 p-6">
+            <h2 className="text-lg font-bold mb-4">Farm Type</h2>
+
+            <FieldArray name="farmType">
+              {({ push, remove }) => (
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-wrap gap-2">
+                    {values.farmType.map((_, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 px-3 py-2 rounded-full border border-theme bg-base-100"
+                      >
+                        <Field
+                          name={`farmType.${index}`}
+                          placeholder="e.g. organic"
+                          className="bg-transparent outline-none text-sm w-28"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => remove(index)}
+                          className="text-muted hover:text-error"
+                        >
+                          <FiX size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => push("")}
+                    className="self-start px-4 py-2 rounded-xl border border-dashed border-primary bg-primary-soft text-primary text-sm font-bold hover:bg-primary hover:text-primary-content"
+                  >
+                    + Add Farm Type
+                  </button>
+
+                  <ErrorMessage
+                    name="farmType"
+                    component="p"
+                    className="text-error text-xs"
+                  />
+                </div>
+              )}
+            </FieldArray>
+          </section>
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full py-3 rounded-xl bg-primary text-primary-content font-bold hover:bg-primary-hover disabled:opacity-50"
+          >
             {isSubmitting
               ? "Saving..."
               : mode === "update"

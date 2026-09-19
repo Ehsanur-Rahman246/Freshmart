@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import { connectDB } from "./config/db.js";
-import cors from 'cors';
+import cors from "cors";
 import cookieParser from "cookie-parser";
 import authRouter from "./routes/authRoutes.js";
 import customerRouter from "./routes/customerRoutes.js";
@@ -19,7 +19,7 @@ import { startDemoFarmerScheduler } from "./jobs/demoFarmerAutomation.js";
 import { startDemoCustomerScheduler } from "./jobs/demoCustomerAutomation.js";
 import { multerErrorHandling } from "./middlewares/multerError.middleware.js";
 import { startRestockProcessingScheduler } from "./jobs/restockProcessing.js";
-
+import { startDriverShuffleScheduler } from "./jobs/driverShuffle.js";
 
 const app = express();
 
@@ -28,13 +28,14 @@ const allowedOrigins = process.env.CLIENT_URL?.split(",") || [];
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors({origin: allowedOrigins, credentials: true}));
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 
-app.get('/', (_, res) => res.send("Server working"));
-app.use('/api/auth', authRouter);
-app.use('/api/customer', customerRouter);
-app.use('/api/farmer', farmerRouter);
-app.use('/api/farm', farmRouter); 
+app.get("/", (_, res) => res.send("Server working"));
+
+app.use("/api/auth", authRouter);
+app.use("/api/customer", customerRouter);
+app.use("/api/farmer", farmerRouter);
+app.use("/api/farm", farmRouter);
 app.use("/api/product", productRouter);
 app.use("/api/cart", cartRouter);
 app.use("/api/orders", orderRouter);
@@ -44,8 +45,7 @@ app.use("/api/admin", adminRouter);
 app.use("/api/delivery", deliveryRouter);
 
 app.use(multerErrorHandling);
-
-app.use((err, req, res, next) => {
+app.use((err, _, res, __) => {
   console.error(err);
   res.status(err.status || 500).json({
     success: false,
@@ -54,11 +54,12 @@ app.use((err, req, res, next) => {
 });
 
 connectDB().then(() => {
-    app.listen(PORT, () => {
-        console.log("Server started on PORT:", PORT);
-        startDeliveryScheduler();
-        startDemoFarmerScheduler();
-        startDemoCustomerScheduler();
-        startRestockProcessingScheduler(); 
-    });
+  app.listen(PORT, () => {
+    console.log("Server started on PORT:", PORT);
+    startDeliveryScheduler();
+    startDemoFarmerScheduler();
+    startDemoCustomerScheduler();
+    startRestockProcessingScheduler();
+    startDriverShuffleScheduler();
+  });
 });

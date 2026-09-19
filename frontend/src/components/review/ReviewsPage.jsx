@@ -14,6 +14,7 @@ import {
   deleteReview,
 } from "../../api/review";
 import ReviewCard from "./ReviewCard";
+import ReviewModal from "./ReviewModal";
 
 const TABS = ["All", "Farms", "Products"];
 
@@ -59,51 +60,6 @@ const MessageModal = ({ mode, onClose, onSubmit }) => {
   );
 };
 
-const EditReviewModal = ({ review, onClose, onSubmit }) => {
-  const [rating, setRating] = useState(review.rating);
-  const [comment, setComment] = useState(review.comment || "");
-
-  return (
-    <div className="fixed inset-0 bg-overlay flex items-center justify-center z-50 p-4">
-      <div className="bg-base-100 rounded-box p-5 w-full max-w-md space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold">Edit your review</h3>
-          <button onClick={onClose} className="btn btn-ghost btn-xs btn-circle">
-            <FiX size={16} />
-          </button>
-        </div>
-
-        <div className="flex gap-1">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <button key={n} onClick={() => setRating(n)}>
-              <FiStar
-                size={20}
-                className={n <= rating ? "fill-current text-secondary" : "text-muted-light"}
-              />
-            </button>
-          ))}
-        </div>
-
-        <textarea
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          rows={4}
-          className="textarea textarea-bordered w-full"
-        />
-
-        <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="btn btn-sm btn-ghost">
-            Cancel
-          </button>
-          <button onClick={() => onSubmit({ rating, comment })} className="btn btn-sm btn-primary">
-            Save
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // role-agnostic — picks the right fetch by viewer role.
 // renderSummary(reviews): optional, receives the full unfiltered list,
 // rendered above the tab bar (used by farmer/Reviews.jsx for RatingSummary).
@@ -121,7 +77,11 @@ export default function ReviewsPage({
 
   const queryFn = async () => {
     const call =
-      role === "admin" ? getAllReviewsAdmin : role === "farmer" ? getFarmerReviews : getMyReviews;
+      role === "admin"
+        ? getAllReviewsAdmin
+        : role === "farmer"
+          ? getFarmerReviews
+          : getMyReviews;
     return (await call()).data.reviews;
   };
 
@@ -131,7 +91,8 @@ export default function ReviewsPage({
     enabled: role !== "guest",
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["reviews", role] });
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: ["reviews", role] });
 
   const filtered = reviews.filter((review) => {
     if (tab === "Farms") return !!review.farm;
@@ -252,9 +213,13 @@ export default function ReviewsPage({
                 review={review}
                 role={role}
                 isReplying={replyingTo === review._id}
-                onReplyClick={(id) => setReplyingTo(id === replyingTo ? null : id)}
+                onReplyClick={(id) =>
+                  setReplyingTo(id === replyingTo ? null : id)
+                }
                 onReplyCancel={() => setReplyingTo(null)}
-                onReplySubmit={(msg) => handleInlineReplySubmit(review._id, msg)}
+                onReplySubmit={(msg) =>
+                  handleInlineReplySubmit(review._id, msg)
+                }
                 onReport={(reviewId) => setModal({ mode: "report", reviewId })}
                 onDeleteReview={handleDeleteReview}
                 onDeleteReply={handleDeleteReply}
@@ -270,11 +235,19 @@ export default function ReviewsPage({
         <MessageModal
           mode={modal.mode}
           onClose={() => setModal(null)}
-          onSubmit={modal.mode === "reply" ? handleReplySubmit : handleReportSubmit}
+          onSubmit={
+            modal.mode === "reply" ? handleReplySubmit : handleReportSubmit
+          }
         />
       )}
       {editing && (
-        <EditReviewModal review={editing} onClose={() => setEditing(null)} onSubmit={handleEditSubmit} />
+        <ReviewModal
+          title="Edit your review"
+          initialRating={editing.rating}
+          initialComment={editing.comment || ""}
+          onClose={() => setEditing(null)}
+          onSubmit={handleEditSubmit}
+        />
       )}
     </div>
   );

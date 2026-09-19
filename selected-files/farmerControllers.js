@@ -131,7 +131,7 @@ export const respondToCompanySaleOffer = async (req, res) => {
       await notifyAdmin({
         type: "companySaleOfferAccepted",
         title: "Company Sale Offer Accepted",
-        message: `A farmer accepted the company sale offer for ${product.name}.`,
+        message: `The farmer has accepted the company sale offer for ${product.name}.`,
         relatedProduct: product._id,
       });
     }
@@ -242,10 +242,16 @@ export const getMyRevenue = async (req, res) => {
       },
     ]);
 
+    const entries = await Revenue.find({ farmer: farmer._id })
+      .select("farm farmerRevenue grossAmount type createdAt")
+      .populate("farm", "name")
+      .sort({ createdAt: 1 });
+
     return res.status(200).json({
       success: true,
       summary: totals || { totalFarmerRevenue: 0, totalGross: 0, count: 0 },
       byFarm,
+      entries,
     });
   } catch (error) {
     console.error(error);

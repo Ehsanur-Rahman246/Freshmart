@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import ProductCard from "../../components/ProductCard";
 import ProductCardSkeleton from "../../components/ProductCardSkeleton";
 import { getWishlist, removeFromWishlist } from "../../api/customer";
-import { getCategoryIcon } from "../../utils/categoryIcons";
+import { getSourceIcon } from "../../utils/sourceIcons";
 
 const Wishlist = () => {
   const queryClient = useQueryClient();
@@ -55,7 +55,7 @@ const Wishlist = () => {
                 src={product.farm?.name}
                 price={product.price}
                 unit={product.unit}
-                badge={getCategoryIcon(product.source)}
+                badge={getSourceIcon(product.source)}
                 isWishlisted={true}
               />
 

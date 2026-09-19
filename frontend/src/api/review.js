@@ -13,15 +13,20 @@ export const createFarmReview = (farmId, data) =>
 export const updateReview = (reviewId, data) =>
   api.patch(`/reviews/${reviewId}`, data);
 export const deleteReview = (reviewId) => api.delete(`/reviews/${reviewId}`);
-
 export const getMyReviews = () => api.get("/reviews/mine");
+
+// Farmer
 export const getFarmerReviews = () => api.get("/reviews/farmer/mine");
+
+// Admin
 export const getAllReviewsAdmin = () => api.get("/reviews/admin/all");
-export const addReviewReply = (reviewId, message) =>
-  api.post(`/reviews/${reviewId}/reply`, { message });
-export const reportReview = (reviewId, message) =>
-  api.post(`/reviews/${reviewId}/report`, { message });
 export const adminDeleteReview = (reviewId) =>
   api.delete(`/reviews/admin/${reviewId}`);
 export const deleteReply = (reviewId, replyId) =>
   api.delete(`/reviews/${reviewId}/reply/${replyId}`);
+
+// Shared
+export const reportReview = (reviewId, message) =>
+  api.post(`/reviews/${reviewId}/report`, { message });
+export const addReviewReply = (reviewId, message) =>
+  api.post(`/reviews/${reviewId}/reply`, { message });

@@ -23,9 +23,9 @@ export const ADMIN_COMPANY_SALE_COMMISSION = 0.3; // 30% to admin
 
 // --- Demo customer automation ---
 
-export const DEMO_CUSTOMERS_PER_ZONE = 2; // 2 demo customers seeded per zone (10 total across 5 zones)
+// export const DEMO_CUSTOMERS_PER_ZONE = 2; // 2 demo customers seeded per zone (10 total across 5 zones)
 
-export const DEMO_CUSTOMERS_ACTIVE_PER_DAY = 7; // how many of the 10 demo customers place an order each day
+// export const DEMO_CUSTOMERS_ACTIVE_PER_DAY = 7; // how many of the 10 demo customers place an order each day
 
 export const DEMO_WISHLIST_SEED_MIN = 3; // initial wishlist size (one-off seed script)
 export const DEMO_WISHLIST_SEED_MAX = 5;

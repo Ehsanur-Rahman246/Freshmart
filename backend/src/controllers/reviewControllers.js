@@ -9,8 +9,6 @@ import createNotification from "../utils/createNotification.js";
 import notifyAdmin from "../utils/notifyAdmin.js";
 import { maybeAddFarmerReply } from "../utils/farmerAutoReply.js";
 
-// Reply.author is a User ref, but profile images live on Customer/Farmer docs,
-// so after populating name we do a second batch lookup for images.
 const attachReplyProfiles = async (reviews) => {
   const farmerUserIds = new Set();
   const customerUserIds = new Set();
@@ -48,7 +46,7 @@ const attachReplyProfiles = async (reviews) => {
           ? farmerImages.get(uid) || null
           : reply.authorRole === "customer"
             ? customerImages.get(uid) || null
-            : null; // admin — placeholder only
+            : null;
     }
   }
 

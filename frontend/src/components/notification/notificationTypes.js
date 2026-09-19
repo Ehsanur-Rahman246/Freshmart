@@ -1,10 +1,3 @@
-// All notification `type` values your backend currently sends, grouped by
-// which role acts on them. Kept in one place so adding a new type later is
-// a one-line change instead of hunting through three pages.
-//
-// If a type isn't listed for a role, that role's card still shows fine —
-// it just isn't clickable to a detail page (falls through to null / mark-as-read only).
-
 export const CUSTOMER_ORDER_TYPES = [
   "orderAccepted",
   "orderRejected",
@@ -24,7 +17,7 @@ export const CUSTOMER_ORDER_TYPES = [
 ];
 
 export const FARMER_ORDER_TYPES = [
-  "orderPlaced", // new order for the farmer to accept/reject
+  "orderPlaced", 
   "orderAccepted",
   "orderRejected",
   "orderCancelled",

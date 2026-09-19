@@ -12,10 +12,6 @@ import {
 } from "../../api/notification";
 import NotificationCard from "./NotificationCard";
 
-// Generic full-page notification list. Each role's page passes in its own
-// `getNotificationLink` (which relatedOrder/relatedProduct types map to
-// which route) plus optional copy. Everything else — fetch, read, delete,
-// highlight/scroll-to on arrival from the bell — is shared.
 export default function NotificationsPage({
   title = "Notifications",
   emptyMessage = "You have no notifications.",
@@ -106,12 +102,7 @@ export default function NotificationsPage({
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   if (isLoading) {
-    return (
-      // <div className="min-h-screen flex items-center justify-center">
-      //   <span className="loading loading-spinner loading-lg text-primary" />
-      // </div>
-      <Loader/>
-    );
+    return <Loader />;
   }
 
   return (

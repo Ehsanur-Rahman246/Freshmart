@@ -4,6 +4,7 @@ import { FaArrowRightLong } from "react-icons/fa6";
 import Footer from "../components/Footer";
 import HomeNavbar from "../components/HomeNavbar";
 import heroImage from "../assets/hero.png";
+import About from "./About";
 
 const ROTATING_WORDS = [
   { text: "priced fairly.", className: "text-primary" },
@@ -28,7 +29,6 @@ const HeroSlogan = () => {
 
   return (
     <div className="relative z-10 w-full max-w-2xl">
-
       {/* Eyebrow */}
       <p className="font-pacifico mb-3 text-sm sm:text-base font-bold uppercase tracking-[0.16em] text-primary">
         --- Farm-to-customer marketplace ---
@@ -99,7 +99,6 @@ const HeroSlogan = () => {
           "
         >
           Become a farmer
-
           <FaArrowRightLong
             className="
               text-lg
@@ -173,6 +172,9 @@ const Home = () => {
             <HeroSlogan />
           </div>
         </div>
+      </section>
+      <section>
+        <About />
       </section>
 
       <Footer />

@@ -8,12 +8,6 @@ import createNotification from "../utils/createNotification.js";
 import { HOUR_IN_MS, LOCAL_PICKUP_HOURS } from "../config/time.js";
 import Zone from "../models/Zone.js";
 
-// Looks up an available driver for the order's destination zone and, if
-// found, performs the same assignment mutation assignDriverToOrder does
-// manually. Returns true if a driver was assigned, false if none were
-// available. Used both by the admin's manual flow (indirectly, via
-// assignDriverToOrder) and by demo-customer automation, which needs to
-// assign without an admin in the loop.
 export const tryAutoAssignDriver = async (order) => {
   try {
     if (order.status !== "readyForPickup" || order.delivery.courier) {

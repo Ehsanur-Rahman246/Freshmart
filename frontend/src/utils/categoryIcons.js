@@ -1,20 +1,22 @@
 import {
   GiMilkCarton,
   GiWheat,
+  GiChiliPepper,
   GiChicken,
   GiCow,
-  GiField,
-  GiGreenhouse,
-  GiFruitTree,
+  GiTomato,
+  GiFruitBowl,
 } from "react-icons/gi";
 
 const CATEGORY_ICONS = {
-  field:GiField,
-  greenhouse:GiGreenhouse,
-  orchard:GiFruitTree,
-  dairyFarm:GiMilkCarton,
-  poultryFarm:GiChicken,
-  livestockFarm:GiCow,
+  dairy: GiMilkCarton,
+  grain: GiWheat,
+  spices: GiChiliPepper,
+  poultry: GiChicken,
+  livestock: GiCow,
+  fruits: GiFruitBowl,
+  vegetables: GiTomato,
 };
 
-export const getCategoryIcon = (category) => CATEGORY_ICONS[category] || GiWheat;
+export const getCategoryIcon = (category) =>
+  CATEGORY_ICONS[category] || GiWheat;

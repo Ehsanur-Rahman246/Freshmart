@@ -23,8 +23,7 @@ const pickRandom = (arr, count) => {
   return shuffled.slice(0, count);
 };
 
-// Adds DEMO_WISHLIST_DAILY_ADD_MIN..MAX random active products (not already
-// wishlisted) to the customer's wishlist.
+// demo customer, adds to wishlist
 const restockWishlist = async (customer) => {
   const addCount = randomInt(
     DEMO_WISHLIST_DAILY_ADD_MIN,
@@ -48,8 +47,7 @@ const restockWishlist = async (customer) => {
   }
 };
 
-// Tries to add exactly 1 available wishlist item to the cart. Skips
-// silently if none of the wishlisted products are currently available.
+// adds 1 active wishlisted item to cart
 const addWishlistItemToCart = async (customer) => {
   if (customer.wishlist.length === 0) return;
 
@@ -82,9 +80,7 @@ const addWishlistItemToCart = async (customer) => {
   }
 };
 
-// Picks 1 random farm with at least one active product, then adds
-// DEMO_CART_FARM_PRODUCT_COUNT of its products to the cart, each at a
-// random quantity capped by available stock.
+// picks a random farm to add products to cart
 const addRandomFarmItemsToCart = async (customer) => {
   const farmIds = await Product.distinct("farm", {
     status: "active",
@@ -179,7 +175,7 @@ export const startDemoCustomerScheduler = () => {
       const jobState = await JobState.findOneAndUpdate(
         { jobName: "demoCustomerAutomation" },
         { $setOnInsert: { lastRunAt: null } },
-        { upsert: true, new: true },
+        { upsert: true, returnDocument: "after" },
       );
 
       const lastRun = jobState.lastRunAt ? jobState.lastRunAt.getTime() : 0;

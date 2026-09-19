@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
@@ -7,24 +7,21 @@ import {
   FiMinus,
   FiPlus,
   FiShoppingCart,
-  FiTag,
   FiTrash2,
 } from "react-icons/fi";
 import { getCart, updateCartItem, removeFromCart } from "../../api/cart";
+import Loader from "../../components/Loader";
 
 const Cart = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
-  const [promoCode, setPromoCode] = useState("");
-  const [promoApplied, setPromoApplied] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["cart"],
     queryFn: async () => (await getCart()).data.cart,
   });
 
-  const cartItems = data ?? [];
+  const cartItems = useMemo(() => data ?? [], [data]);
 
   const updateQuantityMutation = useMutation({
     mutationFn: ({ productId, quantity }) =>
@@ -33,7 +30,9 @@ const Cart = () => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
     },
     onError: (error) => {
-      toast.error(error?.response?.data?.message || "Could not update quantity");
+      toast.error(
+        error?.response?.data?.message || "Could not update quantity",
+      );
     },
   });
 
@@ -49,19 +48,30 @@ const Cart = () => {
 
   const getEffectivePrice = (product) => {
     const discountPct = product.discountPercentage || 0;
+
     return Math.round(product.price * (1 - discountPct / 100) * 100) / 100;
   };
 
   const subtotal = useMemo(() => {
     return cartItems.reduce((total, item) => {
       if (!item.product) return total;
-      return total + getEffectivePrice(item.product) * item.quantity;
+
+      return total + item.product.price * item.quantity;
     }, 0);
   }, [cartItems]);
 
-  const discount = promoApplied ? Math.round(subtotal * 0.1) : 0;
-  const deliveryFee = subtotal > 0 ? 50 : 0;
-  const total = subtotal - discount + deliveryFee;
+  const discount = useMemo(() => {
+    return cartItems.reduce((total, item) => {
+      if (!item.product) return total;
+
+      const product = item.product;
+      const effectivePrice = getEffectivePrice(product);
+
+      return total + (product.price - effectivePrice) * item.quantity;
+    }, 0);
+  }, [cartItems]);
+
+  const total = subtotal - discount;
 
   const updateQuantity = (item, change) => {
     const newQuantity = item.quantity + change;
@@ -86,14 +96,6 @@ const Cart = () => {
     removeItemMutation.mutate(productId);
   };
 
-  const applyPromo = () => {
-    if (promoCode.trim().toUpperCase() === "FRESH10") {
-      setPromoApplied(true);
-    } else {
-      setPromoApplied(false);
-    }
-  };
-
   const handleCheckout = () => {
     navigate("/customer/checkout");
   };
@@ -101,9 +103,7 @@ const Cart = () => {
   if (isLoading) {
     return (
       <main className="min-h-screen bg-base-200/40 px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl text-center py-16 text-muted">
-          Loading your cart...
-        </div>
+        <Loader />
       </main>
     );
   }
@@ -121,7 +121,6 @@ const Cart = () => {
   return (
     <main className="min-h-screen bg-base-200/40 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
-
         {/* Breadcrumb */}
         <div className="mb-5 flex items-center gap-2 text-sm text-muted">
           <span>Home</span>
@@ -168,10 +167,8 @@ const Cart = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-
             {/* ================= CART ITEMS ================= */}
             <section className="overflow-hidden rounded-2xl border border-theme bg-base-100 shadow-sm">
-
               <div className="flex items-center justify-between border-b border-theme-light px-5 py-4 sm:px-6">
                 <span className="text-sm font-bold sm:text-base">
                   Items in Cart
@@ -233,7 +230,9 @@ const Cart = () => {
 
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <p className="text-lg font-extrabold">
-                            ৳{Math.round(effectivePrice * item.quantity * 100) / 100}
+                            ৳
+                            {Math.round(effectivePrice * item.quantity * 100) /
+                              100}
                           </p>
 
                           {/* Quantity */}
@@ -288,88 +287,42 @@ const Cart = () => {
               </div>
             </section>
 
-            {/* ================= ORDER SUMMARY ================= */}
-            <aside className="max-lg:sticky max-lg:bottom-0 h-fit rounded-2xl border border-theme bg-base-100 p-5 shadow-sm sm:p-6 lg:sticky lg:top-24">
+            {/* ================= CART SUMMARY ================= */}
+            <aside className="h-fit rounded-2xl border border-theme bg-base-100 p-5 shadow-sm sm:p-6 lg:sticky lg:top-24">
+  <h2 className="text-xl font-extrabold">Order Summary</h2>
 
-              <h2 className="text-xl font-extrabold">Order Summary</h2>
+  <div className="mt-5 space-y-4 text-sm">
+    <div className="flex items-center justify-between">
+      <span className="text-muted">Subtotal</span>
+      <span className="font-bold">৳{subtotal}</span>
+    </div>
 
-              <div className="mt-5 space-y-4 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted">Subtotal</span>
-                  <span className="font-bold">৳{subtotal}</span>
-                </div>
+    <div className="flex items-center justify-between">
+      <span className="text-muted">Discount</span>
+      <span className="font-bold text-success">
+        {discount > 0 ? `-৳${discount}` : "৳0"}
+      </span>
+    </div>
+  </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-muted">Discount</span>
-                  <span className="font-bold text-error">
-                    {discount > 0 ? `-৳${discount}` : "৳0"}
-                  </span>
-                </div>
+  <div className="my-5 border-t border-theme-light" />
 
-                <div className="flex items-center justify-between">
-                  <span className="text-muted">Delivery Fee</span>
-                  <span className="font-bold">৳{deliveryFee}</span>
-                </div>
-              </div>
+  <div className="flex items-center justify-between">
+    <span className="text-base font-bold">Total</span>
+    <span className="text-2xl font-extrabold text-primary">
+      ৳{total}
+    </span>
+  </div>
 
-              <div className="my-5 border-t border-theme-light" />
+  <button
+    onClick={handleCheckout}
+    className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl bg-primary px-5 py-3.5 font-extrabold text-white shadow-sm transition hover:bg-primary-hover active:bg-primary-active"
+  >
+    Go to Checkout
+    <FiArrowRight size={18} />
+  </button>
+</aside>
 
-              <div className="flex items-center justify-between">
-                <span className="text-base font-bold">Total</span>
-                <span className="text-2xl font-extrabold text-primary">
-                  ৳{total}
-                </span>
-              </div>
-
-              {/* Promo */}
-              <div className="mt-6">
-                <label className="mb-2 block text-sm font-bold">
-                  Promo Code
-                </label>
-
-                <div className="flex overflow-hidden rounded-xl border border-theme bg-base-100 focus-within:border-primary">
-                  <div className="flex items-center pl-3 text-muted">
-                    <FiTag size={17} />
-                  </div>
-
-                  <input
-                    type="text"
-                    value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value)}
-                    placeholder="Enter promo code"
-                    className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm outline-none"
-                  />
-
-                  <button
-                    onClick={applyPromo}
-                    className="bg-primary px-4 text-sm font-bold text-white transition hover:bg-primary-hover"
-                  >
-                    Apply
-                  </button>
-                </div>
-
-                {promoApplied && (
-                  <p className="mt-2 text-xs font-bold text-success">
-                    FRESH10 applied — 10% discount added.
-                  </p>
-                )}
-
-                {!promoApplied && promoCode && (
-                  <p className="mt-2 text-xs text-error">
-                    Try promo code: FRESH10
-                  </p>
-                )}
-              </div>
-
-              {/* Checkout */}
-              <button
-                onClick={handleCheckout}
-                className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl bg-primary px-5 py-3.5 font-extrabold text-white shadow-sm transition hover:bg-primary-hover active:bg-primary-active"
-              >
-                Go to Checkout
-                <FiArrowRight size={18} />
-              </button>
-            </aside>
           </div>
         )}
       </div>

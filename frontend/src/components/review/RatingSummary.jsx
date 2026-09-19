@@ -26,7 +26,9 @@ const DistributionBlock = ({ label, items }) => {
       </div>
 
       {total === 0 ? (
-        <p className="text-xs text-muted-light">No {label.toLowerCase()} yet.</p>
+        <p className="text-xs text-muted-light">
+          No {label.toLowerCase()} yet.
+        </p>
       ) : (
         <div className="space-y-1.5">
           {counts.map(({ star, count }) => (

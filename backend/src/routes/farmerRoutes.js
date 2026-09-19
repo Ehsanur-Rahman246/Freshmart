@@ -12,26 +12,19 @@ import {
 
 const farmerRouter = express.Router();
 
-farmerRouter.get("/profile", userAuth, roleAuth("farmer"), getFarmerProfile);
+farmerRouter.use(userAuth, roleAuth("farmer"));
+
+farmerRouter.get("/profile", getFarmerProfile);
 farmerRouter.patch(
   "/profile",
-  userAuth,
-  roleAuth("farmer"),
   upload.single("profileImage"),
   updateFarmerProfile,
 );
 farmerRouter.patch(
   "/company-sale/:productId/respond",
-  userAuth,
-  roleAuth("farmer"),
   respondToCompanySaleOffer,
 );
-farmerRouter.patch(
-  "/company-sale/:productId/ready",
-  userAuth,
-  roleAuth("farmer"),
-  markCompanySaleReady,
-);
+farmerRouter.patch("/company-sale/:productId/ready", markCompanySaleReady);
 farmerRouter.get("/revenue", userAuth, roleAuth("farmer"), getMyRevenue);
 
 export default farmerRouter;

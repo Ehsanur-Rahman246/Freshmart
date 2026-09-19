@@ -8,22 +8,10 @@ import { useQuery } from "@tanstack/react-query";
 import { getCustomerProfile } from "../api/customer";
 import NotificationBell from "./notification/NotificationBell";
 import useLogout from "../hooks/useLogout";
+import SearchBar from "./SearchBar";
+import { useLocation } from "react-router";
 
-const SearchBar = () => {
-  return (
-    <div className="flex flex-1 min-w-0 justify-center px-2 lg:px-8">
-      <label className="input w-full max-w-xl flex items-center gap-2 bg-base-300 border-transparent focus-within:bg-base-100 focus-within:border-primary focus-within:outline-none focus-within:shadow-none">
-        <FaSearch className="h-5 w-5 shrink-0 text-primary" />
-
-        <input
-          type="search"
-          placeholder="Search fresh products..."
-          className="grow min-w-0 bg-transparent border-none outline-none focus:border-none focus:outline-none caret-primary"
-        />
-      </label>
-    </div>
-  );
-};
+const SEARCHABLE_PATHS = ["/customer", "/customer/marketplace", "/farms"];
 
 const ProfileMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -102,6 +90,9 @@ const CutomerNavbar = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchActive, setSearchActive] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const location = useLocation();
+  const showSearch = SEARCHABLE_PATHS.includes(location.pathname);
+  const isFarmsPage = location.pathname === "/farms";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -118,26 +109,42 @@ const CutomerNavbar = () => {
       <nav
         className={`navbar sticky top-0 z-55 px-4 sm:px-6 lg:px-10 transition-all duration-300 ease-in-out ${scrolled ? "bg-primary/30 backdrop-blur-md border-none bg-linear-to-b from-secondary-soft/70 via-secondary-soft/30 via-65% to-transparent" : "bg-base-100"}`}
       >
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="btn btn-ghost btn-circle text-2xl"
-            aria-label="Menu"
-          >
-            <FiMenu className="text-primary" />
-          </button>
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="btn btn-ghost btn-circle text-2xl"
+          aria-label="Menu"
+        >
+          <FiMenu className="text-primary" />
+        </button>
 
         {/* Logo */}
         <div className="flex flex-1 items-center align-middle">
-          <img src="/logo.png" alt="Logo" className="w-7 h-7 mr-2" />
-          <div className="logo max-sm:hidden">FreshMart</div>
+          <a
+            href="/customer"
+            onClick={(e) => {
+              e.preventDefault();
+              window.location.replace("/customer");
+            }}
+            className="flex items-center"
+          >
+            <img src="/logo.png" alt="Logo" className="w-7 h-7 mr-2" />
+            <div className="logo max-sm:hidden">FreshMart</div>
+          </a>
         </div>
 
         {/* Actions */}
         <div className="flex-1 flex justify-end items-center gap-1 sm:gap-2">
-          <div className="flex flex-1 max-sm:hidden">
-            <SearchBar />
-          </div>
+          {showSearch && (
+            <div className="flex flex-1 max-sm:hidden">
+              <SearchBar
+                mode={isFarmsPage ? "farms" : "products"}
+                resultsBasePath={
+                  isFarmsPage ? "/farms" : "/customer/marketplace"
+                }
+              />
+            </div>
+          )}
 
           {/* Search Bar */}
           <button
@@ -149,27 +156,30 @@ const CutomerNavbar = () => {
           </button>
 
           {/* Cart */}
-            <button
-              className="btn btn-ghost btn-circle text-2xl"
-              aria-label="Cart"
-            >
-              <NavLink to={"/customer/cart"}>
-                <FaCartShopping className="text-primary" />
-              </NavLink>
-            </button>
+          <button
+            className="btn btn-ghost btn-circle text-2xl"
+            aria-label="Cart"
+          >
+            <NavLink to={"/customer/cart"}>
+              <FaCartShopping className="text-primary" />
+            </NavLink>
+          </button>
 
           {/* Notifications */}
-          <NotificationBell/>
+          <NotificationBell notificationsPath="/customer/notifications" />
 
           {/* Profile */}
-            <ProfileMenu />
+          <ProfileMenu />
         </div>
       </nav>
 
-      {searchActive && (
+      {showSearch && searchActive && (
         <div className="navbar bg-base-100 px-4 sm:px-6 lg:px-10 border-b border-theme-light sm:hidden">
           <div className="flex flex-1 justify-center px-4">
-            <SearchBar />
+            <SearchBar
+              mode={isFarmsPage ? "farms" : "products"}
+              resultsBasePath={isFarmsPage ? "/farms" : "/customer/marketplace"}
+            />
           </div>
         </div>
       )}

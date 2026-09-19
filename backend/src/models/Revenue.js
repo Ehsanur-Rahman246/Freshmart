@@ -11,7 +11,7 @@ const revenueSchema = new mongoose.Schema(
     order: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Order",
-      default: null, // null for companySale (not tied to a customer order)
+      default: null, // null for companySale
     },
 
     product: {

@@ -8,6 +8,7 @@ import {
   finalizeCompanySale,
   getAdminRevenueSummary,
   getFarmRevenue,
+  getRevenueOverTime,
 } from "../controllers/adminControllers.js";
 import {
   getAllCustomers,
@@ -33,6 +34,7 @@ adminRouter.get("/company-sales", getCompanySaleQueue);
 adminRouter.patch("/company-sales/:productId/pickup", markCompanySalePickedUp);
 adminRouter.patch("/company-sales/:productId/finalize", finalizeCompanySale);
 adminRouter.get("/revenue", getAdminRevenueSummary);
+adminRouter.get("/revenue/over-time", getRevenueOverTime);
 adminRouter.get("/revenue/farm/:farmId", getFarmRevenue);
 
 export default adminRouter;

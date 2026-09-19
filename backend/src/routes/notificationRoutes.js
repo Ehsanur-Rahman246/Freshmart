@@ -1,5 +1,4 @@
 import express from "express";
-
 import {
   getMyNotifications,
   getUnreadNotifications,
@@ -8,12 +7,12 @@ import {
   deleteNotification,
   deleteAllNotifications,
 } from "../controllers/notificationControllers.js";
-
 import userAuth from "../middlewares/userAuth.js";
 
 const notificationRouter = express.Router();
 
 notificationRouter.use(userAuth);
+
 notificationRouter.get("/", getMyNotifications);
 notificationRouter.get("/unread", getUnreadNotifications);
 notificationRouter.patch("/mark-all-read", markAllNotificationsAsRead);

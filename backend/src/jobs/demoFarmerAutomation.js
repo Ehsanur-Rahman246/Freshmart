@@ -19,21 +19,22 @@ import notifyAdmin from "../utils/notifyAdmin.js";
 import { tryAutoAssignDriver } from "../controllers/deliveryControllers.js";
 import { autoCancelOrder } from "../controllers/orderControllers.js";
 
+const claimDueDemoOrder = () =>
+  Order.findOneAndUpdate(
+    {
+      status: "processing",
+      isDemoOrder: true,
+      processingReadyAt: { $lte: new Date() },
+    },
+    { $set: { status: "readyForPickup", processingReadyAt: null } },
+    { returnDocument: "after" },
+  );
+
 // 1. Demo orders: processing -> readyForPickup, automatically.
 const advanceDemoOrders = async () => {
-  const now = new Date();
+  let order;
 
-  const dueOrders = await Order.find({
-    status: "processing",
-    isDemoOrder: true,
-    processingReadyAt: { $lte: now },
-  });
-
-  for (const order of dueOrders) {
-    order.status = "readyForPickup";
-    order.processingReadyAt = null;
-    await order.save();
-
+  while ((order = await claimDueDemoOrder())) {
     const customer = await Customer.findById(order.customer).populate("user");
     let driverAutoAssigned = false;
     if (customer) {
@@ -46,8 +47,6 @@ const advanceDemoOrders = async () => {
         relatedOrder: order._id,
       });
 
-      // Demo customers skip the admin driver-assignment queue: try once,
-      // auto-cancel if nobody's available right now.
       if (customer.isDemo) {
         driverAutoAssigned = await tryAutoAssignDriver(order);
 
@@ -57,17 +56,12 @@ const advanceDemoOrders = async () => {
             customer,
             reason: "No driver was available for this order",
           });
-
-          // Order is now cancelled — skip the admin notification below,
-          // there's nothing for an admin to act on.
           continue;
         }
       }
     }
 
-    // Driver already auto-assigned — order is past readyForPickup, nothing
-    // for the admin driver-assignment queue to act on.
-    if(driverAutoAssigned) continue;
+    if (driverAutoAssigned) continue;
 
     await notifyAdmin({
       type: "readyForPickup",
@@ -97,9 +91,7 @@ const handleOutOfStock = async () => {
   }
 };
 
-// 3. Demo listings due for restock: clone into a fresh active listing.
-// The old (sold-out) listing stays exactly as-is for historical/order
-// reference and is never reactivated.
+// 3. Demo listings due for restock
 const handleRestocking = async () => {
   const now = new Date();
 
@@ -122,9 +114,9 @@ const handleRestocking = async () => {
 };
 
 // 4. Listings that expired with stock still remaining.
-// Demo farmer -> instantly sold to a fixed placeholder company.
+// Demo farmer -> instantly sold
 // Real farmer -> emailed with a company-sale offer, awaiting their response.
-// NEW — exported so the restock-maturity job can reuse this
+// exported so the restock-maturity job can reuse this
 export const processExpiredProduct = async (product) => {
   const now = new Date();
   const companySalePrice =
@@ -239,7 +231,12 @@ const handleUnansweredOffers = async () => {
 };
 
 export const startDemoFarmerScheduler = () => {
+  let isRunning = false;
+
   cron.schedule(CRON_INTERVAL, async () => {
+    if (isRunning) return;
+    isRunning = true;
+
     try {
       await advanceDemoOrders();
       await handleOutOfStock();
@@ -248,6 +245,8 @@ export const startDemoFarmerScheduler = () => {
       await handleRestocking();
     } catch (error) {
       console.error("Demo farmer automation error:", error);
+    } finally {
+      isRunning = false;
     }
   });
 

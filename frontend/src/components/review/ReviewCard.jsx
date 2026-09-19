@@ -1,4 +1,10 @@
-import { FiStar, FiFlag, FiMessageSquare, FiTrash2, FiEdit2 } from "react-icons/fi";
+import {
+  FiStar,
+  FiFlag,
+  FiMessageSquare,
+  FiTrash2,
+  FiEdit2,
+} from "react-icons/fi";
 import { timeAgo } from "../notification/timeAgo";
 import { useState } from "react";
 
@@ -13,7 +19,11 @@ const Stars = ({ rating }) => (
 const Avatar = ({ src, name }) => (
   <div className="w-6 h-6 rounded-full bg-base-300 overflow-hidden shrink-0 flex items-center justify-center">
     {src ? (
-      <img src={src} alt={name || "User"} className="w-full h-full object-cover" />
+      <img
+        src={src}
+        alt={name || "User"}
+        className="w-full h-full object-cover"
+      />
     ) : (
       <span className="text-[10px] font-bold text-muted">
         {(name || "?").charAt(0).toUpperCase()}
@@ -29,7 +39,9 @@ const ReplyItem = ({ reply, canDelete, onDelete }) => (
       <div>
         <p className="text-xs font-bold">{reply.author?.name || "User"}</p>
         <p className="text-sm">{reply.message}</p>
-        <p className="text-xs text-muted-light mt-1">{timeAgo(reply.createdAt)}</p>
+        <p className="text-xs text-muted-light mt-1">
+          {timeAgo(reply.createdAt)}
+        </p>
       </div>
     </div>
     {canDelete && (
@@ -115,7 +127,9 @@ const ReviewCard = ({
             <ReplyItem
               key={reply._id}
               reply={reply}
-              canDelete={role === "admin" || reply.author?._id === currentUserId}
+              canDelete={
+                role === "admin" || reply.author?._id === currentUserId
+              }
               onDelete={(replyId) => onDeleteReply(review._id, replyId)}
             />
           ))}
@@ -127,24 +141,39 @@ const ReviewCard = ({
       )}
 
       <div className="flex justify-end gap-2 pt-1 border-t border-theme-light">
-        <button onClick={() => onReplyClick(review._id)} className="btn btn-ghost btn-xs gap-1">
+        <button
+          onClick={() => onReplyClick(review._id)}
+          className="btn btn-ghost btn-xs gap-1"
+        >
           <FiMessageSquare size={13} /> Reply
         </button>
-        <button onClick={() => onReport(review._id)} className="btn btn-ghost btn-xs gap-1 text-warning">
+        <button
+          onClick={() => onReport(review._id)}
+          className="btn btn-ghost btn-xs gap-1 text-warning"
+        >
           <FiFlag size={13} /> Report
         </button>
         {role === "customer" && (
           <>
-            <button onClick={() => onEditReview(review)} className="btn btn-ghost btn-xs gap-1">
+            <button
+              onClick={() => onEditReview(review)}
+              className="btn btn-ghost btn-xs gap-1"
+            >
               <FiEdit2 size={13} /> Edit
             </button>
-            <button onClick={() => onDeleteReview(review._id)} className="btn btn-ghost btn-xs gap-1 text-error">
+            <button
+              onClick={() => onDeleteReview(review._id)}
+              className="btn btn-ghost btn-xs gap-1 text-error"
+            >
               <FiTrash2 size={13} /> Delete
             </button>
           </>
         )}
         {role === "admin" && (
-          <button onClick={() => onDeleteReview(review._id)} className="btn btn-ghost btn-xs gap-1 text-error">
+          <button
+            onClick={() => onDeleteReview(review._id)}
+            className="btn btn-ghost btn-xs gap-1 text-error"
+          >
             <FiTrash2 size={13} /> Delete
           </button>
         )}

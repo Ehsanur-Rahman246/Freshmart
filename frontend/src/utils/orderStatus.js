@@ -31,7 +31,11 @@ export const DELIVERY_STEP_GROUPS = [
     label: "In Transit",
     statuses: ["toOriginCenter", "inTransit", "toDestinationCenter"],
   },
-  { key: "outForDelivery", label: "Out for Delivery", statuses: ["outForDelivery"] },
+  {
+    key: "outForDelivery",
+    label: "Out for Delivery",
+    statuses: ["outForDelivery"],
+  },
   { key: "delivered", label: "Delivered", statuses: ["delivered"] },
 ];
 

@@ -28,9 +28,17 @@ export const getOrderById = async (req, res) => {
     }
 
     const order = await Order.findById(orderId)
-      .populate("customer")
-      .populate("farmer")
-      .populate("farm", "name location")
+      .populate({
+        path: "customer",
+        select: "profileImage",
+        populate: { path: "user", select: "name phone" },
+      })
+      .populate({
+        path: "farmer",
+        select: "profileImage",
+        populate: { path: "user", select: "name phone" },
+      })
+      .populate("farm", "name location images")
       .populate("items.product", "name images")
       .populate("delivery.originZone")
       .populate("delivery.destinationZone")
@@ -207,7 +215,6 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // Pass 1: resolve farm/farmer/zone and compute discounted totals per farm
     const farmData = [];
     let grandItemsTotal = 0;
 
@@ -283,7 +290,6 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // Points redemption: 1 point = 1 taka, capped by balance and by cart value
     const pointsToRedeemActual = Math.min(
       requestedPoints,
       customer.pointsBalance,
@@ -292,6 +298,12 @@ export const createOrder = async (req, res) => {
 
     if (pointsToRedeemActual > 0) {
       customer.pointsBalance -= pointsToRedeemActual;
+    }
+
+    const debtToSettle = customer.debtBalance || 0;
+
+    if (debtToSettle > 0) {
+      customer.debtBalance = 0;
     }
 
     const orderGroup = new mongoose.Types.ObjectId();
@@ -314,13 +326,18 @@ export const createOrder = async (req, res) => {
         pointsForThisOrder = Math.min(pointsForThisOrder, data.itemsTotal);
         pointsAllocatedSoFar += pointsForThisOrder;
       }
+      const debtForThisOrder = isLast ? debtToSettle : 0;
 
       const { estimatedHours, deliveryCharge } = computeDeliveryEstimate(
         data.originZone,
         destinationZone,
       );
 
-      const total = data.itemsTotal + deliveryCharge - pointsForThisOrder;
+      const total =
+        data.itemsTotal +
+        deliveryCharge -
+        pointsForThisOrder +
+        debtForThisOrder;
 
       const estimatedDeliveryAt = new Date(
         Date.now() + estimatedHours * 60 * 60 * 1000,
@@ -351,6 +368,7 @@ export const createOrder = async (req, res) => {
           deliveryCharge,
           discount: data.discountAmount,
           pointsRedeemed: pointsForThisOrder,
+          debtSettled: debtForThisOrder,
           total,
         },
 
@@ -394,9 +412,6 @@ export const createOrder = async (req, res) => {
         relatedOrder: order._id,
       });
 
-      // Demo farmers skip the manual accept step, so the customer-facing
-      // acceptance/payment notifications fire immediately here instead of
-      // waiting on acceptOrder().
       if (isDemoFarmer) {
         await createNotification({
           recipient: customer.user,
@@ -433,12 +448,32 @@ export const createOrder = async (req, res) => {
     customer.cart = [];
     await customer.save();
 
+    const populatedOrders = await Order.find({
+      _id: { $in: createdOrders.map((o) => o._id) },
+    })
+      .populate({
+        path: "customer",
+        select: "profileImage",
+        populate: { path: "user", select: "name phone" },
+      })
+      .populate({
+        path: "farmer",
+        select: "profileImage",
+        populate: { path: "user", select: "name phone" },
+      })
+      .populate("farm", "name location images")
+      .populate("items.product", "name images")
+      .populate("delivery.originZone")
+      .populate("delivery.destinationZone")
+      .populate("delivery.courier")
+      .populate("delivery.driver.driverId");
+
     return res.status(201).json({
       success: true,
       message: "Orders placed successfully",
       orderGroup,
       pointsRedeemed: pointsToRedeemActual,
-      orders: createdOrders,
+      orders: populatedOrders,
     });
   } catch (error) {
     console.error(error);
@@ -547,8 +582,6 @@ export const confirmPayment = async (req, res) => {
         message: "This order group has already been paid for",
       });
     }
-
-    // ---- everything below this point is the new piece ----
 
     const invalidStatusOrder = orders.find(
       (order) => order.status !== "paymentPending",
@@ -705,7 +738,8 @@ export const cancelOrder = async (req, res) => {
         recipientRole: "farmer",
         type: "orderCancelled",
         title: "Order Cancelled",
-        message: "A customer has cancelled an order.",
+        message: `The customer has cancelled an order.
+                  Order: ${order.orderNumber}`,
         relatedOrder: order._id,
       });
     }
@@ -738,6 +772,7 @@ export const cancelOrder = async (req, res) => {
     });
   }
 };
+
 export const getFarmerOrders = async (req, res) => {
   try {
     const farmer = await Farmer.findOne({
@@ -762,6 +797,7 @@ export const getFarmerOrders = async (req, res) => {
       .populate("items.product", "name images")
       .populate("delivery.originZone")
       .populate("delivery.destinationZone")
+      .populate("delivery.courier", "name courierCode")
       .sort({
         createdAt: -1,
       });
@@ -895,6 +931,8 @@ export const updateOrderStatus = async (req, res) => {
     await order.save();
 
     const customer = await Customer.findById(order.customer).populate("user");
+
+    let driverAutoAssigned = false;
     if (customer) {
       const notificationData = {
         readyForPickup: {
@@ -917,9 +955,6 @@ export const updateOrderStatus = async (req, res) => {
         });
       }
 
-      // Demo customers skip the admin driver-assignment queue: try once,
-      // auto-cancel if nobody's available right now.
-      let driverAutoAssigned = false;
       if (customer.isDemo) {
         driverAutoAssigned = await tryAutoAssignDriver(order);
 
@@ -1030,14 +1065,14 @@ export const acceptOrder = async (req, res) => {
           await transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: customer.user.email,
-            subject: "Your FreshMart Order Has Been Accepted",
+            subject: "Your FreshMart Order Has Been Placed",
             html: `
-              <h2>Order Accepted</h2>
+              <h2>Order Placed</h2>
 
               <p>Hello ${customer.user.name || "Customer"},</p>
 
               <p>
-                Good news! The farmer has accepted your order
+                Good news! The farmer has placed your order
                 and is now preparing it.
               </p>
 
@@ -1167,9 +1202,21 @@ export const rejectOrder = async (req, res) => {
 export const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find()
-      .populate("customer", "user")
-      .populate("farmer", "user")
-      .populate("farm", "name")
+      .populate({
+        path: "customer",
+        select: "profileImage",
+        populate: { path: "user", select: "name" },
+      })
+      .populate({
+        path: "farmer",
+        select: "profileImage",
+        populate: { path: "user", select: "name" },
+      })
+      .populate("farm", "name location images")
+      .populate("items.product", "name images")
+      .populate("delivery.originZone")
+      .populate("delivery.destinationZone")
+      .populate("delivery.courier", "name courierCode")
       .sort({
         createdAt: -1,
       });
@@ -1312,9 +1359,7 @@ export const getOrdersByFarm = async (req, res) => {
   }
 };
 
-// Places an order on behalf of a demo customer. Duplicates createOrder's
-// logic rather than reusing it, since this always forces cashOnDelivery
-// and never redeems points, and doesn't have a req/res to work with.
+// By demo customer
 export const placeDemoOrder = async ({ userId, addressId }) => {
   try {
     const customer = await Customer.findOne({
@@ -1346,7 +1391,6 @@ export const placeDemoOrder = async ({ userId, addressId }) => {
       };
     }
 
-    // Group cart items by farm
     const farmOrders = new Map();
 
     for (const cartItem of customer.cart) {
@@ -1549,9 +1593,7 @@ export const placeDemoOrder = async ({ userId, addressId }) => {
   }
 };
 
-// Cancels an order outside the normal customer-initiated HTTP flow (e.g.
-// no driver was available). Duplicates cancelOrder's logic since there's
-// no req/res here, and adds an optional system-generated reason.
+// demo customer cancels if no driver found
 export const autoCancelOrder = async ({ order, customer, reason }) => {
   try {
     const REFUND_TIERS = {
@@ -1687,5 +1729,145 @@ export const autoCancelOrder = async ({ order, customer, reason }) => {
     console.error("autoCancelOrder error:", error);
 
     return { success: false, message: "Internal server error" };
+  }
+};
+
+// CUSTOMER preview of payment
+export const getCheckoutPreview = async (req, res) => {
+  try {
+    const { addressId, pointsToRedeem = 0 } = req.body;
+
+    if (!addressId) {
+      return res.status(400).json({
+        success: false,
+        message: "Delivery address is required",
+      });
+    }
+
+    const customer = await Customer.findOne({
+      user: req.user.userId,
+    }).populate("cart.product");
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer profile not found",
+      });
+    }
+
+    if (customer.cart.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Cart is empty",
+      });
+    }
+
+    const selectedAddress = customer.addresses.id(addressId);
+
+    if (!selectedAddress) {
+      return res.status(404).json({
+        success: false,
+        message: "Delivery address not found",
+      });
+    }
+
+    const destinationZone = await Zone.findOne({
+      districts: selectedAddress.district,
+    });
+
+    if (!destinationZone) {
+      return res.status(400).json({
+        success: false,
+        message: "Delivery zone not found for this district",
+      });
+    }
+
+    const farmOrders = new Map();
+
+    for (const cartItem of customer.cart) {
+      const product = cartItem.product;
+
+      if (!product || product.status !== "active") continue;
+      if (product.expiresAt && product.expiresAt <= new Date()) continue;
+
+      const farmId = product.farm.toString();
+
+      if (!farmOrders.has(farmId)) farmOrders.set(farmId, []);
+
+      farmOrders.get(farmId).push({
+        product,
+        quantity: Math.min(cartItem.quantity, product.stock),
+      });
+    }
+
+    let itemsTotal = 0;
+    let discountAmount = 0;
+    let deliveryCharge = 0;
+
+    for (const [farmId, items] of farmOrders.entries()) {
+      const farm = await Farm.findById(farmId);
+      if (!farm) continue;
+
+      const originZone = await Zone.findOne({
+        districts: farm.location.district,
+      });
+      if (!originZone) continue;
+
+      let farmItemsTotal = 0;
+
+      for (const item of items) {
+        const originalUnitPrice = item.product.price;
+        const discountPct = item.product.discountPercentage || 0;
+        const effectiveUnitPrice =
+          Math.round(originalUnitPrice * (1 - discountPct / 100) * 100) / 100;
+        const subtotal =
+          Math.round(effectiveUnitPrice * item.quantity * 100) / 100;
+
+        discountAmount += originalUnitPrice * item.quantity - subtotal;
+        farmItemsTotal += subtotal;
+      }
+
+      itemsTotal += farmItemsTotal;
+
+      const { deliveryCharge: farmDeliveryCharge } = computeDeliveryEstimate(
+        originZone,
+        destinationZone,
+      );
+
+      deliveryCharge += farmDeliveryCharge;
+    }
+
+    const requestedPoints = Number(pointsToRedeem) || 0;
+    const pointsRedeemed = Math.max(
+      0,
+      Math.min(requestedPoints, customer.pointsBalance, itemsTotal),
+    );
+
+    const debtBalance = customer.debtBalance || 0;
+
+    const total =
+      Math.round(
+        (itemsTotal + deliveryCharge - pointsRedeemed + debtBalance) * 100,
+      ) / 100;
+
+    return res.status(200).json({
+      success: true,
+      preview: {
+        itemsTotal,
+        discountAmount: Math.round(discountAmount * 100) / 100,
+        deliveryCharge,
+        pointsAvailable: customer.pointsBalance,
+        pointsRedeemed,
+        debtBalance,
+        total,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };

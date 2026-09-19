@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import { createProduct, updateProduct } from "../api/product";
-
-const CATEGORIES = ["dairy", "grain", "spices", "poultry", "livestock", "fruits", "vegetables"];
-const SEASONS = ["allYear", "winter", "summer", "monsoon"];
-const SOURCES = ["field", "greenhouse", "orchard", "dairyFarm", "poultryFarm", "livestockFarm"];
-const UNITS = ["kg", "g", "L", "pc", "dozen", "mL"];
+import {
+  PRODUCT_CATEGORIES as CATEGORIES,
+  PRODUCT_SEASONS as SEASONS,
+  PRODUCT_SOURCES as SOURCES,
+  PRODUCT_UNITS as UNITS,
+} from "../utils/productConstants";
 
 const validationSchema = Yup.object({
   farmId: Yup.string().required("Farm is required"),
@@ -25,7 +26,12 @@ const validationSchema = Yup.object({
 // mode: "create" | "update"
 // farms: [{ _id, name }] for the farm <select>
 // product: existing product doc, required when mode === "update"
-export default function ProductForm({ mode = "create", farms = [], product, onSuccess }) {
+export default function ProductForm({
+  mode = "create",
+  farms = [],
+  product,
+  onSuccess,
+}) {
   const [removeImageIds, setRemoveImageIds] = useState([]);
 
   const initialValues = {
@@ -46,7 +52,9 @@ export default function ProductForm({ mode = "create", farms = [], product, onSu
 
   const toggleRemoveImage = (publicId) => {
     setRemoveImageIds((prev) =>
-      prev.includes(publicId) ? prev.filter((id) => id !== publicId) : [...prev, publicId],
+      prev.includes(publicId)
+        ? prev.filter((id) => id !== publicId)
+        : [...prev, publicId],
     );
   };
 
@@ -107,13 +115,21 @@ export default function ProductForm({ mode = "create", farms = [], product, onSu
                 </option>
               ))}
             </Field>
-            <ErrorMessage name="farmId" component="p" className="text-red-600 text-sm" />
+            <ErrorMessage
+              name="farmId"
+              component="p"
+              className="text-red-600 text-sm"
+            />
           </div>
 
           <div>
             <label>Name</label>
             <Field name="name" />
-            <ErrorMessage name="name" component="p" className="text-red-600 text-sm" />
+            <ErrorMessage
+              name="name"
+              component="p"
+              className="text-red-600 text-sm"
+            />
           </div>
 
           <div>
@@ -126,16 +142,26 @@ export default function ProductForm({ mode = "create", farms = [], product, onSu
             <Field as="select" name="category">
               <option value="">Select category</option>
               {CATEGORIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c}>
+                  {c}
+                </option>
               ))}
             </Field>
-            <ErrorMessage name="category" component="p" className="text-red-600 text-sm" />
+            <ErrorMessage
+              name="category"
+              component="p"
+              className="text-red-600 text-sm"
+            />
           </div>
 
           <div>
             <label>Sub-category</label>
             <Field name="subCategory" />
-            <ErrorMessage name="subCategory" component="p" className="text-red-600 text-sm" />
+            <ErrorMessage
+              name="subCategory"
+              component="p"
+              className="text-red-600 text-sm"
+            />
           </div>
 
           <div>
@@ -143,10 +169,16 @@ export default function ProductForm({ mode = "create", farms = [], product, onSu
             <Field as="select" name="season">
               <option value="">Select season</option>
               {SEASONS.map((s) => (
-                <option key={s} value={s}>{s}</option>
+                <option key={s} value={s}>
+                  {s}
+                </option>
               ))}
             </Field>
-            <ErrorMessage name="season" component="p" className="text-red-600 text-sm" />
+            <ErrorMessage
+              name="season"
+              component="p"
+              className="text-red-600 text-sm"
+            />
           </div>
 
           <div>
@@ -154,44 +186,73 @@ export default function ProductForm({ mode = "create", farms = [], product, onSu
             <Field as="select" name="source">
               <option value="">Select source</option>
               {SOURCES.map((s) => (
-                <option key={s} value={s}>{s}</option>
+                <option key={s} value={s}>
+                  {s}
+                </option>
               ))}
             </Field>
-            <ErrorMessage name="source" component="p" className="text-red-600 text-sm" />
+            <ErrorMessage
+              name="source"
+              component="p"
+              className="text-red-600 text-sm"
+            />
           </div>
 
           <div className="flex gap-4">
             <div>
               <label>Price</label>
               <Field type="number" name="price" min="0" step="0.01" />
-              <ErrorMessage name="price" component="p" className="text-red-600 text-sm" />
+              <ErrorMessage
+                name="price"
+                component="p"
+                className="text-red-600 text-sm"
+              />
             </div>
             <div>
               <label>Unit</label>
               <Field as="select" name="unit">
                 <option value="">Select unit</option>
                 {UNITS.map((u) => (
-                  <option key={u} value={u}>{u}</option>
+                  <option key={u} value={u}>
+                    {u}
+                  </option>
                 ))}
               </Field>
-              <ErrorMessage name="unit" component="p" className="text-red-600 text-sm" />
+              <ErrorMessage
+                name="unit"
+                component="p"
+                className="text-red-600 text-sm"
+              />
             </div>
             <div>
               <label>Stock</label>
               <Field type="number" name="stock" min="0" />
-              <ErrorMessage name="stock" component="p" className="text-red-600 text-sm" />
+              <ErrorMessage
+                name="stock"
+                component="p"
+                className="text-red-600 text-sm"
+              />
             </div>
           </div>
 
           <div className="flex gap-4">
             <div>
               <label>Discount %</label>
-              <Field type="number" name="discountPercentage" min="0" max="100" />
+              <Field
+                type="number"
+                name="discountPercentage"
+                min="0"
+                max="100"
+              />
             </div>
             <div>
               <label>Listing Duration (days)</label>
               <Field type="number" name="listingDuration" min="1" />
-              <ErrorMessage name="listingDuration" component="p" className="text-red-600 text-sm" />
+              <ErrorMessage
+                name="listingDuration"
+                component="p"
+                className="text-red-600 text-sm"
+              />
             </div>
           </div>
 
@@ -200,8 +261,15 @@ export default function ProductForm({ mode = "create", farms = [], product, onSu
               <label>Existing Images (check to remove)</label>
               <div className="flex flex-wrap gap-3">
                 {product.images.map((img) => (
-                  <label key={img.publicId} className="flex flex-col items-center gap-1">
-                    <img src={img.url} alt="" className="w-20 h-20 object-cover rounded" />
+                  <label
+                    key={img.publicId}
+                    className="flex flex-col items-center gap-1"
+                  >
+                    <img
+                      src={img.url}
+                      alt=""
+                      className="w-20 h-20 object-cover rounded"
+                    />
                     <input
                       type="checkbox"
                       checked={removeImageIds.includes(img.publicId)}
@@ -215,18 +283,26 @@ export default function ProductForm({ mode = "create", farms = [], product, onSu
           )}
 
           <div>
-            <label>{mode === "update" ? "Add More Images" : "Images (up to 6)"}</label>
+            <label>
+              {mode === "update" ? "Add More Images" : "Images (up to 6)"}
+            </label>
             <input
               type="file"
               name="images"
               accept="image/*"
               multiple
-              onChange={(e) => setFieldValue("images", Array.from(e.target.files))}
+              onChange={(e) =>
+                setFieldValue("images", Array.from(e.target.files))
+              }
             />
           </div>
 
           <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Saving..." : mode === "update" ? "Update Product" : "Create Product"}
+            {isSubmitting
+              ? "Saving..."
+              : mode === "update"
+                ? "Update Product"
+                : "Create Product"}
           </button>
         </Form>
       )}

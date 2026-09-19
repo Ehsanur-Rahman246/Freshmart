@@ -32,7 +32,6 @@ export const createFarm = async (req, res) => {
       products,
     } = req.body;
 
-    // size, location, and farmType may arrive as JSON strings via form-data
     const parsedSize = typeof size === "string" ? JSON.parse(size) : size;
     const parsedLocation =
       typeof location === "string" ? JSON.parse(location) : location;
@@ -230,7 +229,6 @@ export const updateFarm = async (req, res) => {
         typeof products === "string" ? JSON.parse(products) : products;
     }
 
-    // Remove requested images (by publicId) from Cloudinary + the array
     if (removeImages) {
       let removeIds = [];
 
@@ -252,7 +250,6 @@ export const updateFarm = async (req, res) => {
       }
     }
 
-    // Append newly uploaded images
     if (req.files && req.files.length > 0) {
       const limit = pLimit(IMAGE_UPLOAD_CONCURRENCY);
 

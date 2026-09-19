@@ -1,9 +1,6 @@
 import { FiCheck, FiTrash2 } from "react-icons/fi";
 import { timeAgo } from "./timeAgo";
 
-// Generic — works for any role. The caller decides what onNavigate does
-// (build a link, mark-as-read only, etc.) via the getNotificationLink
-// function passed into NotificationsPage.
 const NotificationCard = ({
   notification,
   isHighlighted,

@@ -7,9 +7,7 @@ import {
   LOCAL_DELIVERY_HOURS,
 } from "../config/time.js";
 
-// Used only at order creation to show the customer an ETA and to
-// compute the delivery charge. Actual per-hop timing during the real
-// delivery run is re-rolled by the scheduler (jobs/deliveryProgression.js).
+// estimation, rerolled at deliveryProgression job
 const computeDeliveryEstimate = (originZone, destinationZone) => {
   let transitHours;
 

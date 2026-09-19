@@ -25,7 +25,7 @@ const getFarmerNotificationLink = (notification) => {
     FARMER_ORDER_TYPES.includes(notification.type) &&
     notification.relatedOrder
   ) {
-    return `/farmer/orders/${notification.relatedOrder}`;
+    return `/farmer/orders`;
   }
 
   return null;

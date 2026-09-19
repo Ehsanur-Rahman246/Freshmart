@@ -41,21 +41,24 @@ const applyMaturedRestocks = async () => {
       }
       product.status = "active";
     }
-    // Real farmer, or a non-reactivatable status (expired/inactive): just
-    // credit the stock back. Status changes are the farmer's call via
-    // updateProduct — the scheduler never auto-reactivates a real farmer's
-    // listing.
 
     await product.save();
   }
 };
 
 export const startRestockProcessingScheduler = () => {
+  let isRunning = false;
+
   cron.schedule(CRON_INTERVAL, async () => {
+    if (isRunning) return;
+    isRunning = true;
+
     try {
       await applyMaturedRestocks();
     } catch (error) {
       console.error("Restock processing error:", error);
+    } finally {
+      isRunning = false;
     }
   });
 

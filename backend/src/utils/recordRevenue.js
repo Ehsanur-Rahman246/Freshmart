@@ -6,7 +6,7 @@ import {
   ADMIN_COMPANY_SALE_COMMISSION,
 } from "../config/business.js";
 
-// Normal customer order reaching "delivered".
+// at delivered
 export const recordSaleRevenue = async (order) => {
   const grossAmount = order.pricing.itemsTotal;
 
@@ -27,9 +27,6 @@ export const recordSaleRevenue = async (order) => {
   });
 };
 
-// Company sale finalized (demo instant sale, or real-farmer admin-finalized sale).
-// quantity = stock at the moment of sale (must be passed in before stock is
-// cleared/zeroed, if that's ever done elsewhere).
 export const recordCompanySaleRevenue = async (product, quantity) => {
   const grossAmount =
     Math.round(product.companySalePrice * quantity * 100) / 100;

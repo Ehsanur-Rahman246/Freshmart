@@ -1,5 +1,4 @@
 import express from "express";
-
 import {
   createProductReview,
   createFarmReview,
@@ -15,35 +14,24 @@ import {
   adminDeleteReview,
   deleteReply,
 } from "../controllers/reviewControllers.js";
-
 import userAuth from "../middlewares/userAuth.js";
 import roleAuth from "../middlewares/roleAuth.js";
 
 const reviewRouter = express.Router();
 
-// ==========================================
-// PUBLIC ROUTES
-// ==========================================
+// PUBLIC
 
-// Get all reviews for a product
 reviewRouter.get("/product/:productId", getProductReviews);
-
-// Get all reviews for a farm
 reviewRouter.get("/farm/:farmId", getFarmReviews);
 
-// ==========================================
-// CUSTOMER ROUTES
-// ==========================================
+// CUSTOMER
 
-// Create product review
 reviewRouter.post(
   "/product/:productId",
   userAuth,
   roleAuth("customer"),
   createProductReview,
 );
-
-// Create farm review
 reviewRouter.post(
   "/farm/:farmId",
   userAuth,
@@ -52,11 +40,10 @@ reviewRouter.post(
 );
 reviewRouter.patch("/:reviewId", userAuth, roleAuth("customer"), updateReview);
 reviewRouter.delete("/:reviewId", userAuth, roleAuth("customer"), deleteReview);
-
-// CUSTOMER
 reviewRouter.get("/mine", userAuth, roleAuth("customer"), getMyReviews);
 
 // FARMER
+
 reviewRouter.get(
   "/farmer/mine",
   userAuth,
@@ -65,6 +52,7 @@ reviewRouter.get(
 );
 
 // ADMIN
+
 reviewRouter.get("/admin/all", userAuth, roleAuth("admin"), getAllReviewsAdmin);
 reviewRouter.delete(
   "/admin/:reviewId",
@@ -80,6 +68,7 @@ reviewRouter.delete(
 );
 
 // SHARED
+
 reviewRouter.post(
   "/:reviewId/reply",
   userAuth,
@@ -89,7 +78,7 @@ reviewRouter.post(
 reviewRouter.post(
   "/:reviewId/report",
   userAuth,
-  roleAuth("customer", "farmer", "admin"),
+  roleAuth("customer", "farmer"),
   reportReview,
 );
 

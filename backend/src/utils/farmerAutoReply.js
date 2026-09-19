@@ -1,6 +1,3 @@
-// Adds a canned farmer reply to a freshly created review, but only when
-// the reviewed product/farm belongs to a demo farmer. Real farmers reply
-// manually via addReviewReply.
 const REPLY_COMMENTS = {
   1: [
     "We're sorry to hear this — please reach out so we can make it right.",

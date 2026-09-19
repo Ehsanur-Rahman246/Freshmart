@@ -11,7 +11,6 @@ import {
 } from "react-icons/fi";
 import { login } from "../api/auth";
 
-
 // Input component
 const Input = ({
   icon: Icon,

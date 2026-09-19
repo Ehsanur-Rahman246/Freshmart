@@ -1,6 +1,6 @@
 import OrderDetailContent from "./OrderDetailContent";
 
-const OrderDrawer = ({ order, onClose }) => {
+const OrderDrawer = ({ order, onClose, ...actions }) => {
   if (!order) return null;
 
   return (
@@ -27,7 +27,7 @@ const OrderDrawer = ({ order, onClose }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
-          <OrderDetailContent order={order} />
+          <OrderDetailContent order={order} {...actions} />
         </div>
       </div>
     </>
