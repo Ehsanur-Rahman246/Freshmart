@@ -60,6 +60,8 @@ import LiveDeliveries from "./pages/admin/LiveDeliveries";
 import AdminReviews from "./pages/admin/Reviews";
 import AdminNotifications from "./pages/admin/Notifications";
 import AdminProfile from "./pages/admin/Profile";
+import AdminAnnouncements from "./pages/admin/Announcements";
+import AdminMessages from "./pages/admin/Messages";
 
 // Error Pages
 import Unauthorized from "./pages/Unauthorized";
@@ -171,6 +173,10 @@ const AppRoutes = () => {
           <Route path="notifications" element={<AdminNotifications />} />
 
           <Route path="profile" element={<AdminProfile />} />
+
+          <Route path="messages" element={<AdminMessages/>} />
+          
+          <Route path="announcements" element={<AdminAnnouncements/>} />
         </Route>
       </Route>
 

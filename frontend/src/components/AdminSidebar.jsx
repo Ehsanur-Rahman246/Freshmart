@@ -21,7 +21,7 @@ const menuItems = [
   { name: "Home", path: "/admin", icon: FiHome, end: true },
   { name: "Orders", path: "/admin/orders", icon: FiPackage },
   { name: "Delivery", path: "/admin/live-deliveries", icon: FiTruck },
-  { name: "Market", path: "/admin/products", icon: FiShoppingBag },
+  { name: "Market", path: "/admin/marketplace", icon: FiShoppingBag },
   { name: "Customers", path: "/admin/customers", icon: FiUsers },
   { name: "Farmers", path: "/admin/farmers", icon: FiUserCheck },
   { name: "Farms", path: "/farms", icon: PiFarmLight },
