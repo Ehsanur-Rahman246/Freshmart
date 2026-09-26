@@ -94,7 +94,7 @@ const ProductCard = ({
     );
   }
 
-  const showCart = role !== "farmer";
+  const showCart = role !== "farmer" || "admin";
   const showHeart = role === "customer";
 
   return (
@@ -136,7 +136,7 @@ const ProductCard = ({
         <span className="text-muted"> / {unit}</span>
       </p>
       <div className="flex gap-2 mt-auto">
-        {role === "farmer" ? (
+        {(role === "farmer" || role === "admin")  ? (
           <Link to={`/products/${id}`} className="flex-1">
             <button className="btn btn-primary w-full flex items-center justify-center gap-2">
               <span className="truncate text-xs sm:text-sm">View Details</span>

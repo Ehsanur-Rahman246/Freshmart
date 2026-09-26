@@ -4,10 +4,13 @@ import { Routes, Route } from "react-router";
 import CustomerLayout from "./layouts/CustomerLayout";
 import FarmerLayout from "./layouts/FarmerLayout";
 import AdminLayout from "./layouts/AdminLayout";
+import PublicLayout from "./layouts/PublicLayout";
 
 // Protection
 import ProtectedRoute from "./components/ProtectedRoute";
 import GuestRoute from "./components/GuestRoute";
+import VerifyRoute from "./components/VerifyRoute";
+import VerifyAccount from "./pages/VerifyAccount";
 
 // Public Pages
 import Home from "./pages/Home";
@@ -34,6 +37,7 @@ import CustomerReviews from "./pages/customer/Reviews";
 import Wishlist from "./pages/customer/Wishlist";
 import CustomerNotifications from "./pages/customer/Notifications";
 import CustomerProfile from "./pages/customer/Profile";
+import CustomerMessages from "./pages/customer/Messages";
 
 // Farmer Pages
 import FarmerDashboard from "./pages/farmer/Dashboard";
@@ -41,7 +45,7 @@ import Listings from "./pages/farmer/Listings";
 import AddProduct from "./pages/farmer/AddProduct";
 import EditProduct from "./pages/farmer/EditProduct";
 import FarmerOrders from "./pages/farmer/Orders";
-// import FarmerOrderDetails from "./pages/farmer/OrderDetails";
+import PricingHistory from "./pages/farmer/PricingHistory";
 import RevenueBalance from "./pages/farmer/RevenueBalance";
 import FarmerReviews from "./pages/farmer/Reviews";
 import FarmerNotifications from "./pages/farmer/Notifications";
@@ -49,6 +53,7 @@ import FarmerProfileSettings from "./pages/farmer/Profile";
 import Farms from "./pages/farmer/Farms";
 import FarmAdd from "./pages/farmer/FarmAdd";
 import FarmManage from "./pages/farmer/FarmManage";
+import FarmerMessages from "./pages/farmer/Messages";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -72,20 +77,25 @@ const AppRoutes = () => {
     <Routes>
       {/* ================= PUBLIC ROUTES ================= */}
 
+      <Route element={<VerifyRoute />}>
+        <Route path="/verify-account" element={<VerifyAccount />} />
+      </Route>
+
       <Route element={<GuestRoute />}>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
       </Route>
-      <Route path="/about" element={<About />} />
-      <Route path="/marketplace" element={<Marketplace />} />
-      <Route path="/products/:productId" element={<ProductDetails />} />
-      <Route path="/farms" element={<FarmInfo />} />
-      <Route path="/farms/:id" element={<FarmProfile />} />
-
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/terms-and-conditions" element={<TermsConditions />} />
-      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+      <Route element={<PublicLayout />}>
+        <Route path="/about" element={<About />} />
+        <Route path="/marketplace" element={<Marketplace />} />
+        <Route path="/products/:productId" element={<ProductDetails />} />
+        <Route path="/farms" element={<FarmInfo />} />
+        <Route path="/farms/:id" element={<FarmProfile />} />
+        <Route path="/terms-and-conditions" element={<TermsConditions />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+      </Route>
 
       {/* ================= CUSTOMER ROUTES ================= */}
 
@@ -115,6 +125,8 @@ const AppRoutes = () => {
 
           <Route path="notifications" element={<CustomerNotifications />} />
 
+          <Route path="messages" element={<CustomerMessages/>} />
+
           <Route path="profile" element={<CustomerProfile />} />
         </Route>
       </Route>
@@ -139,14 +151,17 @@ const AppRoutes = () => {
 
           <Route path="orders">
             <Route index element={<FarmerOrders />} />
-            {/* <Route path=":id" element={<FarmerOrderDetails />} /> */}
           </Route>
+
+          <Route path="pricing-history" element={<PricingHistory />} />
 
           <Route path="revenue" element={<RevenueBalance />} />
 
           <Route path="reviews" element={<FarmerReviews />} />
 
           <Route path="notifications" element={<FarmerNotifications />} />
+
+          <Route path="messages" element={<FarmerMessages />} />
 
           <Route path="profile" element={<FarmerProfileSettings />} />
         </Route>

@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { logout } from "../api/auth";
+import { disconnectSocket } from "../api/socket";
 
 const useLogout = () => {
   const queryClient = useQueryClient();
@@ -9,6 +10,7 @@ const useLogout = () => {
   const handleLogout = async () => {
     try {
       await logout();
+      disconnectSocket();
 
       queryClient.invalidateQueries({
         queryKey: ["viewer"],

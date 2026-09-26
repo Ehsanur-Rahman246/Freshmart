@@ -2,19 +2,43 @@ import mongoose from "mongoose";
 import crypto from "crypto";
 import Order from "../models/Order.js";
 import Customer from "../models/Customer.js";
-import Product from "../models/Product.js";
 import Farmer from "../models/Farmer.js";
 import Farm from "../models/Farm.js";
 import Zone from "../models/Zone.js";
-import Driver from "../models/Driver.js";
 import generateOrderNumber from "../utils/generateOrderNumber.js";
-import createNotification from "../utils/createNotification.js";
 import transporter from "../config/nodemailer.js";
 import computeDeliveryEstimate from "../utils/computeDeliveryEstimate.js";
-import { HOUR_IN_MS, DEMO_PROCESSING_HOURS } from "../config/time.js";
+import {
+  HOUR_IN_MS,
+  DEMO_PROCESSING_HOURS,
+  PAYMENT_WINDOW_HOURS,
+} from "../config/time.js";
 import notifyAdmin from "../utils/notifyAdmin.js";
 import { tryAutoAssignDriver } from "./deliveryControllers.js";
-import scheduleRestock from "../utils/scheduleRestock.js";
+import { cancelOrderCore } from "../utils/cancelOrderCore.js";
+import { reserveStock, releaseStock } from "../utils/stock.js";
+import { emitOrderStatusToCustomer } from "../utils/realtime.js";
+import { notifyFarmer } from "../utils/notifyFarmer.js";
+import { notifyCustomer } from "../utils/notifyCustomer.js";
+import {
+  validateAndComputePromo,
+  claimPromoUsage,
+  releasePromoUsage,
+  recordPromoUsage,
+} from "../utils/promoCode.js";
+import { openGroupPaymentIfReady } from "../utils/groupPayment.js";
+import { round2 } from "../utils/money.js";
+import {
+  orderPlacedEmail,
+  orderRejectedEmail,
+  orderCancelledEmail,
+  paymentInvoiceEmail,
+} from "../utils/emailTemplates.js";
+
+const populateOrderForEmail = (orderId) =>
+  Order.findById(orderId)
+    .populate("items.product", "images")
+    .populate("farm", "name");
 
 export const getOrderById = async (req, res) => {
   try {
@@ -106,7 +130,12 @@ export const getOrderById = async (req, res) => {
 
 export const createOrder = async (req, res) => {
   try {
-    const { addressId, paymentMethod, pointsToRedeem = 0 } = req.body;
+    const {
+      addressId,
+      paymentMethod,
+      pointsToRedeem = 0,
+      promoCode,
+    } = req.body;
 
     if (!addressId) {
       return res.status(400).json({
@@ -228,6 +257,13 @@ export const createOrder = async (req, res) => {
         });
       }
 
+      if (!farm.isActive) {
+        return res.status(400).json({
+          success: false,
+          message: `${farm.name} is not accepting orders right now`,
+        });
+      }
+
       const farmer = await Farmer.findById(farm.farmer);
 
       if (!farmer) {
@@ -290,115 +326,262 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    const pointsToRedeemActual = Math.min(
-      requestedPoints,
-      customer.pointsBalance,
-      grandItemsTotal,
+    // ---- promo code: validate against the whole cart ----
+    let promo = null;
+    let promoDiscountTotal = 0;
+
+    if (promoCode) {
+      const promoResult = await validateAndComputePromo({
+        code: promoCode,
+        customerId: customer._id,
+        itemsTotal: grandItemsTotal,
+      });
+
+      if (promoResult.error) {
+        return res
+          .status(400)
+          .json({ success: false, message: promoResult.error });
+      }
+
+      promo = promoResult.promoCode;
+      promoDiscountTotal = promoResult.discountAmount;
+    }
+
+    // ---- points: whole numbers, allocated with no loss ----
+    let pointsToRedeemActual = Math.floor(
+      Math.min(
+        requestedPoints,
+        customer.pointsBalance,
+        grandItemsTotal - promoDiscountTotal,
+      ),
     );
 
-    if (pointsToRedeemActual > 0) {
-      customer.pointsBalance -= pointsToRedeemActual;
+    const allocations = farmData.map((d) =>
+      grandItemsTotal > 0
+        ? Math.min(
+            Math.floor((d.itemsTotal / grandItemsTotal) * pointsToRedeemActual),
+            Math.floor(d.itemsTotal),
+          )
+        : 0,
+    );
+
+    let remainder =
+      pointsToRedeemActual - allocations.reduce((a, b) => a + b, 0);
+
+    for (let i = 0; i < allocations.length && remainder > 0; i++) {
+      const room = Math.floor(farmData[i].itemsTotal) - allocations[i];
+      const add = Math.min(room, remainder);
+      allocations[i] += add;
+      remainder -= add;
+    }
+
+    pointsToRedeemActual -= remainder; // anything unallocatable is simply not spent
+
+    // ---- promo discount: same proportional allocation as points ----
+    const promoAllocations = farmData.map((d) =>
+      grandItemsTotal > 0
+        ? Math.round(
+            (d.itemsTotal / grandItemsTotal) * promoDiscountTotal * 100,
+          ) / 100
+        : 0,
+    );
+
+    let promoRemainder =
+      Math.round(
+        (promoDiscountTotal - promoAllocations.reduce((a, b) => a + b, 0)) *
+          100,
+      ) / 100;
+
+    if (promoAllocations.length > 0 && promoRemainder !== 0) {
+      promoAllocations[promoAllocations.length - 1] =
+        Math.round(
+          (promoAllocations[promoAllocations.length - 1] + promoRemainder) *
+            100,
+        ) / 100;
     }
 
     const debtToSettle = customer.debtBalance || 0;
 
-    if (debtToSettle > 0) {
-      customer.debtBalance = 0;
+    // ---- 1) reserve stock atomically (never oversell) ----
+    const allItems = farmData.flatMap((d) => d.items);
+    const reservation = await reserveStock(allItems);
+
+    if (!reservation.ok) {
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient stock for ${reservation.productName}`,
+      });
     }
 
+    // ---- 1.5) claim promo code usage atomically ----
+    if (promo) {
+      const claimed = await claimPromoUsage(promo._id, promo.usageLimit);
+
+      if (!claimed) {
+        await releaseStock(allItems);
+        return res.status(409).json({
+          success: false,
+          message: "This promo code just reached its usage limit",
+        });
+      }
+    }
+
+    // ---- 2) debit points/debt atomically (fails if balances changed) ----
+    const debit = await Customer.updateOne(
+      {
+        _id: customer._id,
+        pointsBalance: { $gte: pointsToRedeemActual },
+        debtBalance: debtToSettle,
+        updatedAt: customer.updatedAt,
+      },
+      {
+        $inc: { pointsBalance: -pointsToRedeemActual },
+        $set: { debtBalance: 0 },
+      },
+    );
+
+    if (debit.modifiedCount !== 1) {
+      await releaseStock(allItems);
+      if (promo) await releasePromoUsage(promo._id);
+      return res.status(409).json({
+        success: false,
+        message: "Your balance changed. Please review your checkout again.",
+      });
+    }
+
+    // ---- 3) create orders; compensate on any failure ----
     const orderGroup = new mongoose.Types.ObjectId();
     const createdOrders = [];
-    let pointsAllocatedSoFar = 0;
 
-    for (let i = 0; i < farmData.length; i++) {
-      const data = farmData[i];
-      const isLast = i === farmData.length - 1;
+    try {
+      for (let i = 0; i < farmData.length; i++) {
+        const data = farmData[i];
+        const isLast = i === farmData.length - 1;
 
-      let pointsForThisOrder = 0;
+        const pointsForThisOrder = allocations[i];
+        const promoForThisOrder = promoAllocations[i] || 0;
+        const debtForThisOrder = isLast ? debtToSettle : 0;
 
-      if (pointsToRedeemActual > 0) {
-        pointsForThisOrder = isLast
-          ? pointsToRedeemActual - pointsAllocatedSoFar
-          : Math.round(
-              (data.itemsTotal / grandItemsTotal) * pointsToRedeemActual,
-            );
+        const { estimatedHours, deliveryCharge } = computeDeliveryEstimate(
+          data.originZone,
+          destinationZone,
+        );
 
-        pointsForThisOrder = Math.min(pointsForThisOrder, data.itemsTotal);
-        pointsAllocatedSoFar += pointsForThisOrder;
+        const total =
+          Math.round(
+            (data.itemsTotal +
+              deliveryCharge -
+              pointsForThisOrder -
+              promoForThisOrder +
+              debtForThisOrder) *
+              100,
+          ) / 100;
+
+        const isDemoFarmer = data.farmer.isDemo === true;
+        const isOnline = paymentMethod === "online";
+
+        const order = await Order.create({
+          customer: customer._id,
+          orderGroup,
+          orderNumber: await generateOrderNumber(),
+          farmer: data.farmer._id,
+          farm: data.farm._id,
+          items: data.orderItems,
+
+          deliveryAddress: {
+            name: selectedAddress.recipientName,
+            phone: selectedAddress.phone,
+            division: selectedAddress.division,
+            district: selectedAddress.district,
+            upazila: selectedAddress.upazila,
+            village: selectedAddress.village,
+            address: selectedAddress.address,
+          },
+
+          pricing: {
+            itemsTotal: round2(data.itemsTotal),
+            deliveryCharge,
+            discount: data.discountAmount,
+            pointsRedeemed: pointsForThisOrder,
+            promoDiscount: promoForThisOrder,
+            debtSettled: debtForThisOrder,
+            total,
+          },
+          promoCode: promo ? promo._id : null,
+
+          payment: { method: paymentMethod, status: "pending" },
+
+          delivery: {
+            originZone: data.originZone._id,
+            destinationZone: destinationZone._id,
+            estimatedHours,
+            estimatedDeliveryAt: new Date(
+              Date.now() + estimatedHours * HOUR_IN_MS,
+            ),
+          },
+
+          status: isDemoFarmer
+            ? isOnline
+              ? "orderPlaced"
+              : "processing"
+            : "pendingAcceptance",
+          isDemoOrder: isDemoFarmer,
+          processingReadyAt:
+            isDemoFarmer && !isOnline
+              ? new Date(Date.now() + DEMO_PROCESSING_HOURS * HOUR_IN_MS)
+              : null,
+          paymentDueAt: null,
+        });
+
+        createdOrders.push(order);
       }
-      const debtForThisOrder = isLast ? debtToSettle : 0;
+    } catch (creationError) {
+      console.error(creationError);
 
-      const { estimatedHours, deliveryCharge } = computeDeliveryEstimate(
-        data.originZone,
-        destinationZone,
+      await Order.deleteMany({ _id: { $in: createdOrders.map((o) => o._id) } });
+      await releaseStock(allItems);
+      await Customer.updateOne(
+        { _id: customer._id },
+        {
+          $inc: {
+            pointsBalance: pointsToRedeemActual,
+            debtBalance: debtToSettle,
+          },
+        },
       );
+      if (promo) await releasePromoUsage(promo._id);
 
-      const total =
-        data.itemsTotal +
-        deliveryCharge -
-        pointsForThisOrder +
-        debtForThisOrder;
-
-      const estimatedDeliveryAt = new Date(
-        Date.now() + estimatedHours * 60 * 60 * 1000,
-      );
-
-      const isDemoFarmer = data.farmer.isDemo === true;
-      const orderNumber = await generateOrderNumber();
-
-      const order = await Order.create({
-        customer: customer._id,
-        orderGroup,
-        orderNumber,
-        farmer: data.farmer._id,
-        farm: data.farm._id,
-        items: data.orderItems,
-
-        deliveryAddress: {
-          name: selectedAddress.recipientName,
-          phone: selectedAddress.phone,
-          district: selectedAddress.district,
-          upazila: selectedAddress.upazila,
-          village: selectedAddress.village,
-          address: selectedAddress.address,
-        },
-
-        pricing: {
-          itemsTotal: data.itemsTotal,
-          deliveryCharge,
-          discount: data.discountAmount,
-          pointsRedeemed: pointsForThisOrder,
-          debtSettled: debtForThisOrder,
-          total,
-        },
-
-        payment: {
-          method: paymentMethod,
-          status: "pending",
-        },
-
-        delivery: {
-          originZone: data.originZone._id,
-          destinationZone: destinationZone._id,
-          estimatedHours,
-          estimatedDeliveryAt,
-        },
-
-        status: isDemoFarmer
-          ? paymentMethod === "online"
-            ? "paymentPending"
-            : "processing"
-          : "pendingAcceptance",
-        isDemoOrder: isDemoFarmer,
-        processingReadyAt:
-          isDemoFarmer && paymentMethod !== "online"
-            ? new Date(Date.now() + DEMO_PROCESSING_HOURS * HOUR_IN_MS)
-            : null,
+      return res.status(500).json({
+        success: false,
+        message: "Could not place your order. Nothing was charged.",
       });
+    }
 
-      await createNotification({
-        recipient: data.farmer.user,
-        recipientRole: "farmer",
+    if (promo) {
+      try {
+        await recordPromoUsage({
+          promoId: promo._id,
+          customerId: customer._id,
+          orderGroup,
+          discountAmount: promoDiscountTotal,
+          oncePerCustomer: promo.oncePerCustomer,
+        });
+      } catch (usageError) {
+        console.error(
+          "recordPromoUsage failed (orders already created):",
+          usageError,
+        );
+      }
+    }
+
+    await Customer.updateOne({ _id: customer._id }, { $set: { cart: [] } });
+
+    // ---- 4) notifications (only after everything succeeded) ----
+    for (let i = 0; i < createdOrders.length; i++) {
+      const order = createdOrders[i];
+      const data = farmData[i];
+
+      await notifyFarmer(order.farmer, {
         type: "orderPlaced",
         title: "New Order Received",
         message: "You have received a new order from a customer.",
@@ -412,41 +595,17 @@ export const createOrder = async (req, res) => {
         relatedOrder: order._id,
       });
 
-      if (isDemoFarmer) {
-        await createNotification({
-          recipient: customer.user,
-          recipientRole: "customer",
+      if (data.farmer.isDemo === true) {
+        await notifyCustomer(order.customer, {
           type: "orderAccepted",
           title: "Order Accepted",
           message: "The farmer has accepted your order and is preparing it.",
           relatedOrder: order._id,
         });
-
-        if (paymentMethod === "online") {
-          await createNotification({
-            recipient: customer.user,
-            recipientRole: "customer",
-            type: "paymentRequired",
-            title: "Payment Required",
-            message:
-              "Please complete your online payment before this order is picked up.",
-            relatedOrder: order._id,
-          });
-        }
-      }
-
-      createdOrders.push(order);
-
-      for (const item of data.items) {
-        await Product.updateOne(
-          { _id: item.product._id },
-          { $inc: { stock: -item.quantity } },
-        );
       }
     }
 
-    customer.cart = [];
-    await customer.save();
+    if (paymentMethod === "online") await openGroupPaymentIfReady(orderGroup);
 
     const populatedOrders = await Order.find({
       _id: { $in: createdOrders.map((o) => o._id) },
@@ -473,6 +632,7 @@ export const createOrder = async (req, res) => {
       message: "Orders placed successfully",
       orderGroup,
       pointsRedeemed: pointsToRedeemActual,
+      promoDiscount: promoDiscountTotal,
       orders: populatedOrders,
     });
   } catch (error) {
@@ -501,7 +661,7 @@ export const getMyOrders = async (req, res) => {
     const orders = await Order.find({
       customer: customer._id,
     })
-      .populate("farm", "name location")
+      .populate("farm", "name location images")
       .populate({
         path: "farmer",
         select: "user",
@@ -543,7 +703,7 @@ export const confirmPayment = async (req, res) => {
 
     const customer = await Customer.findOne({
       user: req.user.userId,
-    });
+    }).populate("user", "name email");
 
     if (!customer) {
       return res.status(404).json({
@@ -564,11 +724,18 @@ export const confirmPayment = async (req, res) => {
       });
     }
 
-    const nonOnlineOrder = orders.find(
-      (order) => order.payment.method !== "online",
+    const payable = orders.filter(
+      (o) => !["rejected", "cancelled"].includes(o.status),
     );
 
-    if (nonOnlineOrder) {
+    if (payable.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No orders in this group need payment",
+      });
+    }
+
+    if (payable.some((o) => o.payment.method !== "online")) {
       return res.status(400).json({
         success: false,
         message:
@@ -576,57 +743,103 @@ export const confirmPayment = async (req, res) => {
       });
     }
 
-    if (orders.every((order) => order.payment.status === "paid")) {
+    if (payable.every((o) => o.payment.status === "paid")) {
       return res.status(400).json({
         success: false,
         message: "This order group has already been paid for",
       });
     }
 
-    const invalidStatusOrder = orders.find(
-      (order) => order.status !== "paymentPending",
-    );
-
-    if (invalidStatusOrder) {
+    if (payable.some((o) => o.status !== "paymentPending")) {
       return res.status(400).json({
         success: false,
-        message:
-          "Payment can only be confirmed while the order is awaiting payment",
+        message: "Payment opens once every farm in this order has responded",
       });
     }
 
-    const transactionId = `TXN-${crypto
-      .randomBytes(6)
-      .toString("hex")
-      .toUpperCase()}`;
+    const transactionId = `TXN-${crypto.randomBytes(6).toString("hex").toUpperCase()}`;
+    const paidOrderIds = [];
 
-    for (const order of orders) {
-      order.payment.status = "paid";
-      order.payment.transactionId = transactionId;
-      order.status = "processing";
+    for (const order of payable) {
+      const updated = await Order.findOneAndUpdate(
+        { _id: order._id, status: "paymentPending" },
+        {
+          $set: {
+            "payment.status": "paid",
+            "payment.transactionId": transactionId,
+            status: "processing",
+            paymentDueAt: null,
+            ...(order.isDemoOrder
+              ? {
+                  processingReadyAt: new Date(
+                    Date.now() + DEMO_PROCESSING_HOURS * HOUR_IN_MS,
+                  ),
+                }
+              : {}),
+          },
+        },
+        { returnDocument: "after" },
+      );
 
-      if (order.isDemoOrder) {
-        order.processingReadyAt = new Date(
-          Date.now() + DEMO_PROCESSING_HOURS * HOUR_IN_MS,
-        );
-      }
+      if (!updated) continue;
+      await emitOrderStatusToCustomer(updated);
 
-      await order.save();
-
-      await createNotification({
-        recipient: req.user.userId,
-        recipientRole: "customer",
+      await notifyCustomer(order.customer, {
         type: "paymentSuccess",
         title: "Payment Successful",
         message: "Your payment has been confirmed for this order.",
         relatedOrder: order._id,
       });
+
+      paidOrderIds.push(updated._id);
     }
+
+    if (paidOrderIds.length > 0 && !customer.isDemo && customer.user?.email) {
+      const invoiceOrders = await Order.find({ _id: { $in: paidOrderIds } })
+        .populate("items.product", "images")
+        .populate("farm", "name");
+
+      try {
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: customer.user.email,
+          subject: `Payment Invoice — ${transactionId}`,
+          html: paymentInvoiceEmail({
+            orders: invoiceOrders,
+            transactionId,
+            customerName: customer.user.name,
+          }),
+        });
+      } catch (emailError) {
+        console.error("Failed to send payment invoice email:", emailError);
+      }
+
+      for (const invoiceOrder of invoiceOrders) {
+        try {
+          await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: customer.user.email,
+            subject: `Order Placed — ${invoiceOrder.orderNumber}`,
+            html: orderPlacedEmail({
+              order: invoiceOrder,
+              customerName: customer.user.name,
+            }),
+          });
+        } catch (emailError) {
+          console.error("Failed to send order-placed email:", emailError);
+        }
+      }
+    }
+
+    const refreshed = await Order.find({
+      orderGroup: orderGroupId,
+      customer: customer._id,
+    });
 
     return res.status(200).json({
       success: true,
       message: "Payment confirmed successfully",
-      orders,
+      orders: refreshed,
     });
   } catch (error) {
     console.error(error);
@@ -653,99 +866,73 @@ export const cancelOrder = async (req, res) => {
       });
     }
 
-    const order = await Order.findOne({
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid order ID" });
+    }
+
+    const owned = await Order.findOne({
       _id: orderId,
       customer: customer._id,
-    });
+    }).select("status");
 
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
+    if (!owned) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
     }
 
-    const REFUND_TIERS = {
-      pendingAcceptance: 100,
-      processing: 100,
-      readyForPickup: 100,
-      pickedUp: 70,
-      toOriginCenter: 40,
-      inTransit: 40,
-      toDestinationCenter: 40,
-    };
+    const result = await cancelOrderCore(orderId);
 
-    if (!(order.status in REFUND_TIERS)) {
+    if (!result) {
       return res.status(400).json({
         success: false,
-        message:
-          order.status === "outForDelivery" || order.status === "delivered"
-            ? "This order can no longer be cancelled at this delivery stage"
-            : "This order can no longer be cancelled",
+        message: ["outForDelivery", "delivered"].includes(owned.status)
+          ? "This order can no longer be cancelled at this delivery stage"
+          : "This order can no longer be cancelled",
       });
     }
 
-    const refundPercentage = REFUND_TIERS[order.status];
+    const { order } = result;
+    await emitOrderStatusToCustomer(order);
 
-    order.status = "cancelled";
-    order.cancelledAt = new Date();
-
-    if (order.pricing.pointsRedeemed > 0) {
-      customer.pointsBalance += order.pricing.pointsRedeemed;
-    }
-
-    const refundAmount = Math.round(
-      order.pricing.total * (refundPercentage / 100),
+    const farmer = await Farmer.findById(order.farmer).populate(
+      "user",
+      "name email",
     );
-
-    if (order.payment.method === "online") {
-      if (order.payment.status === "paid") {
-        customer.pointsBalance += refundAmount;
-        order.payment.status = "refunded";
-      }
-    } else if (order.payment.method === "cashOnDelivery") {
-      const forfeitedPercentage = 100 - refundPercentage;
-
-      if (forfeitedPercentage > 0) {
-        customer.debtBalance += Math.round(
-          order.pricing.total * (forfeitedPercentage / 100),
-        );
-      }
-    }
-
-    order.refund = {
-      percentage: refundPercentage,
-      amount: refundAmount,
-    };
-
-    await order.save();
-    await customer.save();
-
-    for (const item of order.items) {
-      await scheduleRestock(item.product, item.quantity);
-    }
-    if (order.delivery.driver?.driverId) {
-      await Driver.updateOne(
-        { _id: order.delivery.driver.driverId },
-        { $set: { isAvailable: true } },
-      );
-    }
-
-    const farmer = await Farmer.findById(order.farmer);
     if (farmer) {
-      await createNotification({
-        recipient: farmer.user,
-        recipientRole: "farmer",
+      await notifyFarmer(order.farmer, {
         type: "orderCancelled",
         title: "Order Cancelled",
         message: `The customer has cancelled an order.
                   Order: ${order.orderNumber}`,
         relatedOrder: order._id,
       });
+
+      if (!farmer.isDemo && farmer.user?.email) {
+        try {
+          const emailOrder = await populateOrderForEmail(order._id);
+          await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: farmer.user.email,
+            subject: `Order Cancelled — ${order.orderNumber}`,
+            html: orderCancelledEmail({
+              order: emailOrder,
+              recipientName: farmer.user.name,
+              recipientRole: "farmer",
+              reason: "The customer cancelled this order.",
+            }),
+          });
+        } catch (emailError) {
+          console.error(
+            "Failed to send order-cancelled email (farmer):",
+            emailError,
+          );
+        }
+      }
     }
-    await createNotification({
-      recipient: req.user.userId,
-      recipientRole: "customer",
+    await notifyCustomer(order.customer, {
       type: "orderCancelled",
       title: "Order Cancelled",
       message: "Your order has been cancelled successfully.",
@@ -757,6 +944,10 @@ export const cancelOrder = async (req, res) => {
       message: `Order ${order.orderNumber} was cancelled by the customer.`,
       relatedOrder: order._id,
     });
+
+    if (order.payment.method === "online") {
+      await openGroupPaymentIfReady(order.orderGroup);
+    }
 
     return res.status(200).json({
       success: true,
@@ -794,6 +985,7 @@ export const getFarmerOrders = async (req, res) => {
         select: "user",
         populate: { path: "user", select: "name" },
       })
+      .populate("farm", "name location images")
       .populate("items.product", "name images")
       .populate("delivery.originZone")
       .populate("delivery.destinationZone")
@@ -854,7 +1046,11 @@ export const getFarmOrders = async (req, res) => {
     const orders = await Order.find({
       farm: farm._id,
     })
-      .populate("customer", "user")
+      .populate({
+        path: "customer",
+        select: "user",
+        populate: { path: "user", select: "name" },
+      })
       .populate("items.product", "name images")
       .sort({
         createdAt: -1,
@@ -882,6 +1078,12 @@ export const updateOrderStatus = async (req, res) => {
     const { orderId } = req.params;
     const { status } = req.body;
 
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid order ID" });
+    }
+
     if (status !== "readyForPickup") {
       return res.status(400).json({
         success: false,
@@ -900,35 +1102,19 @@ export const updateOrderStatus = async (req, res) => {
       });
     }
 
-    const order = await Order.findOne({
-      _id: orderId,
-      farmer: farmer._id,
-    });
+    const order = await Order.findOneAndUpdate(
+      { _id: orderId, farmer: farmer._id, status: "processing" },
+      { $set: { status: "readyForPickup" } },
+      { returnDocument: "after" },
+    );
 
     if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
-    }
-
-    if (order.status === "cancelled") {
-      return res.status(400).json({
-        success: false,
-        message: "Cancelled orders cannot be updated",
-      });
-    }
-
-    if (order.status !== "processing") {
       return res.status(400).json({
         success: false,
         message: "This order cannot be updated by the farmer",
       });
     }
-
-    order.status = "readyForPickup";
-
-    await order.save();
+    await emitOrderStatusToCustomer(order);
 
     const customer = await Customer.findById(order.customer).populate("user");
 
@@ -945,9 +1131,7 @@ export const updateOrderStatus = async (req, res) => {
       const notificationInfo = notificationData[status];
 
       if (notificationInfo) {
-        await createNotification({
-          recipient: customer.user._id,
-          recipientRole: "customer",
+        await notifyCustomer(order.customer, {
           type: notificationInfo.type,
           title: notificationInfo.title,
           message: notificationInfo.message,
@@ -1003,6 +1187,12 @@ export const acceptOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
 
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid order ID" });
+    }
+
     const farmer = await Farmer.findOne({
       user: req.user.userId,
     });
@@ -1014,35 +1204,37 @@ export const acceptOrder = async (req, res) => {
       });
     }
 
-    const order = await Order.findOne({
+    const isOnlineOrder = await Order.exists({
       _id: orderId,
       farmer: farmer._id,
+      "payment.method": "online",
     });
 
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
-    }
+    const order = await Order.findOneAndUpdate(
+      { _id: orderId, farmer: farmer._id, status: "pendingAcceptance" },
+      {
+        $set: {
+          status: isOnlineOrder ? "orderPlaced" : "processing",
+          paymentDueAt: isOnlineOrder
+            ? new Date(Date.now() + PAYMENT_WINDOW_HOURS * HOUR_IN_MS)
+            : null,
+        },
+      },
+      { returnDocument: "after" },
+    );
 
-    if (order.status !== "pendingAcceptance") {
+    if (!order) {
       return res.status(400).json({
         success: false,
         message: "This order can no longer be accepted",
       });
     }
 
-    order.status =
-      order.payment.method === "online" ? "paymentPending" : "processing";
-
-    await order.save();
+    await emitOrderStatusToCustomer(order);
 
     const customer = await Customer.findById(order.customer).populate("user");
     if (customer) {
-      await createNotification({
-        recipient: customer.user._id,
-        recipientRole: "customer",
+      await notifyCustomer(order.customer, {
         type: "orderAccepted",
         title: "Order Accepted",
         message: "The farmer has accepted your order and is preparing it.",
@@ -1050,47 +1242,23 @@ export const acceptOrder = async (req, res) => {
       });
 
       if (order.payment.method === "online") {
-        await createNotification({
-          recipient: customer.user._id,
-          recipientRole: "customer",
-          type: "paymentRequired",
-          title: "Payment Required",
-          message:
-            "Please complete your online payment before this order is picked up.",
-          relatedOrder: order._id,
-        });
-      }
-      if (!customer.isDemo && customer.user.email) {
+        await openGroupPaymentIfReady(order.orderGroup);
+      } else if (!customer.isDemo && customer.user.email) {
+        // COD goes straight to "processing" here. Online orders get this
+        // email later, once confirmPayment moves them to "processing".
         try {
+          const emailOrder = await populateOrderForEmail(order._id);
           await transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: customer.user.email,
-            subject: "Your FreshMart Order Has Been Placed",
-            html: `
-              <h2>Order Placed</h2>
-
-              <p>Hello ${customer.user.name || "Customer"},</p>
-
-              <p>
-                Good news! The farmer has placed your order
-                and is now preparing it.
-              </p>
-
-              <p>
-                <strong>Order ID:</strong> ${order.orderNumber}
-              </p>
-
-              <p>
-                You can check your order status from your FreshMart account.
-              </p>
-
-              <p>
-                Thank you for shopping with FreshMart!
-              </p>
-            `,
+            subject: `Order Placed — ${order.orderNumber}`,
+            html: orderPlacedEmail({
+              order: emailOrder,
+              customerName: customer.user.name,
+            }),
           });
         } catch (emailError) {
-          console.error("Failed to send order acceptance email:", emailError);
+          console.error("Failed to send order-placed email:", emailError);
         }
       }
     }
@@ -1115,6 +1283,12 @@ export const rejectOrder = async (req, res) => {
     const { orderId } = req.params;
     const { reason } = req.body;
 
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid order ID" });
+    }
+
     const farmer = await Farmer.findOne({
       user: req.user.userId,
     });
@@ -1126,47 +1300,36 @@ export const rejectOrder = async (req, res) => {
       });
     }
 
-    const order = await Order.findOne({
-      _id: orderId,
-      farmer: farmer._id,
-    });
+    const order = await Order.findOneAndUpdate(
+      { _id: orderId, farmer: farmer._id, status: "pendingAcceptance" },
+      { $set: { status: "rejected" } },
+      { returnDocument: "after" },
+    );
 
     if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
-    }
-
-    if (order.status !== "pendingAcceptance") {
       return res.status(400).json({
         success: false,
         message: "This order can no longer be rejected",
       });
     }
+    await emitOrderStatusToCustomer(order);
 
-    order.status = "rejected";
+    const { pointsRedeemed = 0, debtSettled = 0 } = order.pricing;
 
-    await order.save();
-
-    for (const item of order.items) {
-      await Product.updateOne(
-        {
-          _id: item.product,
-        },
-        {
-          $inc: {
-            stock: item.quantity,
-          },
-        },
+    if (pointsRedeemed > 0 || debtSettled > 0) {
+      await Customer.updateOne(
+        { _id: order.customer },
+        { $inc: { pointsBalance: pointsRedeemed, debtBalance: debtSettled } },
       );
     }
 
+    await releaseStock(
+      order.items.map((i) => ({ product: i.product, quantity: i.quantity })),
+    );
+
     const customer = await Customer.findById(order.customer).populate("user");
     if (customer) {
-      await createNotification({
-        recipient: customer.user._id,
-        recipientRole: "customer",
+      await notifyCustomer(order.customer, {
         type: "orderRejected",
         title: "Order Rejected",
         message: reason
@@ -1174,6 +1337,24 @@ export const rejectOrder = async (req, res) => {
           : "The farmer was unable to fulfill your order.",
         relatedOrder: order._id,
       });
+
+      if (!customer.isDemo && customer.user?.email) {
+        try {
+          const emailOrder = await populateOrderForEmail(order._id);
+          await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: customer.user.email,
+            subject: `Order Rejected — ${order.orderNumber}`,
+            html: orderRejectedEmail({
+              order: emailOrder,
+              customerName: customer.user.name,
+              reason,
+            }),
+          });
+        } catch (emailError) {
+          console.error("Failed to send order-rejected email:", emailError);
+        }
+      }
     }
     await notifyAdmin({
       type: "orderRejected",
@@ -1181,6 +1362,10 @@ export const rejectOrder = async (req, res) => {
       message: `Order ${order.orderNumber} was rejected by the farmer.`,
       relatedOrder: order._id,
     });
+
+    if (order.payment.method === "online") {
+      await openGroupPaymentIfReady(order.orderGroup);
+    }
 
     return res.status(200).json({
       success: true,
@@ -1201,7 +1386,8 @@ export const rejectOrder = async (req, res) => {
 
 export const getAllOrders = async (req, res) => {
   try {
-    const orders = await Order.find()
+    const limit = Math.min(Math.max(Number(req.query.limit) || 0, 0), 200);
+    let query = Order.find()
       .populate({
         path: "customer",
         select: "profileImage",
@@ -1220,6 +1406,10 @@ export const getAllOrders = async (req, res) => {
       .sort({
         createdAt: -1,
       });
+
+    if (limit > 0) query = query.limit(limit);
+
+    const orders = await query;
 
     return res.status(200).json({
       success: true,
@@ -1421,7 +1611,13 @@ export const placeDemoOrder = async ({ userId, addressId }) => {
 
     for (const [farmId, items] of farmOrders.entries()) {
       const farm = await Farm.findById(farmId);
-      if (!farm) continue;
+      if (!farm || !farm.isActive) {
+        const productIds = items.map((i) => i.product._id.toString());
+        customer.cart = customer.cart.filter(
+          (item) => !productIds.includes(item.product.toString()),
+        );
+        continue;
+      }
 
       const farmer = await Farmer.findById(farm.farmer);
       if (!farmer) continue;
@@ -1482,99 +1678,106 @@ export const placeDemoOrder = async ({ userId, addressId }) => {
     const createdOrders = [];
 
     for (const data of farmData) {
-      const { estimatedHours, deliveryCharge } = computeDeliveryEstimate(
-        data.originZone,
-        destinationZone,
-      );
+      const reservation = await reserveStock(data.items);
+      if (!reservation.ok) continue;
 
-      const total = data.itemsTotal + deliveryCharge;
+      try {
+        const { estimatedHours, deliveryCharge } = computeDeliveryEstimate(
+          data.originZone,
+          destinationZone,
+        );
 
-      const estimatedDeliveryAt = new Date(
-        Date.now() + estimatedHours * 60 * 60 * 1000,
-      );
+        const total = data.itemsTotal + deliveryCharge;
+        const estimatedDeliveryAt = new Date(
+          Date.now() + estimatedHours * 60 * 60 * 1000,
+        );
+        const isDemoFarmer = data.farmer.isDemo === true;
+        const orderNumber = await generateOrderNumber();
 
-      const isDemoFarmer = data.farmer.isDemo === true;
-      const orderNumber = await generateOrderNumber();
+        const order = await Order.create({
+          customer: customer._id,
+          orderGroup,
+          orderNumber,
+          farmer: data.farmer._id,
+          farm: data.farm._id,
+          items: data.orderItems,
 
-      const order = await Order.create({
-        customer: customer._id,
-        orderGroup,
-        orderNumber,
-        farmer: data.farmer._id,
-        farm: data.farm._id,
-        items: data.orderItems,
+          deliveryAddress: {
+            name: selectedAddress.recipientName,
+            phone: selectedAddress.phone,
+            division: selectedAddress.division,
+            district: selectedAddress.district,
+            upazila: selectedAddress.upazila,
+            village: selectedAddress.village,
+            address: selectedAddress.address,
+          },
 
-        deliveryAddress: {
-          name: selectedAddress.recipientName,
-          phone: selectedAddress.phone,
-          district: selectedAddress.district,
-          upazila: selectedAddress.upazila,
-          village: selectedAddress.village,
-          address: selectedAddress.address,
-        },
+          pricing: {
+            itemsTotal: round2(data.itemsTotal),
+            deliveryCharge,
+            discount: data.discountAmount,
+            pointsRedeemed: 0,
+            total,
+          },
 
-        pricing: {
-          itemsTotal: data.itemsTotal,
-          deliveryCharge,
-          discount: data.discountAmount,
-          pointsRedeemed: 0,
-          total,
-        },
+          payment: {
+            method: "cashOnDelivery",
+            status: "pending",
+          },
 
-        payment: {
-          method: "cashOnDelivery",
-          status: "pending",
-        },
+          delivery: {
+            originZone: data.originZone._id,
+            destinationZone: destinationZone._id,
+            estimatedHours,
+            estimatedDeliveryAt,
+          },
 
-        delivery: {
-          originZone: data.originZone._id,
-          destinationZone: destinationZone._id,
-          estimatedHours,
-          estimatedDeliveryAt,
-        },
+          status: isDemoFarmer ? "processing" : "pendingAcceptance",
+          isDemoOrder: isDemoFarmer,
+          processingReadyAt: isDemoFarmer
+            ? new Date(Date.now() + DEMO_PROCESSING_HOURS * HOUR_IN_MS)
+            : null,
+        });
 
-        status: isDemoFarmer ? "processing" : "pendingAcceptance",
-        isDemoOrder: isDemoFarmer,
-        processingReadyAt: isDemoFarmer
-          ? new Date(Date.now() + DEMO_PROCESSING_HOURS * HOUR_IN_MS)
-          : null,
-      });
-
-      await createNotification({
-        recipient: data.farmer.user,
-        recipientRole: "farmer",
-        type: "orderPlaced",
-        title: "New Order Received",
-        message: "You have received a new order from a customer.",
-        relatedOrder: order._id,
-      });
-
-      await notifyAdmin({
-        type: "orderPlaced",
-        title: "New Order Placed",
-        message: `Order ${order.orderNumber} was placed for ${data.farm.name}.`,
-        relatedOrder: order._id,
-      });
-
-      if (isDemoFarmer) {
-        await createNotification({
-          recipient: customer.user,
-          recipientRole: "customer",
-          type: "orderAccepted",
-          title: "Order Accepted",
-          message: "The farmer has accepted your order and is preparing it.",
+        await notifyFarmer(order.farmer, {
+          type: "orderPlaced",
+          title: "New Order Received",
+          message: "You have received a new order from a customer.",
           relatedOrder: order._id,
         });
-      }
 
-      createdOrders.push(order);
+        await notifyAdmin({
+          type: "orderPlaced",
+          title: "New Order Placed",
+          message: `Order ${order.orderNumber} was placed for ${data.farm.name}.`,
+          relatedOrder: order._id,
+        });
 
-      for (const item of data.items) {
-        await Product.updateOne(
-          { _id: item.product._id },
-          { $inc: { stock: -item.quantity } },
+        if (isDemoFarmer) {
+          await notifyCustomer(order.customer, {
+            type: "orderAccepted",
+            title: "Order Accepted",
+            message: "The farmer has accepted your order and is preparing it.",
+            relatedOrder: order._id,
+          });
+        }
+
+        createdOrders.push(order);
+      } catch (farmOrderError) {
+        console.error(
+          `placeDemoOrder: order creation failed for farm ${data.farm._id}:`,
+          farmOrderError,
         );
+        await releaseStock(data.items); // give back what reserveStock took
       }
+    }
+
+    if (createdOrders.length === 0) {
+      await customer.save();
+      return {
+        success: false,
+        message: "No orders could be placed — items are out of stock",
+      };
     }
 
     customer.cart = [];
@@ -1596,84 +1799,23 @@ export const placeDemoOrder = async ({ userId, addressId }) => {
 // demo customer cancels if no driver found
 export const autoCancelOrder = async ({ order, customer, reason }) => {
   try {
-    const REFUND_TIERS = {
-      pendingAcceptance: 100,
-      processing: 100,
-      readyForPickup: 100,
-      pickedUp: 70,
-      toOriginCenter: 40,
-      inTransit: 40,
-      toDestinationCenter: 40,
-    };
+    const result = await cancelOrderCore(order._id);
 
-    if (!(order.status in REFUND_TIERS)) {
+    if (!result) {
       return {
         success: false,
         message: "This order can no longer be cancelled",
       };
     }
 
-    const refundPercentage = REFUND_TIERS[order.status];
-    const wasPrePickup = [
-      "pendingAcceptance",
-      "processing",
-      "readyForPickup",
-    ].includes(order.status);
-
     order.status = "cancelled";
-    order.cancelledAt = new Date();
+    order.refund = result.order.refund;
 
-    if (order.pricing.pointsRedeemed > 0) {
-      customer.pointsBalance += order.pricing.pointsRedeemed;
-    }
-
-    const refundAmount = Math.round(
-      order.pricing.total * (refundPercentage / 100),
-    );
-
-    if (order.payment.method === "online") {
-      if (order.payment.status === "paid") {
-        customer.pointsBalance += refundAmount;
-        order.payment.status = "refunded";
-      }
-    } else if (order.payment.method === "cashOnDelivery") {
-      const forfeitedPercentage = 100 - refundPercentage;
-
-      if (forfeitedPercentage > 0) {
-        customer.debtBalance += Math.round(
-          order.pricing.total * (forfeitedPercentage / 100),
-        );
-      }
-    }
-
-    order.refund = {
-      percentage: refundPercentage,
-      amount: refundAmount,
-    };
-
-    await order.save();
-    await customer.save();
-
-    if (wasPrePickup) {
-      for (const item of order.items) {
-        await Product.updateOne(
-          { _id: item.product },
-          { $inc: { stock: item.quantity } },
-        );
-      }
-    }
-    if (order.delivery.driver?.driverId) {
-      await Driver.updateOne(
-        { _id: order.delivery.driver.driverId },
-        { $set: { isAvailable: true } },
-      );
-    }
+    await emitOrderStatusToCustomer(order);
 
     const farmer = await Farmer.findById(order.farmer).populate("user");
     if (farmer) {
-      await createNotification({
-        recipient: farmer.user._id,
-        recipientRole: "farmer",
+      await notifyFarmer(order.farmer, {
         type: "orderCancelled",
         title: "Order Cancelled",
         message: reason
@@ -1684,19 +1826,17 @@ export const autoCancelOrder = async ({ order, customer, reason }) => {
 
       if (!farmer.isDemo && farmer.user?.email) {
         try {
+          const emailOrder = await populateOrderForEmail(order._id);
           await transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: farmer.user.email,
-            subject: "An Order Has Been Cancelled",
-            html: `
-              <h2>Order Cancelled</h2>
-              <p>Hello ${farmer.user.name || "Farmer"},</p>
-              <p>
-                Order <strong>${order.orderNumber}</strong> has been cancelled${
-                  reason ? `: ${reason}` : "."
-                }
-              </p>
-            `,
+            subject: `Order Cancelled — ${order.orderNumber}`,
+            html: orderCancelledEmail({
+              order: emailOrder,
+              recipientName: farmer.user.name,
+              recipientRole: "farmer",
+              reason,
+            }),
           });
         } catch (emailError) {
           console.error("Failed to send order-cancelled email:", emailError);
@@ -1705,14 +1845,30 @@ export const autoCancelOrder = async ({ order, customer, reason }) => {
     }
 
     if (reason) {
-      await createNotification({
-        recipient: customer.user._id || customer.user,
-        recipientRole: "customer",
+      await notifyCustomer(order.customer, {
         type: "orderCancelled",
         title: "Order Cancelled",
         message: reason,
         relatedOrder: order._id,
       });
+    }
+
+    if (customer && !customer.isDemo && customer.user?.email) {
+      try {
+        const emailOrder = await populateOrderForEmail(order._id);
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: customer.user.email,
+          subject: `Order Cancelled — ${order.orderNumber}`,
+          html: orderCancelledEmail({
+            order: emailOrder,
+            recipientName: customer.user.name,
+            reason,
+          }),
+        });
+      } catch (emailError) {
+        console.error("Failed to send order-cancelled email:", emailError);
+      }
     }
 
     await notifyAdmin({
@@ -1735,7 +1891,7 @@ export const autoCancelOrder = async ({ order, customer, reason }) => {
 // CUSTOMER preview of payment
 export const getCheckoutPreview = async (req, res) => {
   try {
-    const { addressId, pointsToRedeem = 0 } = req.body;
+    const { addressId, pointsToRedeem = 0, promoCode } = req.body;
 
     if (!addressId) {
       return res.status(400).json({
@@ -1806,7 +1962,7 @@ export const getCheckoutPreview = async (req, res) => {
 
     for (const [farmId, items] of farmOrders.entries()) {
       const farm = await Farm.findById(farmId);
-      if (!farm) continue;
+      if (!farm || !farm.isActive) continue;
 
       const originZone = await Zone.findOne({
         districts: farm.location.district,
@@ -1837,27 +1993,53 @@ export const getCheckoutPreview = async (req, res) => {
       deliveryCharge += farmDeliveryCharge;
     }
 
+    let promoDiscount = 0;
+    let promoError = null;
+
+    if (promoCode) {
+      const promoResult = await validateAndComputePromo({
+        code: promoCode,
+        customerId: customer._id,
+        itemsTotal,
+      });
+
+      if (promoResult.error) {
+        promoError = promoResult.error;
+      } else {
+        promoDiscount = promoResult.discountAmount;
+      }
+    }
+
     const requestedPoints = Number(pointsToRedeem) || 0;
-    const pointsRedeemed = Math.max(
-      0,
-      Math.min(requestedPoints, customer.pointsBalance, itemsTotal),
+    const pointsRedeemed = Math.floor(
+      Math.max(
+        0,
+        Math.min(requestedPoints, customer.pointsBalance, itemsTotal),
+      ),
     );
 
     const debtBalance = customer.debtBalance || 0;
 
     const total =
       Math.round(
-        (itemsTotal + deliveryCharge - pointsRedeemed + debtBalance) * 100,
+        (itemsTotal +
+          deliveryCharge -
+          pointsRedeemed -
+          promoDiscount +
+          debtBalance) *
+          100,
       ) / 100;
 
     return res.status(200).json({
       success: true,
       preview: {
-        itemsTotal,
+        itemsTotal: round2(itemsTotal),
         discountAmount: Math.round(discountAmount * 100) / 100,
         deliveryCharge,
         pointsAvailable: customer.pointsBalance,
         pointsRedeemed,
+        promoDiscount,
+        promoError,
         debtBalance,
         total,
       },
@@ -1869,5 +2051,167 @@ export const getCheckoutPreview = async (req, res) => {
       success: false,
       message: "Internal server error",
     });
+  }
+};
+
+// ADMIN — cancel a real (non-demo) order stuck at readyForPickup (no driver available)
+export const adminCancelNoDriver = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid order ID" });
+    }
+
+    const result = await cancelOrderCore(orderId, {
+      extraFilter: { status: "readyForPickup", isDemoOrder: false },
+      finalStatus: "rejected",
+    });
+
+    if (!result) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Only real orders currently at readyForPickup can be cancelled this way",
+      });
+    }
+
+    const { order } = result;
+    await emitOrderStatusToCustomer(order);
+
+    const customer = await Customer.findById(order.customer).populate("user");
+    if (customer) {
+      await notifyCustomer(order.customer, {
+        type: "orderRejected",
+        title: "Order Cancelled",
+        message:
+          "Your order was cancelled as no driver was available. You've been fully refunded.",
+        relatedOrder: order._id,
+      });
+
+      if (!customer.isDemo && customer.user?.email) {
+        try {
+          const emailOrder = await populateOrderForEmail(order._id);
+          await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: customer.user.email,
+            subject: `Order Cancelled — ${order.orderNumber}`,
+            html: orderCancelledEmail({
+              order: emailOrder,
+              recipientName: customer.user.name,
+              reason: "No driver was available for this order",
+            }),
+          });
+        } catch (emailError) {
+          console.error("Failed to send order-cancelled email:", emailError);
+        }
+      }
+    }
+
+    const farmer = await Farmer.findById(order.farmer).populate("user");
+    if (farmer) {
+      await notifyFarmer(order.farmer, {
+        type: "orderRejected",
+        title: "Order Cancelled by Admin",
+        message: `Order ${order.orderNumber} was cancelled — no driver was available.`,
+        relatedOrder: order._id,
+      });
+
+      if (!farmer.isDemo && farmer.user?.email) {
+        try {
+          const emailOrder = await populateOrderForEmail(order._id);
+          await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: farmer.user.email,
+            subject: `Order Cancelled — ${order.orderNumber}`,
+            html: orderCancelledEmail({
+              order: emailOrder,
+              recipientName: farmer.user.name,
+              recipientRole: "farmer",
+              reason: "No driver was available for this order",
+            }),
+          });
+        } catch (emailError) {
+          console.error(
+            "Failed to send order-cancelled email (farmer):",
+            emailError,
+          );
+        }
+      }
+    }
+
+    await notifyAdmin({
+      type: "orderRejected",
+      title: "Order Cancelled — No Driver",
+      message: `Order ${order.orderNumber} was cancelled by admin (no driver available).`,
+      relatedOrder: order._id,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Order cancelled successfully",
+      order,
+    });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const getOrderGroup = async (req, res) => {
+  try {
+    const { orderGroupId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(orderGroupId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid order group ID" });
+    }
+
+    const customer = await Customer.findOne({ user: req.user.userId });
+    if (!customer) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Customer profile not found" });
+    }
+
+    const orders = await Order.find({
+      orderGroup: orderGroupId,
+      customer: customer._id,
+    })
+      .populate({
+        path: "customer",
+        select: "profileImage",
+        populate: { path: "user", select: "name phone" },
+      })
+      .populate({
+        path: "farmer",
+        select: "profileImage",
+        populate: { path: "user", select: "name phone" },
+      })
+      .populate("farm", "name location images")
+      .populate("items.product", "name images")
+      .populate("delivery.originZone")
+      .populate("delivery.destinationZone")
+      .populate("delivery.courier")
+      .populate("delivery.driver.driverId")
+      .sort({ createdAt: 1 });
+
+    if (orders.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Order group not found" });
+    }
+
+    return res.status(200).json({ success: true, orders });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };

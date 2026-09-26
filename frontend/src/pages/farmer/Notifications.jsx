@@ -1,31 +1,29 @@
-import NotificationsPage from "../../components/notification/Notificationspage";
+import NotificationsPage from "../../components/Notificationspage";
 import {
   FARMER_ORDER_TYPES,
   FARMER_PRODUCT_TYPES,
   FARMER_REVIEW_TYPES,
-} from "../../components/notification/notificationTypes";
+  MESSAGE_TYPES,
+} from "../../utils/notificationTypes";
 
-// ADJUST THESE to your real farmer routes
 const getFarmerNotificationLink = (notification) => {
-  if (
-    FARMER_PRODUCT_TYPES.includes(notification.type) &&
-    notification.relatedProduct
-  ) {
-    return `/farmer/products/${notification.relatedProduct}`;
+  if (MESSAGE_TYPES.includes(notification.type)) {
+    return "/farmer/messages";
   }
 
-  if (
-    FARMER_REVIEW_TYPES.includes(notification.type) &&
-    notification.relatedProduct
-  ) {
-    return `/farmer/reviews`;
+  if (FARMER_PRODUCT_TYPES.includes(notification.type)) {
+    return "/farmer/listings";
+  }
+
+  if (FARMER_REVIEW_TYPES.includes(notification.type)) {
+    return "/farmer/reviews";
   }
 
   if (
     FARMER_ORDER_TYPES.includes(notification.type) &&
     notification.relatedOrder
   ) {
-    return `/farmer/orders`;
+    return "/farmer/orders";
   }
 
   return null;

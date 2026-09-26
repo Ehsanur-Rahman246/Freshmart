@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { checkAuth } from "../api/auth";
+import { connectSocket } from "../api/socket";
 
 export const useViewer = () => {
   const { data, isLoading } = useQuery({
@@ -7,8 +8,15 @@ export const useViewer = () => {
     queryFn: async () => {
       try {
         const { data } = await checkAuth();
-        return data.success ? data.user : null;
-      } catch {
+        console.log("checkAuth result:", data);
+        if (data.success) {
+          connectSocket();
+          console.log("connectSocket called");
+          return data.user;
+        }
+        return null;
+      } catch (err) {
+        console.log("checkAuth threw:", err);
         return null;
       }
     },

@@ -73,6 +73,7 @@ const RevenueBalance = () => {
     queryFn: async () => (await getMyFarms()).data.farms,
   });
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const entries = revenue?.entries || [];
   const summary = revenue?.summary || {
     totalFarmerRevenue: 0,
@@ -96,9 +97,34 @@ const RevenueBalance = () => {
         })
         .reduce((sum, e) => sum + e.farmerRevenue, 0);
 
-      return { label: bucket.label, revenue: revenueInBucket };
+      return {
+        label: bucket.label,
+        revenue: Number(revenueInBucket.toFixed(2)),
+      };
     });
   }, [entries, farmId, view]);
+
+  const todayStats = useMemo(() => {
+    const now = new Date();
+    const start = startOfDay(now);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+
+    const todayEntries = entries.filter((e) => {
+      const created = new Date(e.createdAt);
+      return created >= start && created < end;
+    });
+
+    const delivered = todayEntries.filter((e) => e.type === "sale").length;
+    const gross = todayEntries.reduce((sum, e) => sum + e.grossAmount, 0);
+    const revenue = todayEntries.reduce((sum, e) => sum + e.farmerRevenue, 0);
+
+    return {
+      delivered,
+      gross: Number(gross.toFixed(2)),
+      revenue: Number(revenue.toFixed(2)),
+    };
+  }, [entries]);
 
   if (loadingRevenue) {
     return (
@@ -144,6 +170,39 @@ const RevenueBalance = () => {
             <div>
               <p className="text-xs text-muted-light">Total Sales</p>
               <p className="text-xl font-extrabold">{summary.count}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Today's summary */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="rounded-box border border-theme bg-base-100 p-5 flex items-center gap-4">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary">
+              <FiShoppingBag size={20} />
+            </div>
+            <div>
+              <p className="text-xs text-muted-light">Orders Delivered Today</p>
+              <p className="text-xl font-extrabold">{todayStats.delivered}</p>
+            </div>
+          </div>
+
+          <div className="rounded-box border border-theme bg-base-100 p-5 flex items-center gap-4">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary-soft text-secondary">
+              <FiTrendingUp size={20} />
+            </div>
+            <div>
+              <p className="text-xs text-muted-light">Today's Gross</p>
+              <p className="text-xl font-extrabold">৳{todayStats.gross}</p>
+            </div>
+          </div>
+
+          <div className="rounded-box border border-theme bg-base-100 p-5 flex items-center gap-4">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-soft text-accent">
+              <FiDollarSign size={20} />
+            </div>
+            <div>
+              <p className="text-xs text-muted-light">Today's Revenue</p>
+              <p className="text-xl font-extrabold">৳{todayStats.revenue}</p>
             </div>
           </div>
         </div>
@@ -240,6 +299,9 @@ const RevenueBalance = () => {
                     borderRadius: "12px",
                     border: "1px solid hsl(var(--bc) / 0.1)",
                     backgroundColor: "hsl(var(--b1))",
+                  }}
+                  itemStyle={{
+                    color: "#d89b3c",
                   }}
                 />
 

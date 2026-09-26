@@ -9,6 +9,10 @@ export const HOUR_IN_MS = 5 * 1000;
 // ticks per second
 export const CRON_INTERVAL = "*/1 * * * * *";
 
+// Bangladesh has no DST, so a fixed offset is safe
+export const APP_TIMEZONE = "Asia/Dhaka";
+export const APP_TZ_OFFSET_MS = 6 * 60 * 60 * 1000;
+
 // Local leg durations (in simulated hours) — not looked up from Zone routes,
 // these represent short local movements rather than inter-zone travel.
 export const LOCAL_PICKUP_HOURS = 1; // farm -> origin zone center
@@ -23,6 +27,11 @@ export const SAME_ZONE_TRANSIT_HOURS = { min: 2, max: 4 };
 // Delivery charge formula: flat base + a per-hour rate over total estimated hours.
 export const BASE_DELIVERY_CHARGE = 20;
 export const DELIVERY_RATE_PER_HOUR = 5;
+
+// Time a customer has to pay an accepted online order (simulated hours)
+export const PAYMENT_WINDOW_HOURS = 48;
+// Real wall-clock window a farmer has to accept/reject before auto-rejected
+export const FARMER_ACCEPT_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 real hours
 
 // --- Demo farmer automation timing ---
 

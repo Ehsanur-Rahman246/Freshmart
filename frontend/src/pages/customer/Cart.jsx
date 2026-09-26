@@ -221,7 +221,8 @@ const Cart = () => {
                             ৳{effectivePrice} / {product.unit}
                           </p>
 
-                          {product.status !== "active" && (
+                          {(item.product.status !== "active" ||
+                            item.isUnavailable) && (
                             <p className="mt-1 text-xs font-bold text-error">
                               This item is no longer available
                             </p>
@@ -289,40 +290,39 @@ const Cart = () => {
 
             {/* ================= CART SUMMARY ================= */}
             <aside className="h-fit rounded-2xl border border-theme bg-base-100 p-5 shadow-sm sm:p-6 lg:sticky lg:top-24">
-  <h2 className="text-xl font-extrabold">Order Summary</h2>
+              <h2 className="text-xl font-extrabold">Order Summary</h2>
 
-  <div className="mt-5 space-y-4 text-sm">
-    <div className="flex items-center justify-between">
-      <span className="text-muted">Subtotal</span>
-      <span className="font-bold">৳{subtotal}</span>
-    </div>
+              <div className="mt-5 space-y-4 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted">Subtotal</span>
+                  <span className="font-bold">৳{subtotal}</span>
+                </div>
 
-    <div className="flex items-center justify-between">
-      <span className="text-muted">Discount</span>
-      <span className="font-bold text-success">
-        {discount > 0 ? `-৳${discount}` : "৳0"}
-      </span>
-    </div>
-  </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted">Discount</span>
+                  <span className="font-bold text-success">
+                    {discount > 0 ? `-৳${discount}` : "৳0"}
+                  </span>
+                </div>
+              </div>
 
-  <div className="my-5 border-t border-theme-light" />
+              <div className="my-5 border-t border-theme-light" />
 
-  <div className="flex items-center justify-between">
-    <span className="text-base font-bold">Total</span>
-    <span className="text-2xl font-extrabold text-primary">
-      ৳{total}
-    </span>
-  </div>
+              <div className="flex items-center justify-between">
+                <span className="text-base font-bold">Total</span>
+                <span className="text-2xl font-extrabold text-primary">
+                  ৳{total}
+                </span>
+              </div>
 
-  <button
-    onClick={handleCheckout}
-    className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl bg-primary px-5 py-3.5 font-extrabold text-white shadow-sm transition hover:bg-primary-hover active:bg-primary-active"
-  >
-    Go to Checkout
-    <FiArrowRight size={18} />
-  </button>
-</aside>
-
+              <button
+                onClick={handleCheckout}
+                className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl bg-primary px-5 py-3.5 font-extrabold text-white shadow-sm transition hover:bg-primary-hover active:bg-primary-active"
+              >
+                Go to Checkout
+                <FiArrowRight size={18} />
+              </button>
+            </aside>
           </div>
         )}
       </div>

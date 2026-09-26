@@ -1,10 +1,31 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { FiPackage, FiImage, FiSave, FiArrowLeft, FiTrash2 } from "react-icons/fi";
-import { getProductById, updateProduct, deleteProduct } from "../../api/product";
+import {
+  FiPackage,
+  FiImage,
+  FiSave,
+  FiArrowLeft,
+  FiTrash2,
+} from "react-icons/fi";
+import {
+  getProductById,
+  updateProduct,
+  deleteProduct,
+} from "../../api/product";
 import { PRODUCT_UNITS } from "../../utils/productConstants";
+import { useQuery } from "@tanstack/react-query";
+import { getPricingRanges } from "../../api/pricing";
+import PriceRangeGauge from "../../components/PriceRangeGauge";
 
-const TextInput = ({ label, name, value, onChange, placeholder, type = "text", ...rest }) => (
+const TextInput = ({
+  label,
+  name,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  ...rest
+}) => (
   <label className="flex flex-col gap-2 text-sm font-semibold">
     {label}
     <input
@@ -47,6 +68,16 @@ export default function EditProduct() {
     listingDuration: "30",
   });
 
+  const { data: pricingRanges = [] } = useQuery({
+    queryKey: ["pricingRanges"],
+    queryFn: async () => (await getPricingRanges()).data.ranges,
+    staleTime: 1000 * 60,
+  });
+
+  const matchedRange = pricingRanges.find(
+    (r) => r.normalizedName === (product?.name || "").trim().toLowerCase(),
+  );
+
   useEffect(() => {
     getProductById(id)
       .then((res) => {
@@ -68,7 +99,8 @@ export default function EditProduct() {
       });
   }, [id, navigate]);
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleImages = (e) => {
     const selected = Array.from(e.target.files);
@@ -81,7 +113,9 @@ export default function EditProduct() {
 
   const toggleRemoveImage = (publicId) => {
     setRemoveImageIds((prev) =>
-      prev.includes(publicId) ? prev.filter((pid) => pid !== publicId) : [...prev, publicId],
+      prev.includes(publicId)
+        ? prev.filter((pid) => pid !== publicId)
+        : [...prev, publicId],
     );
   };
 
@@ -138,7 +172,8 @@ export default function EditProduct() {
           <div>
             <h1 className="text-3xl font-extrabold">{product.name}</h1>
             <p className="text-sm text-muted mt-1">
-              {product.farm?.name} · <span className="capitalize">{product.status}</span>
+              {product.farm?.name} ·{" "}
+              <span className="capitalize">{product.status}</span>
             </p>
           </div>
           <FiPackage size={30} className="text-primary" />
@@ -149,7 +184,8 @@ export default function EditProduct() {
           <section className="rounded-2xl border border-theme bg-base-200 p-6">
             <h2 className="text-lg font-bold mb-4">Product Information</h2>
             <p className="text-xs text-muted-light mb-4">
-              These fields are set when the listing was created and can't be changed.
+              These fields are set when the listing was created and can't be
+              changed.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -177,7 +213,24 @@ export default function EditProduct() {
               <h2 className="text-lg font-bold mb-4">Pricing</h2>
 
               <div className="grid grid-cols-2 gap-4 mb-4">
-                <TextInput label="Price *" type="number" name="price" value={form.price} onChange={handleChange} min="0" required />
+                <div>
+                  <TextInput
+                    label="Price *"
+                    type="number"
+                    name="price"
+                    value={form.price}
+                    onChange={handleChange}
+                    min="0"
+                    required
+                  />
+                  {matchedRange && (
+                    <PriceRangeGauge
+                      min={matchedRange.min}
+                      max={matchedRange.max}
+                      value={form.price}
+                    />
+                  )}
+                </div>
                 <label className="flex flex-col gap-2 text-sm font-semibold">
                   Unit *
                   <select
@@ -187,21 +240,47 @@ export default function EditProduct() {
                     className="w-full px-4 py-3 rounded-xl border border-theme bg-base-100 outline-none focus:border-primary"
                   >
                     {PRODUCT_UNITS.map((u) => (
-                      <option key={u} value={u}>{u}</option>
+                      <option key={u} value={u}>
+                        {u}
+                      </option>
                     ))}
                   </select>
                 </label>
               </div>
 
-              <TextInput label="Discount %" type="number" name="discountPercentage" value={form.discountPercentage} onChange={handleChange} min="0" max="100" />
+              <TextInput
+                label="Discount %"
+                type="number"
+                name="discountPercentage"
+                value={form.discountPercentage}
+                onChange={handleChange}
+                min="0"
+                max="100"
+              />
             </section>
 
             <section className="rounded-2xl border border-theme bg-base-200 p-6">
               <h2 className="text-lg font-bold mb-4">Stock</h2>
 
               <div className="flex flex-col gap-4">
-                <TextInput label="Available Stock *" type="number" name="stock" value={form.stock} onChange={handleChange} min="0" required />
-                <TextInput label="Listing Duration (days) *" type="number" name="listingDuration" value={form.listingDuration} onChange={handleChange} min="1" required />
+                <TextInput
+                  label="Available Stock *"
+                  type="number"
+                  name="stock"
+                  value={form.stock}
+                  onChange={handleChange}
+                  min="0"
+                  required
+                />
+                <TextInput
+                  label="Listing Duration (days) *"
+                  type="number"
+                  name="listingDuration"
+                  value={form.listingDuration}
+                  onChange={handleChange}
+                  min="1"
+                  required
+                />
               </div>
             </section>
           </div>
@@ -215,8 +294,15 @@ export default function EditProduct() {
                 <p className="text-xs text-muted-light mb-2">Check to remove</p>
                 <div className="flex flex-wrap gap-3">
                   {product.images.map((img) => (
-                    <label key={img.publicId} className="flex flex-col items-center gap-1">
-                      <img src={img.url} alt="" className="w-20 h-20 object-cover rounded-xl" />
+                    <label
+                      key={img.publicId}
+                      className="flex flex-col items-center gap-1"
+                    >
+                      <img
+                        src={img.url}
+                        alt=""
+                        className="w-20 h-20 object-cover rounded-xl"
+                      />
                       <input
                         type="checkbox"
                         checked={removeImageIds.includes(img.publicId)}
@@ -231,9 +317,19 @@ export default function EditProduct() {
 
             <label className="flex flex-col items-center justify-center gap-2 py-10 px-4 rounded-2xl border-2 border-dashed border-theme bg-base-100 cursor-pointer text-muted hover:border-primary hover:bg-primary-soft hover:text-primary">
               <FiImage size={32} />
-              <strong className="text-sm font-bold text-base-content">Add more images</strong>
-              <span className="text-xs text-muted-light">Maximum 4 at a time, 2MB each</span>
-              <input type="file" accept="image/*" multiple onChange={handleImages} className="hidden" />
+              <strong className="text-sm font-bold text-base-content">
+                Add more images
+              </strong>
+              <span className="text-xs text-muted-light">
+                Maximum 4 at a time, 2MB each
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImages}
+                className="hidden"
+              />
             </label>
 
             {images.length > 0 && (

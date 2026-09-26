@@ -5,9 +5,9 @@ export const getMyNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find({
       recipient: req.user.userId,
-    }).sort({
-      createdAt: -1,
-    });
+    })
+      .sort({ createdAt: -1 })
+      .limit(100);
 
     return res.status(200).json({
       success: true,

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router";
 import { checkAuth } from "../api/auth";
 import Loader from "./Loader";
+import { connectSocket } from "../api/socket";
 
 const ProtectedRoute = ({ role }) => {
   const [loading, setLoading] = useState(true);
@@ -14,6 +15,7 @@ const ProtectedRoute = ({ role }) => {
 
         if (data.success) {
           setUser(data.user);
+          connectSocket();
         }
       } catch {
         setUser(null);
@@ -26,7 +28,7 @@ const ProtectedRoute = ({ role }) => {
   }, []);
 
   if (loading) {
-    return <Loader/>;
+    return <Loader />;
   }
 
   if (!user) {
@@ -35,6 +37,14 @@ const ProtectedRoute = ({ role }) => {
 
   if (role && user.role !== role) {
     return <Navigate to="/unauthorized" replace />;
+  }
+
+  // NEW: force unverified customers/farmers to verify before using the app
+  if (
+    (user.role === "customer" || user.role === "farmer") &&
+    !user.isAccountVerified
+  ) {
+    return <Navigate to="/verify-account" replace />;
   }
 
   return <Outlet />;

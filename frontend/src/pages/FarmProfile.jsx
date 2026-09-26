@@ -1,8 +1,8 @@
 import { useParams } from "react-router";
-import { useQuery, useQueries } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { FaStar } from "react-icons/fa6";
 import { getFarmById } from "../api/farm";
-import { getProductById } from "../api/product";
+import { getProducts } from "../api/product";
 import { getFarmReviews } from "../api/review";
 import ProductCard from "../components/ProductCard";
 import Loader from "../components/Loader";
@@ -16,6 +16,7 @@ const FarmProfile = () => {
       const { data } = await getFarmById(id);
       return data.farm;
     },
+    enabled: !!id,
   });
 
   const { data: reviews = [] } = useQuery({
@@ -27,144 +28,158 @@ const FarmProfile = () => {
     enabled: !!id,
   });
 
-  const productIds = farm
-    ? [
-        ...farm.products.allYear,
-        ...farm.products.winter,
-        ...farm.products.summer,
-        ...farm.products.monsoon,
-      ]
-    : [];
-
-  const productQueries = useQueries({
-    queries: productIds.map((productId) => ({
-      queryKey: ["product", productId],
-      queryFn: async () => {
-        const { data } = await getProductById(productId);
-        return data.product;
-      },
-      enabled: !!farm,
-    })),
+  const { data: products = [] } = useQuery({
+    queryKey: ["farmProducts", id],
+    queryFn: async () => {
+      const { data } = await getProducts(1, 100, "", { farm: id });
+      return data.products;
+    },
+    enabled: !!id,
   });
-
-  const products = productQueries.map((q) => q.data).filter(Boolean);
-
-  if (isLoading || !farm) return <Loader />;
-
+  if (isLoading || !farm) {
+    return <Loader />;
+  }
   const avgRating = reviews.length
-    ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
     : null;
-
-    return (
-    <div className="p-4 space-y-6">
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div className="flex-1 space-y-6">
+  return (
+      <main className="min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+          {/* Farm Images */}
           {farm.images?.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto">
-              {farm.images.map((img) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {farm.images.map((img, index) => (
                 <img
                   key={img.publicId}
                   src={img.url}
-                  alt={farm.name}
-                  className="h-48 w-64 object-cover rounded-box shrink-0"
+                  alt={`${farm.name} ${index + 1}`}
+                  className="w-full h-52 object-cover rounded-box"
                 />
               ))}
             </div>
           )}
-
-          <div>
-            <h1 className="text-3xl">{farm.name}</h1>
-            <p className="text-muted">
-              {farm.location?.village}, {farm.location?.upazila}, {farm.location?.district}
-            </p>
-
-            <div className="flex items-center gap-1 mt-1">
-              <FaStar className="text-secondary" />
-              <span>{avgRating !== null ? avgRating.toFixed(1) : "No ratings"}</span>
-              {reviews.length > 0 && (
-                <span className="text-xs text-muted-light">({reviews.length} reviews)</span>
+          {/* Farm Information + Reviews */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
+            {/* Farm Information */}
+            <section className="space-y-5">
+              <div>
+                <h1 className="text-4xl font-semibold"> {farm.name} </h1>
+                <p className="text-muted mt-1">
+                  {farm.location?.village}, {farm.location?.upazila},
+                  {farm.location?.district}
+                </p>
+                <div className="flex items-center gap-1 mt-3">
+                  <FaStar className="text-secondary" />
+                  <span className="font-medium">
+                    {avgRating !== null ? avgRating.toFixed(1) : "No ratings"}
+                  </span>
+                  {reviews.length > 0 && (
+                    <span className="text-sm text-muted">
+                      ({reviews.length} reviews)
+                    </span>
+                  )}
+                </div>
+              </div>
+              {farm.description && (
+                <p className="text-base leading-7 max-w-3xl">
+                  {farm.description}
+                </p>
               )}
-            </div>
-
-            {farm.establishedYear && (
-              <p className="text-sm text-muted mt-1">Established {farm.establishedYear}</p>
-            )}
-
-            {farm.description && <p className="mt-2">{farm.description}</p>}
-
-            {farm.size?.value && (
-              <p className="text-sm text-muted mt-1">
-                Size: {farm.size.value} {farm.size.unit}
-              </p>
-            )}
-
-            {farm.farmType?.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {farm.farmType.map((type) => (
-                  <span key={type} className="badge badge-secondary">
+              <div className="flex flex-wrap gap-2">
+                {farm.establishedYear && (
+                  <span className="badge badge-outline py-3">
+                    Established {farm.establishedYear}
+                  </span>
+                )}
+                {farm.size?.value && (
+                  <span className="badge badge-outline py-3">
+                    Size: {farm.size.value} {farm.size.unit}
+                  </span>
+                )}
+                {farm.farmType?.map((type) => (
+                  <span key={type} className="badge badge-secondary py-3">
                     {type}
                   </span>
                 ))}
               </div>
-            )}
+              {/* Farmer */}
+              {farm.farmer && (
+                <section className="bg-base-300 rounded-box p-4 flex items-center gap-4">
+                  <img
+                    src={farm.farmer.profileImage?.url || "/default-avatar.png"}
+                    alt={farm.farmer.user?.name}
+                    className="w-14 h-14 rounded-full object-cover"
+                  />
+                  <div>
+                    <p className="text-xs text-primary font-medium">FARMER</p>
+                    <p className="font-semibold"> {farm.farmer.user?.name} </p>
+                  </div>
+                </section>
+              )}
+            </section>
+            {/* Reviews */}
+            <aside className="bg-base-300 rounded-box p-5 h-fit lg:sticky lg:top-24">
+              <h2 className="text-lg font-semibold mb-4"> Reviews </h2>
+              {reviews.length === 0 ? (
+                <p className="text-muted text-sm"> No reviews yet. </p>
+              ) : (
+                <div className="space-y-4 max-h-96 overflow-y-auto pr-1">
+                  {reviews.map((review) => (
+                    <div
+                      key={review._id}
+                      className="pb-4 border-b border-base-200 last:border-0"
+                    >
+                      <div className="flex items-center gap-1">
+                        <FaStar className="text-secondary text-xs" />
+                        <span className="text-sm font-medium">
+                          {review.rating}
+                        </span>
+                        <span className="text-xs text-muted-light">
+                          {review.customer?.user?.name}
+                        </span>
+                      </div>
+                      {review.comment && (
+                        <p className="text-sm mt-1 leading-5">
+                          {review.comment}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </aside>
           </div>
-        </div>
 
-        <div className="lg:w-80 shrink-0 bg-base-300 rounded-box p-4 max-h-96 overflow-y-auto">
-          <h2 className="text-lg mb-2">Reviews</h2>
-          {reviews.length === 0 && (
-            <p className="text-muted text-sm">No reviews yet.</p>
-          )}
-          {reviews.map((review) => (
-            <div key={review._id} className="border-b border-base-200 py-2">
-              <div className="flex items-center gap-1">
-                <FaStar className="text-secondary text-xs" />
-                <span className="text-sm">{review.rating}</span>
-                <span className="text-xs text-muted-light">
-                  {review.customer?.user?.name}
-                </span>
-              </div>
-              {review.comment && <p className="text-sm mt-1">{review.comment}</p>}
+          {/* Products */}
+          <section>
+            <div className="mb-5">
+              <h2 className="text-2xl font-semibold">
+                Products from this farm
+              </h2>
+              <p className="text-sm text-muted mt-1">
+                Fresh products currently available from {farm.name}
+              </p>
             </div>
-          ))}
+            {products.length === 0 ? (
+              <p className="text-muted text-sm"> No products listed yet. </p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {products.map((product) => (
+                  <ProductCard
+                    key={product._id}
+                    id={product._id}
+                    image={product.images?.[0]?.url}
+                    name={product.name}
+                    src={farm.name}
+                    price={product.price}
+                    unit={product.unit}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
         </div>
-      </div>
-
-      {farm.farmer && (
-        <div className="flex items-center gap-3 bg-base-300 rounded-box p-3 w-fit">
-          <img
-            src={farm.farmer.profileImage?.url || "/default-avatar.png"}
-            alt={farm.farmer.user?.name}
-            className="w-12 h-12 rounded-full object-cover"
-          />
-          <div className="flex flex-col">
-            <p className="text-sm text-primary">Farmer</p>
-            <p className="font-medium">{farm.farmer.user?.name}</p>
-          </div>
-        </div>
-      )}
-
-      <div>
-        <h2 className="text-xl mb-2">Products from this farm</h2>
-        <div className="flex flex-wrap gap-3">
-          {products.length === 0 && (
-            <p className="text-muted text-sm">No products listed yet.</p>
-          )}
-          {products.map((product) => (
-            <ProductCard
-              key={product._id}
-              id={product._id}
-              image={product.images?.[0]?.url}
-              name={product.name}
-              src={farm.name}
-              price={product.price}
-              unit={product.unit}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
+      </main>
   );
 };
-
 export default FarmProfile;

@@ -21,11 +21,17 @@ import {
   createProductReview,
   createFarmReview,
 } from "../api/review";
-import ReviewModal from "./review/ReviewModal"; // adjust path
+import ReviewModal from "./ReviewModal";
 
-const PRE_PROCESSING_STATUSES = ["pendingAcceptance", "paymentPending"];
+const PRE_PROCESSING_STATUSES = [
+  "pendingAcceptance",
+  "orderPlaced",
+  "paymentPending",
+];
 const CANCELLABLE_STATUSES = [
   "pendingAcceptance",
+  "orderPlaced",
+  "paymentPending",
   "processing",
   "readyForPickup",
   "pickedUp",
@@ -156,6 +162,8 @@ const OrderDetailContent = ({
   isRejecting,
   onUpdateStatus,
   isUpdatingStatus,
+  onAdminCancelNoDriver,
+  isAdminCancelling,
 }) => {
   const statusMeta = getStatusMeta(order.status);
   const farmerName = order.farmer?.user?.name;
@@ -168,7 +176,6 @@ const OrderDetailContent = ({
   const isCustomer = role === "customer";
   const isAdmin = role === "admin";
   const isFarmer = role === "farmer";
-  // ...after: const isFarmer = role === "farmer";
   const queryClient = useQueryClient();
   const [reviewTarget, setReviewTarget] = useState(null);
   const [submittingReview, setSubmittingReview] = useState(false);
@@ -211,6 +218,21 @@ const OrderDetailContent = ({
     }
   };
 
+  const REFUND_PCT = {
+    pickedUp: 70,
+    toOriginCenter: 40,
+    inTransit: 40,
+    toDestinationCenter: 40,
+  };
+
+  const handleCancel = () => {
+    const pct = REFUND_PCT[order.status];
+    const msg = pct
+      ? `Cancelling now refunds only ${pct}% of your payment. Continue?`
+      : "Cancel this order?";
+    if (window.confirm(msg)) onCancel(order._id);
+  };
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -228,7 +250,7 @@ const OrderDetailContent = ({
             {onCancel && CANCELLABLE_STATUSES.includes(order.status) && (
               <button
                 type="button"
-                onClick={() => onCancel(order._id)}
+                onClick={handleCancel}
                 disabled={isCancelling}
                 className="btn btn-error disabled:opacity-50"
               >
@@ -274,6 +296,27 @@ const OrderDetailContent = ({
                 {isUpdatingStatus ? "Updating..." : "Mark Ready for Pickup"}
               </button>
             )}
+            {isAdmin &&
+              order.status === "readyForPickup" &&
+              !order.isDemoOrder &&
+              onAdminCancelNoDriver && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Cancel this order? The customer will be fully refunded since no driver was available.",
+                      )
+                    ) {
+                      onAdminCancelNoDriver(order._id);
+                    }
+                  }}
+                  disabled={isAdminCancelling}
+                  className="btn btn-sm bg-error text-error-content disabled:opacity-50"
+                >
+                  {isAdminCancelling ? "Cancelling..." : "Cancel (No Driver)"}
+                </button>
+              )}
           </div>
         </div>
       </div>
@@ -400,8 +443,8 @@ const OrderDetailContent = ({
 
       {/* Delivery */}
       <Section title="Delivery" icon={<FiTruck />}>
-        <Row label="From" value={deliveryAddress} />
-        <Row label="To" value={farmAddress} />
+        <Row label="From" value={farmAddress} />
+        <Row label="To" value={deliveryAddress} />
         <Row
           label="Estimated Delivery"
           value={
@@ -428,7 +471,17 @@ const OrderDetailContent = ({
             order.payment?.method === "online" ? "Online" : "Cash on Delivery"
           }
         />
-        <Row label="Status" value={order.payment?.status} />
+        <Row
+          label="Status"
+          value={
+            {
+              pending: "Pending",
+              paid: "Paid",
+              failed: "Failed",
+              refunded: "Refunded",
+            }[order.payment?.status]
+          }
+        />
         <Row label="Items Total" value={`৳${order.pricing?.itemsTotal}`} />
         <Row
           label="Delivery Charge"
@@ -443,38 +496,55 @@ const OrderDetailContent = ({
             value={`-৳${order.pricing.pointsRedeemed}`}
           />
         )}
+        {order.pricing?.debtSettled > 0 && (
+          <Row
+            label="Previous Balance Due"
+            value={`+৳${order.pricing.debtSettled}`}
+          />
+        )}
         <div className="border-t border-theme-light mt-2 pt-2">
           <Row label="Total" value={`৳${order.pricing?.total}`} />
         </div>
+        {order.status === "cancelled" &&
+          order.payment?.status === "refunded" && (
+            <Row
+              label={`Refunded (${order.refund?.percentage}%)`}
+              value={`৳${order.refund?.amount} as points`}
+            />
+          )}
       </Section>
 
       {/* Timeline */}
-      <Section title="Order Status" icon={<FiClock />}>
-        {PRE_PROCESSING_STATUSES.includes(order.status) ? (
-          <div className="space-y-3">
-            <p className="text-sm text-muted">
-              {order.status === "pendingAcceptance"
-                ? "Waiting for the farmer to accept your order."
-                : "The farmer has accepted your order — payment is needed before it can be picked up."}
-            </p>
+      {isCustomer && (
+        <Section title="Order Status" icon={<FiClock />}>
+          {PRE_PROCESSING_STATUSES.includes(order.status) ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted">
+                {order.status === "pendingAcceptance"
+                  ? "Waiting for the farmer to accept your order."
+                  : order.status === "orderPlaced"
+                    ? "The farmer has accepted your order. Payment opens once every farm has responded."
+                    : "All farms have responded. Payment is needed before this order can be picked up."}
+              </p>
 
-            {order.status === "paymentPending" &&
-              order.payment?.method === "online" &&
-              onPayNow && (
-                <button
-                  type="button"
-                  onClick={() => onPayNow(order.orderGroup)}
-                  disabled={isPayingNow}
-                  className="btn btn-sm bg-primary text-primary-content"
-                >
-                  {isPayingNow ? "Processing..." : "Pay Now"}
-                </button>
-              )}
-          </div>
-        ) : (
-          <DeliveryTimeline status={order.status} />
-        )}
-      </Section>
+              {order.status === "paymentPending" &&
+                order.payment?.method === "online" &&
+                onPayNow && (
+                  <button
+                    type="button"
+                    onClick={() => onPayNow(order.orderGroup)}
+                    disabled={isPayingNow}
+                    className="btn btn-sm bg-primary text-primary-content"
+                  >
+                    {isPayingNow ? "Processing..." : "Pay Now"}
+                  </button>
+                )}
+            </div>
+          ) : (
+            <DeliveryTimeline status={order.status} />
+          )}
+        </Section>
+      )}
       {reviewTarget && (
         <ReviewModal
           title={

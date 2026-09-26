@@ -20,15 +20,26 @@ import { startDemoCustomerScheduler } from "./jobs/demoCustomerAutomation.js";
 import { multerErrorHandling } from "./middlewares/multerError.middleware.js";
 import { startRestockProcessingScheduler } from "./jobs/restockProcessing.js";
 import { startDriverShuffleScheduler } from "./jobs/driverShuffle.js";
+import { globalRateLimit } from "./middlewares/rateLimit.middleware.js";
+import { startPaymentExpiryScheduler } from "./jobs/paymentExpiry.js";
+import zoneRouter from "./routes/zoneRoutes.js";
+import { createServer } from "http";
+import { initSocket } from "./config/socket.js";
+import messageRouter from "./routes/messageRoutes.js";
+import announcementRouter from "./routes/announcementRoutes.js";
+import pricingRouter from "./routes/pricingRoutes.js";
+import promoCodeRouter from "./routes/promoCodeRoutes.js";
 
 const app = express();
 
 const PORT = process.env.PORT || 5000;
 const allowedOrigins = process.env.CLIENT_URL?.split(",") || [];
 
+app.set("trust proxy", 1); 
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({ origin: allowedOrigins, credentials: true }));
+app.use(globalRateLimit);
 
 app.get("/", (_, res) => res.send("Server working"));
 
@@ -43,6 +54,18 @@ app.use("/api/reviews", reviewRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/delivery", deliveryRouter);
+app.use("/api/zones", zoneRouter);
+app.use("/api/messages", messageRouter);
+app.use("/api/announcements", announcementRouter);
+app.use("/api/pricing", pricingRouter);
+app.use("/api/promo-codes", promoCodeRouter);  
+
+app.use((_, res) => {
+  res.status(404).json({
+    success: false,
+    message: "Route not found",
+  });
+});
 
 app.use(multerErrorHandling);
 app.use((err, _, res, __) => {
@@ -53,13 +76,17 @@ app.use((err, _, res, __) => {
   });
 });
 
+const httpServer = createServer(app);
+initSocket(httpServer);
+
 connectDB().then(() => {
-  app.listen(PORT, () => {
+  httpServer.listen(PORT, () => {
     console.log("Server started on PORT:", PORT);
     startDeliveryScheduler();
     startDemoFarmerScheduler();
     startDemoCustomerScheduler();
     startRestockProcessingScheduler();
     startDriverShuffleScheduler();
+    startPaymentExpiryScheduler();
   });
 });

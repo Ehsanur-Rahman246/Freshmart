@@ -1,5 +1,6 @@
 export const STATUS_META = {
   pendingAcceptance: { label: "Pending Acceptance", badge: "badge-warning" },
+  orderPlaced: { label: "Accepted", badge: "badge-warning" }, 
   paymentPending: { label: "Awaiting Payment", badge: "badge-warning" },
   processing: { label: "Processing", badge: "badge-info" },
   readyForPickup: { label: "Ready for Pickup", badge: "badge-info" },
@@ -22,7 +23,7 @@ export const DELIVERY_STEP_GROUPS = [
   {
     key: "processing",
     label: "Accepted & Processing",
-    statuses: ["paymentPending", "processing"],
+    statuses: ["orderPlaced", "paymentPending", "processing"], 
   },
   { key: "ready", label: "Ready for Pickup", statuses: ["readyForPickup"] },
   { key: "pickedUp", label: "Picked Up", statuses: ["pickedUp"] },

@@ -6,6 +6,8 @@ export const getMyOrders = () => api.get("/orders/my-orders");
 export const cancelOrder = (orderId) => api.patch(`/orders/${orderId}/cancel`);
 export const confirmPayment = (orderGroupId) =>
   api.patch(`/orders/group/${orderGroupId}/confirm-payment`);
+export const getOrderGroup = (orderGroupId) =>
+  api.get(`/orders/group/${orderGroupId}`);
 export const getCheckoutPreview = (data) => api.post("/orders/preview", data);
 
 // Farmer
@@ -18,13 +20,16 @@ export const rejectOrder = (orderId, reason) =>
   api.patch(`/orders/${orderId}/reject`, { reason });
 
 // Admin
-export const getAllOrders = () => api.get("/orders/admin/all");
+export const getAllOrders = (params) =>
+  api.get("/orders/admin/all", { params }); // e.g. { limit: 5 }
 export const getOrdersByCustomer = (customerId) =>
   api.get(`/orders/admin/customer/${customerId}`);
 export const getOrdersByFarmer = (farmerId) =>
   api.get(`/orders/admin/farmer/${farmerId}`);
 export const getOrdersByFarm = (farmId) =>
   api.get(`/orders/admin/farm/${farmId}`);
+export const adminCancelNoDriver = (orderId) =>
+  api.patch(`/orders/${orderId}/admin-cancel-no-driver`);
 
 // All
 export const getOrderById = (orderId) => api.get(`/orders/${orderId}`);

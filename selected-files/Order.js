@@ -61,6 +61,7 @@ const orderSchema = new mongoose.Schema(
     deliveryAddress: {
       name: { type: String, required: true, trim: true },
       phone: { type: String, required: true, trim: true },
+      division: { type: String, trim: true, default: "" },
       district: { type: String, required: true, trim: true },
       upazila: { type: String, required: true, trim: true },
       village: { type: String, required: true, trim: true },
@@ -72,8 +73,15 @@ const orderSchema = new mongoose.Schema(
       deliveryCharge: { type: Number, required: true, default: 0, min: 0 },
       discount: { type: Number, default: 0, min: 0 },
       pointsRedeemed: { type: Number, default: 0, min: 0 },
+      promoDiscount: { type: Number, default: 0, min: 0 },
       debtSettled: { type: Number, default: 0, min: 0 },
       total: { type: Number, required: true, min: 0 },
+    },
+
+    promoCode: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "PromoCode",
+      default: null,
     },
 
     payment: {
@@ -127,6 +135,7 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: [
         "pendingAcceptance",
+        "orderPlaced",
         "paymentPending",
         "processing",
         "rejected",
@@ -163,11 +172,21 @@ const orderSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    paymentDueAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
   },
 );
+
+orderSchema.index({ status: 1, "delivery.nextTransitionAt": 1 });
+orderSchema.index({ status: 1, processingReadyAt: 1 });
+orderSchema.index({ status: 1, paymentDueAt: 1 });
+orderSchema.index({ customer: 1, createdAt: -1 });
+orderSchema.index({ farmer: 1, createdAt: -1 });
 
 const Order = mongoose.model("Order", orderSchema);
 

@@ -1,93 +1,85 @@
-import { useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router";
-import { useMutation } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useNavigate, useParams } from "react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { FiCheckCircle } from "react-icons/fi";
-import { useOrderById } from "../../hooks/useOrders";
+import { useOrderGroup } from "../../hooks/useOrders";
 import { cancelOrder, confirmPayment } from "../../api/order";
 import OrderDetailContent from "../../components/OrderDetailContent";
 import Loader from "../../components/Loader";
+import { useMemo } from "react";
+
+const DROPPED = ["rejected", "cancelled"];
+const PRE_PAYMENT = ["pendingAcceptance", "orderPlaced", "paymentPending"];
 
 const OrderConfirmation = () => {
-  const location = useLocation();
+  const { id: orderGroupId } = useParams();
   const navigate = useNavigate();
-  const { id } = useParams();
+  const queryClient = useQueryClient();
+  const { data: orders = [], isLoading, isError } = useOrderGroup(orderGroupId);
 
-  // Right after checkout: full order objects arrive via navigate state
-  // (createOrder already returned them populated, no extra fetch needed).
-  const [stateOrders, setStateOrders] = useState(
-    location.state?.orders || null,
-  );
-
-  // Reached from the Orders list instead — a single order id in the URL.
-  const { data: fetchedOrder, isLoading } = useOrderById(
-    stateOrders ? null : id,
-  );
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["orders"] });
 
   const cancelMutation = useMutation({
     mutationFn: (orderId) => cancelOrder(orderId),
-    onSuccess: (response, orderId) => {
+    onSuccess: () => {
       toast.success("Order cancelled");
-
-      if (stateOrders) {
-        setStateOrders((prev) =>
-          prev.map((o) => (o._id === orderId ? response.data.order : o)),
-        );
-      }
+      refresh();
     },
-    onError: (error) => {
-      toast.error(error?.response?.data?.message || "Could not cancel order");
-    },
+    onError: (e) =>
+      toast.error(e?.response?.data?.message || "Could not cancel order"),
   });
 
-  const payNowMutation = useMutation({
-    mutationFn: (orderGroupId) => confirmPayment(orderGroupId),
-    onSuccess: (response) => {
+  const payMutation = useMutation({
+    mutationFn: () => confirmPayment(orderGroupId),
+    onSuccess: () => {
       toast.success("Payment confirmed");
-
-      if (stateOrders) {
-        const updatedById = new Map(
-          response.data.orders.map((o) => [o._id, o]),
-        );
-
-        setStateOrders((prev) => prev.map((o) => updatedById.get(o._id) || o));
-      }
+      refresh();
     },
-    onError: (error) => {
-      toast.error(error?.response?.data?.message || "Payment failed");
-    },
+    onError: (e) => toast.error(e?.response?.data?.message || "Payment failed"),
   });
 
-  if (!stateOrders && !id) {
-    navigate("/customer/orders", { replace: true });
-    return null;
-  }
+  const active = useMemo(() => orders.filter((o) => !DROPPED.includes(o.status)), [orders]);
+  const stillPrePayment = orders.some((o) => PRE_PAYMENT.includes(o.status));
 
-  if (!stateOrders && isLoading) {
-    return <Loader />;
-  }
+  // Nothing left before payment -> leave this page
+  useEffect(() => {
+    if (isLoading || orders.length === 0 || stillPrePayment) return;
+    navigate(
+      active.length === 1
+        ? `/customer/orders/${active[0]._id}`
+        : "/customer/orders",
+      { replace: true },
+    );
+  }, [isLoading, orders, stillPrePayment, active, navigate]);
 
-  const orders = stateOrders || (fetchedOrder ? [fetchedOrder] : null);
+  useEffect(() => {
+    if (isError) navigate("/customer/orders", { replace: true });
+  }, [isError, navigate]);
 
-  if (!orders || orders.length === 0) {
-    navigate("/customer/orders", { replace: true });
-    return null;
-  }
+  if (isLoading) return <Loader />;
+  if (orders.length === 0) return null;
+
+  const isOnline = active.some((o) => o.payment?.method === "online");
+  const canPay =
+    isOnline &&
+    active.length > 0 &&
+    active.every((o) => o.status === "paymentPending");
+  const decided = orders.filter((o) => o.status !== "pendingAcceptance").length;
+  const payTotal = active.reduce((sum, o) => sum + (o.pricing?.total || 0), 0);
 
   return (
     <div className="min-h-screen bg-base-200 py-10 px-4">
       <div className="max-w-2xl mx-auto space-y-6">
-        {stateOrders && (
-          <div className="mb-2 flex flex-col items-center gap-2 text-center">
-            <FiCheckCircle className="text-4xl text-success" />
-            <h1 className="text-2xl font-extrabold">Order Placed!</h1>
-            <p className="text-sm text-muted">
-              {orders.length > 1
-                ? `Your order has been split into ${orders.length} orders, one per farm.`
-                : "Here are your order details."}
-            </p>
-          </div>
-        )}
+        <div className="mb-2 flex flex-col items-center gap-2 text-center">
+          <FiCheckCircle className="text-4xl text-success" />
+          <h1 className="text-2xl font-extrabold">Order Placed!</h1>
+          <p className="text-sm text-muted">
+            {orders.length > 1
+              ? `Your order has been split into ${orders.length} orders, one per farm.`
+              : "Here are your order details."}
+          </p>
+        </div>
 
         {orders.map((order) => (
           <OrderDetailContent
@@ -95,15 +87,38 @@ const OrderConfirmation = () => {
             order={order}
             onCancel={(orderId) => cancelMutation.mutate(orderId)}
             isCancelling={cancelMutation.isPending}
-            onPayNow={(orderGroupId) => payNowMutation.mutate(orderGroupId)}
-            isPayingNow={payNowMutation.isPending}
           />
         ))}
+
+        {isOnline && active.length > 0 && (
+          <div className="bg-base-100 rounded-box border border-theme-light p-4 space-y-3">
+            <div className="flex justify-between text-sm">
+              <span>Total to pay</span>
+              <span className="font-bold">৳{payTotal}</span>
+            </div>
+
+            {canPay ? (
+              <button
+                type="button"
+                onClick={() => payMutation.mutate()}
+                disabled={payMutation.isPending}
+                className="btn btn-primary w-full"
+              >
+                Pay ৳{payTotal} for all orders
+              </button>
+            ) : (
+              <p className="text-xs text-muted-light">
+                Payment opens once every farm has responded ({decided} of{" "}
+                {orders.length} done).
+              </p>
+            )}
+          </div>
+        )}
 
         <button
           type="button"
           onClick={() => navigate("/customer/orders")}
-          className="btn btn-primary w-full"
+          className="btn btn-ghost w-full"
         >
           Go to My Orders
         </button>

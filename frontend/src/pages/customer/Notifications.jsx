@@ -1,14 +1,21 @@
-import NotificationsPage from "../../components/notification/Notificationspage";
-import { CUSTOMER_ORDER_TYPES } from "../../components/notification/notificationTypes";
+import NotificationsPage from "../../components/Notificationspage";
+import {
+  CUSTOMER_ORDER_TYPES,
+  MESSAGE_TYPES,
+} from "../../utils/notificationTypes";
 
-// ADJUST THIS to your real customer order-detail route
 const getCustomerNotificationLink = (notification) => {
+  if (MESSAGE_TYPES.includes(notification.type)) {
+    return "/customer/messages";
+  }
+
   if (
     CUSTOMER_ORDER_TYPES.includes(notification.type) &&
     notification.relatedOrder
   ) {
     return `/customer/orders/${notification.relatedOrder}`;
   }
+
   return null;
 };
 

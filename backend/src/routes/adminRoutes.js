@@ -9,6 +9,7 @@ import {
   getAdminRevenueSummary,
   getFarmRevenue,
   getRevenueOverTime,
+  getAllProductsAdmin,
 } from "../controllers/adminControllers.js";
 import {
   getAllCustomers,
@@ -36,5 +37,6 @@ adminRouter.patch("/company-sales/:productId/finalize", finalizeCompanySale);
 adminRouter.get("/revenue", getAdminRevenueSummary);
 adminRouter.get("/revenue/over-time", getRevenueOverTime);
 adminRouter.get("/revenue/farm/:farmId", getFarmRevenue);
+adminRouter.get("/products", getAllProductsAdmin);
 
 export default adminRouter;

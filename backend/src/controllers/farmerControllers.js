@@ -6,13 +6,18 @@ import {
   deleteFromCloudinary,
 } from "../utils/uploadToCloudinary.js";
 import notifyAdmin from "../utils/notifyAdmin.js";
+import { roundTotals } from "../utils/money.js";
+import mongoose from "mongoose";
+
+const SAFE_USER_FIELDS =
+  "-password -verificationOTP -verificationOTPExpireAt -passwordResetOTP -passwordResetOTPExpireAt";
 
 export const getFarmerProfile = async (req, res) => {
   try {
     const farmer = await Farmer.findOne({
       user: req.user.userId,
     })
-      .populate("user", "-password")
+      .populate("user", SAFE_USER_FIELDS)
       .populate("farms");
 
     if (!farmer) {
@@ -83,6 +88,12 @@ export const respondToCompanySaleOffer = async (req, res) => {
   try {
     const { productId } = req.params;
     const { accept } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid product ID" });
+    }
 
     if (typeof accept !== "boolean") {
       return res.status(400).json({
@@ -160,6 +171,12 @@ export const markCompanySaleReady = async (req, res) => {
   try {
     const { productId } = req.params;
 
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid product ID" });
+    }
+
     const farmer = await Farmer.findOne({ user: req.user.userId });
 
     if (!farmer) {
@@ -191,6 +208,13 @@ export const markCompanySaleReady = async (req, res) => {
     product.companySaleStage = "readyForPickup";
 
     await product.save();
+
+    await notifyAdmin({
+      type: "companySaleReady",
+      title: "Company Sale Ready for Pickup",
+      message: `${product.name} is packed and ready for pickup.`,
+      relatedProduct: product._id,
+    });
 
     return res.status(200).json({
       success: true,
@@ -249,8 +273,10 @@ export const getMyRevenue = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      summary: totals || { totalFarmerRevenue: 0, totalGross: 0, count: 0 },
-      byFarm,
+      summary: totals
+        ? roundTotals(totals)
+        : { totalFarmerRevenue: 0, totalGross: 0, count: 0 },
+      byFarm: byFarm.map(roundTotals),
       entries,
     });
   } catch (error) {

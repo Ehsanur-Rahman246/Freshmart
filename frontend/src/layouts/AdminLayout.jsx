@@ -9,9 +9,14 @@ const AdminLayout = () => {
 
   return (
     <div className="min-h-screen bg-base-200">
-      <AdminSidebar
+      <AdminNavbar
+        onMenuClick={() => setMobileOpen((prev) => !prev)}
         collapsed={collapsed}
         setCollapsed={setCollapsed}
+      />
+
+      <AdminSidebar
+        collapsed={collapsed}
         mobileOpen={mobileOpen}
         setMobileOpen={setMobileOpen}
       />
@@ -19,8 +24,6 @@ const AdminLayout = () => {
       <div
         className={`transition-all duration-300 ${collapsed ? "lg:pl-20" : "lg:pl-64"}`}
       >
-        <AdminNavbar onMenuClick={() => setMobileOpen(true)} />
-
         <main className="p-4 sm:p-6">
           <Outlet />
         </main>

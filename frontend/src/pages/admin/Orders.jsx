@@ -1,16 +1,26 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { getAllOrders } from "../../api/order";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import OrderList from "../../components/OrderList";
 import OrderDrawer from "../../components/OrderDrawer";
+import { useAllOrdersLive } from "../../hooks/useOrders";
+import { adminCancelNoDriver } from "../../api/order";
 
 const AdminOrders = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const queryClient = useQueryClient();
 
-  const { data: orders = [], isLoading } = useQuery({
-    queryKey: ["orders", "admin", "all"],
-    queryFn: async () => (await getAllOrders()).data.orders,
-    staleTime: 1000 * 30,
+  const { data: orders = [], isLoading } = useAllOrdersLive();
+
+  const adminCancelMutation = useMutation({
+    mutationFn: (orderId) => adminCancelNoDriver(orderId),
+    onSuccess: () => {
+      toast.success("Order cancelled");
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      setSelectedOrder(null);
+    },
+    onError: (error) =>
+      toast.error(error?.response?.data?.message || "Could not cancel order"),
   });
 
   return (
@@ -28,7 +38,12 @@ const AdminOrders = () => {
         onSelect={setSelectedOrder}
       />
 
-      <OrderDrawer order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+      <OrderDrawer
+        order={selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        onAdminCancelNoDriver={(orderId) => adminCancelMutation.mutate(orderId)}
+        isAdminCancelling={adminCancelMutation.isPending}
+      />
     </div>
   );
 };

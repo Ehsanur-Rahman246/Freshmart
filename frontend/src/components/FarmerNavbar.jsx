@@ -6,15 +6,19 @@ import {
   FiMenu,
   FiHome,
   FiUser,
+  FiStar,
+  FiMessageSquare,
   FiLogOut,
 } from "react-icons/fi";
 import { useQuery } from "@tanstack/react-query";
 import { getFarmerProfile } from "../api/farmer";
 import { NavLink } from "react-router";
 import useLogout from "../hooks/useLogout";
-import NotificationBell from "./notification/NotificationBell";
+import NotificationBell from "./NotificationBell";
 import { PiFarmLight } from "react-icons/pi";
 import { BsShop } from "react-icons/bs";
+import { useConversations } from "../hooks/useMessages";
+import { useAnnouncements } from "../hooks/useAnnouncements";
 
 const menuItems = [
   {
@@ -33,7 +37,7 @@ const menuItems = [
     path: "/farmer/orders",
   },
   {
-    name: "Payouts",
+    name: "Revenue",
     icon: FiCreditCard,
     path: "/farmer/revenue",
   },
@@ -51,7 +55,7 @@ const menuItems = [
 
 const Menu = () => {
   return (
-    <div className="flex items-center gap-2 max-sm:hidden">
+    <div className="flex items-center gap-2 max-lg:hidden">
       {menuItems.map((item) => {
         const Icon = item.icon;
 
@@ -84,7 +88,7 @@ const MobileMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="relative sm:hidden">
+    <div className="relative lg:hidden">
       {/* Menu Button */}
       <button
         type="button"
@@ -140,6 +144,12 @@ const MobileMenu = () => {
 const ProfileMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
   const handleLogout = useLogout();
+  const { data: conversations = [] } = useConversations();
+  const { data: announcements = [] } = useAnnouncements();
+  const unreadAnnouncements = announcements.filter((a) => !a.isRead).length;
+  const unreadMessages =
+    conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0) +
+    unreadAnnouncements;
 
   const { data: farmer } = useQuery({
     queryKey: ["farmerProfile"],
@@ -187,6 +197,64 @@ const ProfileMenu = () => {
                 <>
                   <FiUser className="text-[17px]" />
                   <span>Profile</span>
+
+                  {isActive && (
+                    <span className="absolute right-0 top-1/2 h-7 w-0.75 -translate-y-1/2 rounded-l-full bg-primary" />
+                  )}
+                </>
+              )}
+            </NavLink>
+          </li>
+          <li key={"messages"}>
+            <NavLink
+              to={"/farmer/messages"}
+              onClick={() => setIsOpen(false)}
+              className={({ isActive }) =>
+                `relative flex items-center gap-3 rounded-lg px-3 py-2.5 font-semibold
+        transition-colors duration-200 mb-2
+        ${
+          isActive
+            ? "bg-primary-soft text-primary-active"
+            : "text-base-content hover:bg-primary-soft hover:text-primary"
+        }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <FiMessageSquare className="text-[17px]" />
+                  <span className="flex-1">Messages</span>
+
+                  {unreadMessages > 0 && (
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-white">
+                      {unreadMessages > 99 ? "99+" : unreadMessages}
+                    </span>
+                  )}
+
+                  {isActive && (
+                    <span className="absolute right-0 top-1/2 h-7 w-0.75 -translate-y-1/2 rounded-l-full bg-primary" />
+                  )}
+                </>
+              )}
+            </NavLink>
+          </li>
+          <li key={"reviews"}>
+            <NavLink
+              to={"/farmer/reviews"}
+              onClick={() => setIsOpen(false)}
+              className={({ isActive }) =>
+                `relative flex items-center gap-3 rounded-lg px-3 py-2.5 font-semibold
+                  transition-colors duration-200 mb-2
+                  ${
+                    isActive
+                      ? "bg-primary-soft text-primary-active"
+                      : "text-base-content hover:bg-primary-soft hover:text-primary"
+                  }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <FiStar className="text-[17px]" />
+                  <span>Reviews</span>
 
                   {isActive && (
                     <span className="absolute right-0 top-1/2 h-7 w-0.75 -translate-y-1/2 rounded-l-full bg-primary" />

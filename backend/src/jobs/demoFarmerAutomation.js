@@ -2,7 +2,6 @@ import cron from "node-cron";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import Customer from "../models/Customer.js";
-import createNotification from "../utils/createNotification.js";
 import transporter from "../config/nodemailer.js";
 import {
   HOUR_IN_MS,
@@ -18,6 +17,10 @@ import { recordCompanySaleRevenue } from "../utils/recordRevenue.js";
 import notifyAdmin from "../utils/notifyAdmin.js";
 import { tryAutoAssignDriver } from "../controllers/deliveryControllers.js";
 import { autoCancelOrder } from "../controllers/orderControllers.js";
+import { notifyFarmer } from "../utils/notifyFarmer.js";
+import { notifyCustomer } from "../utils/notifyCustomer.js";
+import { companySaleOfferEmail } from "../utils/emailTemplates.js";
+import { emitOrderStatusToCustomer } from "../utils/realtime.js";
 
 const claimDueDemoOrder = () =>
   Order.findOneAndUpdate(
@@ -35,12 +38,12 @@ const advanceDemoOrders = async () => {
   let order;
 
   while ((order = await claimDueDemoOrder())) {
+    await emitOrderStatusToCustomer(order);
+    
     const customer = await Customer.findById(order.customer).populate("user");
     let driverAutoAssigned = false;
     if (customer) {
-      await createNotification({
-        recipient: customer.user._id,
-        recipientRole: "customer",
+      await notifyCustomer(order.customer, {
         type: "readyForPickup",
         title: "Order Ready for Pickup",
         message: "Your order has been prepared and is ready for pickup.",
@@ -128,9 +131,10 @@ export const processExpiredProduct = async (product) => {
     product.companySalePrice = companySalePrice;
     product.company = DEMO_COMPANY_NAME;
     product.soldToCompanyAt = now;
-    product.companySaleStage = "sold";
 
     await recordCompanySaleRevenue(product, quantitySold);
+    product.companySaleStage = "none";
+    product.companySalePrice = null;
 
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + product.listingDuration);
@@ -155,21 +159,13 @@ export const processExpiredProduct = async (product) => {
         await transporter.sendMail({
           from: process.env.EMAIL_USER,
           to: product.farmer.user.email,
-          subject: "Your Listing Expired — Company Sale Offer",
-          html: `
-            <h2>Listing Expired</h2>
-            <p>Hello ${product.farmer.user.name || "Farmer"},</p>
-            <p>
-              Your listing <strong>${product.name}</strong> expired with
-              ${product.stock} unit(s) still unsold.
-            </p>
-            <p>
-              We're offering to buy the remaining stock at
-              <strong>${companySalePrice}</strong> per unit. Please respond
-              from your FreshMart account within
-              ${FARMER_RESPONSE_WINDOW_HOURS} hours.
-            </p>
-          `,
+          subject: `Company Sale Offer — ${product.name}`,
+          html: companySaleOfferEmail({
+            product,
+            companySalePrice,
+            responseWindowHours: FARMER_RESPONSE_WINDOW_HOURS,
+            farmerName: product.farmer.user.name,
+          }),
         });
       } catch (emailError) {
         console.error("Failed to send listing-expired email:", emailError);
@@ -177,9 +173,7 @@ export const processExpiredProduct = async (product) => {
     }
 
     if (product.farmer?.user?._id) {
-      await createNotification({
-        recipient: product.farmer.user._id,
-        recipientRole: "farmer",
+      await notifyFarmer(product.farmer, {
         type: "productExpired",
         title: "Listing Expired — Company Sale Offer",
         message: `${product.name} expired with stock remaining. Respond to the company sale offer within ${FARMER_RESPONSE_WINDOW_HOURS} hours.`,
@@ -219,7 +213,7 @@ const handleUnansweredOffers = async () => {
   const overdue = await Product.find({
     companySaleStage: "awaitingFarmerResponse",
     companySaleRespondBy: { $lte: now },
-  });
+  }).populate({ path: "farmer", select: "user" });
 
   for (const product of overdue) {
     product.companySaleStage = "rejected";
@@ -227,6 +221,22 @@ const handleUnansweredOffers = async () => {
     product.stock = 0;
     product.companySaleRespondBy = null;
     await product.save();
+
+    if (product.farmer?._id) {
+      await notifyFarmer(product.farmer._id, {
+        type: "productExpired",
+        title: "Company Sale Offer Expired",
+        message: `You didn't respond in time — the offer for ${product.name} was automatically declined.`,
+        relatedProduct: product._id,
+      });
+    }
+
+    await notifyAdmin({
+      type: "productExpired",
+      title: "Company Sale Offer Auto-Rejected",
+      message: `${product.name}'s company sale offer expired with no farmer response.`,
+      relatedProduct: product._id,
+    });
   }
 };
 

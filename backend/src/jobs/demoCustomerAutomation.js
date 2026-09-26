@@ -14,6 +14,7 @@ import {
   DEMO_CUSTOMER_CHECK_INTERVAL,
   DEMO_CUSTOMER_RUN_GAP_MS,
 } from "../config/time.js";
+import Farm from "../models/Farm.js";
 
 const randomInt = (min, max) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
@@ -82,10 +83,13 @@ const addWishlistItemToCart = async (customer) => {
 
 // picks a random farm to add products to cart
 const addRandomFarmItemsToCart = async (customer) => {
+  const activeFarmIds = await Farm.find({ isActive: true }).distinct("_id");
+
   const farmIds = await Product.distinct("farm", {
     status: "active",
     expiresAt: { $gt: new Date() },
     stock: { $gt: 0 },
+    farm: { $in: activeFarmIds },
   });
 
   if (farmIds.length === 0) return;

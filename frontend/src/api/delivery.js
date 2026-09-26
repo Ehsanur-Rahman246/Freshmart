@@ -8,3 +8,4 @@ export const assignDriverToOrder = (orderId, driverId) =>
   api.patch(`/delivery/${orderId}/assign-driver`, {
     driverId,
   });
+export const getOngoingDeliveries = () => api.get("/delivery/ongoing");

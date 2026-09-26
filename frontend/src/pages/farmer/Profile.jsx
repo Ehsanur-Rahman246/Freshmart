@@ -4,13 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import { FiTrash2, FiLogOut } from "react-icons/fi";
 import { getFarmerProfile, updateFarmerProfile } from "../../api/farmer";
 import { logout, deleteAccount } from "../../api/auth";
-import ProfileHeader from "../../components/profile/shared/ProfileHeader";
-import PersonalInfoCard from "../../components/profile/shared/PersonalInfoCard";
-import EditInfoModal from "../../components/profile/shared/EditInfoModal";
-import ChangePasswordModal from "../../components/profile/shared/ChangePasswordModal";
-import DeleteAccountModal from "../../components/profile/shared/DeleteAccountModal";
-import AvgReviewCard from "../../components/profile/farmer/AvgReviewCard";
-import FarmsListCard from "../../components/profile/farmer/FarmsListCard";
+import ProfileHeader from "../../components/ProfileHeader";
+import PersonalInfoCard from "../../components/PersonalInfoCard";
+import EditInfoModal from "../../components/EditInfoModal";
+import ChangePasswordModal from "../../components/ChangePasswordModal";
+import DeleteAccountModal from "../../components/DeleteAccountModal";
+import AvgReviewCard from "../../components/AvgReviewCard";
+import FarmsListCard from "../../components/FarmsListCard";
 
 const QUERY_KEY = ["farmerProfile"];
 

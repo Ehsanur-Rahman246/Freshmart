@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { FiMenu, FiUser, FiLogOut } from "react-icons/fi";
+import { FiMenu, FiUser, FiLogOut, FiSidebar } from "react-icons/fi";
 import { NavLink } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { checkAuth } from "../api/auth";
 import useLogout from "../hooks/useLogout";
-import NotificationBell from "./notification/NotificationBell";
+import NotificationBell from "./NotificationBell";
 
 const ProfileMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -61,17 +61,40 @@ const ProfileMenu = () => {
   );
 };
 
-const AdminNavbar = ({ onMenuClick }) => {
+const AdminNavbar = ({ onMenuClick, setCollapsed, mobileOpen }) => {
   return (
-    <nav className="navbar sticky top-0 border-b border-theme-light bg-base-100 px-4 sm:px-6 z-30">
+    <nav className="navbar sticky top-0 border-b border-theme-light bg-base-100 px-4 sm:px-6 z-50">
       <button
         type="button"
         onClick={onMenuClick}
         className="btn btn-ghost btn-circle text-2xl lg:hidden"
-        aria-label="Menu"
+        aria-label={mobileOpen ? "Close menu" : "Open menu"}
       >
-        <FiMenu className="text-primary" />
+      <FiMenu className="text-primary" />
       </button>
+
+      <button
+        type="button"
+        onClick={() => setCollapsed((prev) => !prev)}
+        className="btn btn-ghost btn-sm btn-circle ml-2 max-lg:hidden mr-4 text-primary"
+        aria-label="Toggle sidebar"
+      >
+        <FiSidebar size={22} />
+      </button>
+
+      <div className="flex flex-1 items-center align-middle">
+        <a
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              window.location.replace("/");
+            }}
+            className="flex items-center"
+          >
+            <img src="/logo.png" alt="Logo" className="w-7 h-7 mr-2" />
+            <div className="logo max-sm:hidden">FreshMart</div>
+          </a>
+      </div>
 
       <div className="flex-1" />
 

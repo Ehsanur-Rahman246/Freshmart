@@ -16,60 +16,32 @@ import {
   FiHelpCircle,
 } from "react-icons/fi";
 import { PiFarmLight } from "react-icons/pi";
-import { useQuery } from "@tanstack/react-query";
-import { getMyNotifications } from "../api/notification";
+import { useNotifications } from "../hooks/useNotifications";
+import { useConversations } from "../hooks/useMessages";
 import useLogout from "../hooks/useLogout";
+import { useAnnouncements } from "../hooks/useAnnouncements";
 
 const Menu = ({ setSidebarOpen }) => {
-  const { data: notifications = [] } = useQuery({
-    queryKey: ["notifications"],
-    queryFn: async () => (await getMyNotifications()).data.notifications,
-  });
+  const { data: notifications = [] } = useNotifications();
+  const { data: conversations = [] } = useConversations();
+  const { data: announcements = [] } = useAnnouncements();
+  const unreadAnnouncements = announcements.filter((a) => !a.isRead).length;
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const unreadMessages = conversations.reduce(
+    (sum, c) => sum + (c.unreadCount || 0),
+    0,
+  );
+
   const menuItems = [
-    {
-      name: "Home",
-      path: "/customer",
-      icon: FiHome,
-      end: true,
-    },
-    {
-      name: "Cart",
-      path: "/customer/cart",
-      icon: FiShoppingCart,
-    },
-    {
-      name: "Market",
-      path: "/customer/marketplace",
-      icon: FiShoppingBag,
-    },
-    {
-      name: "Orders",
-      path: "/customer/orders",
-      icon: FiPackage,
-    },
-    {
-      name: "Farms",
-      path: "/farms",
-      icon: PiFarmLight,
-    },
-    {
-      name: "Wishlist",
-      path: "/customer/wishlist",
-      icon: FiHeart,
-    },
-    {
-      name: "Reviews",
-      path: "/customer/reviews",
-      icon: FiStar,
-    },
-    {
-      name: "Messages",
-      path: "/customer/messages",
-      icon: FiMessageSquare,
-      badge: 3,
-    },
+    { name: "Home", path: "/customer", icon: FiHome, end: true },
+    { name: "Cart", path: "/customer/cart", icon: FiShoppingCart },
+    { name: "Market", path: "/customer/marketplace", icon: FiShoppingBag },
+    { name: "Orders", path: "/customer/orders", icon: FiPackage },
+    { name: "Farms", path: "/farms", icon: PiFarmLight },
+    { name: "Wishlist", path: "/customer/wishlist", icon: FiHeart },
+    { name: "Reviews", path: "/customer/reviews", icon: FiStar },
+    { name: "Messages", path: "/customer/messages", icon: FiMessageSquare, badge: unreadMessages + unreadAnnouncements },
     {
       name: "Notifications",
       path: "/customer/notifications",
@@ -170,7 +142,7 @@ const BottomMenu = ({ setSidebarOpen }) => {
     },
     {
       name: "Help",
-      path: "/help",
+      path: "/customer/messages",
       icon: FiHelpCircle,
     },
   ];

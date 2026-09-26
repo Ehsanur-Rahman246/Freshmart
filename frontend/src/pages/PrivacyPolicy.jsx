@@ -1,3 +1,4 @@
+// PrivacyPolicy.jsx
 const SECTIONS = [
   {
     title: "1. Information We Collect",
@@ -57,30 +58,43 @@ const SECTIONS = [
 export default function PrivacyPolicy() {
   return (
     <div className="bg-base-100 min-h-screen">
-      <div className="max-w-3xl mx-auto px-6 py-16">
-        <h1 className="text-3xl md:text-4xl mb-2">Privacy Policy</h1>
-        <p className="text-muted-light text-sm mb-10">
+      {/* Hero */}
+      <section className="max-w-5xl mx-auto px-6 pt-20 pb-14 text-center">
+        <span className="badge bg-primary-soft text-primary border-none font-semibold mb-4">
+          Legal
+        </span>
+        <h1 className="text-4xl md:text-5xl mb-4">Privacy Policy</h1>
+        <p className="text-muted text-lg max-w-2xl mx-auto">
+          How FreshMart collects, uses, and protects your information.
+        </p>
+        <p className="text-muted-light text-sm mt-4">
           Last updated: September 2026
         </p>
+      </section>
 
-        <div className="space-y-8">
+      {/* Sections */}
+      <section className="max-w-3xl mx-auto px-6 pb-16">
+        <div className="space-y-4">
           {SECTIONS.map((s) => (
-            <section key={s.title}>
+            <div
+              key={s.title}
+              className="card bg-base-100 border border-theme-light p-6"
+            >
               <h2 className="text-lg mb-2">{s.title}</h2>
               <p className="text-muted leading-relaxed whitespace-pre-line">
                 {s.body}
               </p>
-            </section>
+            </div>
           ))}
         </div>
 
-        <div className="mt-12 pt-6 border-t border-theme-light">
-          <p className="text-muted-light text-sm">
+        <div className="mt-6 rounded-box p-6 bg-accent-soft">
+          <p className="text-muted text-sm leading-relaxed">
             Have privacy questions or want your data removed? Delete your
             account anytime from your profile, or contact us through support.
           </p>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

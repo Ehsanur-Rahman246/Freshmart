@@ -4,14 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { FiTrash2, FiLogOut } from "react-icons/fi";
 import { getCustomerProfile, updateCustomerProfile } from "../../api/customer";
 import { logout, deleteAccount } from "../../api/auth";
-import ProfileHeader from "../../components/profile/shared/ProfileHeader";
-import PersonalInfoCard from "../../components/profile/shared/PersonalInfoCard";
-import EditInfoModal from "../../components/profile/shared/EditInfoModal";
-import ChangePasswordModal from "../../components/profile/shared/ChangePasswordModal";
-import DeleteAccountModal from "../../components/profile/shared/DeleteAccountModal";
-import WalletSummary from "../../components/profile/customer/WalletSummary";
-import AddressesCard from "../../components/profile/customer/AddressesCard";
-import AddressModal from "../../components/profile/customer/AddressModal";
+import ProfileHeader from "../../components/ProfileHeader";
+import PersonalInfoCard from "../../components/PersonalInfoCard";
+import EditInfoModal from "../../components/EditInfoModal";
+import ChangePasswordModal from "../../components/ChangePasswordModal";
+import DeleteAccountModal from "../../components/DeleteAccountModal";
+import WalletSummary from "../../components/WalletSummary";
+import AddressesCard from "../../components/AddressesCard";
+import AddressModal from "../../components/AddressModal";
 
 const QUERY_KEY = ["customerProfile"];
 

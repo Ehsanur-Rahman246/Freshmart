@@ -25,6 +25,6 @@ farmerRouter.patch(
   respondToCompanySaleOffer,
 );
 farmerRouter.patch("/company-sale/:productId/ready", markCompanySaleReady);
-farmerRouter.get("/revenue", userAuth, roleAuth("farmer"), getMyRevenue);
+farmerRouter.get("/revenue", getMyRevenue);
 
 export default farmerRouter;

@@ -2,10 +2,6 @@ import { useState } from "react";
 import { useParams, Link } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import CutomerNavbar from "../components/CustomerNavbar";
-import FarmerNavbar from "../components/FarmerNavbar";
-import AdminNavbar from "../components/AdminNavbar";
-import HomeNavbar from "../components/HomeNavbar";
 import ProductCard from "../components/ProductCard";
 import { getRelatedProducts } from "../api/product";
 import {
@@ -55,8 +51,6 @@ const ProductDetails = () => {
 
   const isCustomer = role === "customer";
   const isGuest = role === "guest";
-  const isAdmin = role === "admin";
-  const isFarmer = role === "farmer";
   const showCustomerActions = isCustomer || isGuest; // farmer/admin never see cart/heart
 
   const { data: product, isLoading } = useQuery({
@@ -180,13 +174,6 @@ const ProductDetails = () => {
     : "0";
 
   return (
-    <>
-      <nav className="sticky top-0 z-30">
-        {isCustomer && <CutomerNavbar />}
-        {isGuest && <HomeNavbar />}
-        {isAdmin && <AdminNavbar />}
-        {isFarmer && <FarmerNavbar />}
-      </nav>
       <main className="min-h-screen bg-base-100 px-4 py-6 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
           {/* Product section */}
@@ -481,7 +468,6 @@ const ProductDetails = () => {
           )}
         </div>
       </main>
-    </>
   );
 };
 

@@ -39,7 +39,12 @@ const notificationSchema = new mongoose.Schema(
         "newFarmerRegistered",
         "reviewReported",
         "productAdded",
+        "companySaleReady",
         "companySaleOfferAccepted",
+        "companySalePickedUp",
+        "companySaleFinalized",
+        "newMessage",
+        "conversationReported",
       ],
       required: true,
     },
@@ -58,6 +63,12 @@ const notificationSchema = new mongoose.Schema(
       ref: "Product",
       default: null,
     },
+    
+    relatedReview: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Review",
+      default: null,
+    },
 
     isRead: { type: Boolean, default: false },
   },
@@ -65,6 +76,9 @@ const notificationSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
+
+notificationSchema.index({ recipient: 1, createdAt: -1 });
+notificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 90 }); // 90-day TTL,
 
 const Notification = mongoose.model("Notification", notificationSchema);
 

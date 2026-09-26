@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Customer from "../models/Customer.js";
 import Product from "../models/Product.js";
+import Farm from "../models/Farm.js";
 
 export const getCart = async (req, res) => {
   try {
@@ -9,10 +10,10 @@ export const getCart = async (req, res) => {
     }).populate({
       path: "cart.product",
       select:
-        "name images price unit stock status farm farmer discountPercentage",
+        "name images price unit stock status farm farmer discountPercentage expiresAt",
       populate: {
         path: "farm",
-        select: "name",
+        select: "name isActive",
       },
     });
 
@@ -23,10 +24,21 @@ export const getCart = async (req, res) => {
       });
     }
 
+    const cart = customer.cart.map((item) => {
+      const product = item.product;
+      const isUnavailable =
+        !product ||
+        product.status !== "active" ||
+        (product.expiresAt && product.expiresAt <= new Date()) ||
+        product.farm?.isActive === false;
+
+      return { ...item.toObject(), isUnavailable };
+    });
+
     return res.status(200).json({
       success: true,
-      count: customer.cart.length,
-      cart: customer.cart,
+      count: cart.length,
+      cart,
     });
   } catch (error) {
     console.error(error);
@@ -86,6 +98,15 @@ export const addToCart = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "This product has expired",
+      });
+    }
+
+    const productFarm = await Farm.findById(product.farm).select("isActive");
+
+    if (!productFarm || !productFarm.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: "This farm is not accepting orders right now",
       });
     }
 
@@ -183,6 +204,15 @@ export const updateCartItem = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "This product has expired",
+      });
+    }
+
+    const productFarm = await Farm.findById(product.farm).select("isActive");
+
+    if (!productFarm || !productFarm.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: "This farm is not accepting orders right now",
       });
     }
 

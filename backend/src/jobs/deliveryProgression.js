@@ -10,6 +10,7 @@ import transporter from "../config/nodemailer.js";
 import notifyAdmin from "../utils/notifyAdmin.js";
 import Review from "../models/Review.js";
 import { maybeAddFarmerReply } from "../utils/farmerAutoReply.js";
+import { emitOrderStatusToCustomer } from "../utils/realtime.js";
 import {
   HOUR_IN_MS,
   CRON_INTERVAL,
@@ -18,6 +19,9 @@ import {
   LOCAL_DELIVERY_HOURS,
   SAME_ZONE_TRANSIT_HOURS,
 } from "../config/time.js";
+import { notifyCustomer } from "../utils/notifyCustomer.js";
+import { notifyFarmer } from "../utils/notifyFarmer.js";
+import { orderDeliveredEmail } from "../utils/emailTemplates.js";
 
 const ACTIVE_STATUSES = [
   "pickedUp",
@@ -99,8 +103,30 @@ const createDemoReviewsForOrder = async (order, customer, farmer) => {
   }
 };
 
+// commits status + nextTransitionAt early, before any side effects fire.
+// Returns false if the order was cancelled out from under this tick.
+const commitPartialTransition = async (order, fromStatus) => {
+  const result = await Order.updateOne(
+    { _id: order._id, status: fromStatus },
+    {
+      $set: {
+        status: order.status,
+        "delivery.nextTransitionAt": order.delivery.nextTransitionAt,
+      },
+    },
+  );
+  return result.modifiedCount === 1;
+};
+
 const advanceOrder = async (order) => {
   const now = new Date();
+  const fromStatus = order.status;
+
+  const stillCurrent = await Order.exists({
+    _id: order._id,
+    status: fromStatus,
+  });
+  if (!stillCurrent) return;
 
   switch (order.status) {
     case "pickedUp": {
@@ -157,11 +183,11 @@ const advanceOrder = async (order) => {
         now.getTime() + hours * HOUR_IN_MS,
       );
 
+      if (!(await commitPartialTransition(order, fromStatus))) return;
+
       const customer = await Customer.findById(order.customer).populate("user");
       if (customer) {
-        await createNotification({
-          recipient: customer.user._id,
-          recipientRole: "customer",
+        await notifyCustomer(order.customer, {
           type: "inTransit",
           title: "Order In Transit",
           message: "Your order is now in transit to your delivery zone.",
@@ -196,11 +222,11 @@ const advanceOrder = async (order) => {
         }
       }
 
+      if (!(await commitPartialTransition(order, fromStatus))) return;
+
       const customer = await Customer.findById(order.customer).populate("user");
       if (customer) {
-        await createNotification({
-          recipient: customer.user._id,
-          recipientRole: "customer",
+        await notifyCustomer(order.customer, {
           type: "toDestinationCenter",
           title: "Order Arrived at Destination Center",
           message: "Your order has arrived at the destination zone center.",
@@ -216,11 +242,11 @@ const advanceOrder = async (order) => {
         now.getTime() + LOCAL_DELIVERY_HOURS * HOUR_IN_MS,
       );
 
+      if (!(await commitPartialTransition(order, fromStatus))) return;
+
       const customer = await Customer.findById(order.customer).populate("user");
       if (customer) {
-        await createNotification({
-          recipient: customer.user._id,
-          recipientRole: "customer",
+        await notifyCustomer(order.customer, {
           type: "outForDelivery",
           title: "Out for Delivery",
           message: "Your order is out for delivery and will arrive soon.",
@@ -245,11 +271,11 @@ const advanceOrder = async (order) => {
         );
       }
 
+      if (!(await commitPartialTransition(order, fromStatus))) return;
+
       const customer = await Customer.findById(order.customer).populate("user");
       if (customer) {
-        await createNotification({
-          recipient: customer.user._id,
-          recipientRole: "customer",
+        await notifyCustomer(order.customer, {
           type: "delivered",
           title: "Order Delivered",
           message: "Your order has been delivered successfully.",
@@ -258,16 +284,18 @@ const advanceOrder = async (order) => {
 
         if (!customer.isDemo && customer.user.email) {
           try {
+            const emailOrder = await Order.findById(order._id)
+              .populate("items.product", "images")
+              .populate("farm", "name");
+
             await transporter.sendMail({
               from: process.env.EMAIL_USER,
               to: customer.user.email,
-              subject: "Your FreshMart Order Has Been Delivered",
-              html: `
-                <h2>Order Delivered</h2>
-                <p>Hello ${customer.user.name || "Customer"},</p>
-                <p>Your order <strong>${order.orderNumber}</strong> has been delivered successfully.</p>
-                <p>Thank you for shopping with FreshMart!</p>
-              `,
+              subject: `Order Delivered — ${order.orderNumber}`,
+              html: orderDeliveredEmail({
+                order: emailOrder,
+                recipientName: customer.user.name,
+              }),
             });
           } catch (emailError) {
             console.error(
@@ -280,9 +308,7 @@ const advanceOrder = async (order) => {
 
       const farmer = await Farmer.findById(order.farmer).populate("user");
       if (farmer) {
-        await createNotification({
-          recipient: farmer.user._id,
-          recipientRole: "farmer",
+        await notifyFarmer(order.farmer, {
           type: "delivered",
           title: "Order Delivered",
           message:
@@ -292,16 +318,19 @@ const advanceOrder = async (order) => {
 
         if (!farmer.isDemo && farmer.user.email) {
           try {
+            const emailOrder = await Order.findById(order._id)
+              .populate("items.product", "images")
+              .populate("farm", "name");
+
             await transporter.sendMail({
               from: process.env.EMAIL_USER,
               to: farmer.user.email,
-              subject: "An Order From Your Farm Has Been Delivered",
-              html: `
-                <h2>Order Delivered</h2>
-                <p>Hello ${farmer.user.name || "Farmer"},</p>
-                <p>Order <strong>${order.orderNumber}</strong> has been delivered to the customer.</p>
-                <p>Thank you for being part of FreshMart!</p>
-              `,
+              subject: `Order Delivered — ${order.orderNumber}`,
+              html: orderDeliveredEmail({
+                order: emailOrder,
+                recipientName: farmer.user.name,
+                recipientRole: "farmer",
+              }),
             });
           } catch (emailError) {
             console.error(
@@ -331,7 +360,17 @@ const advanceOrder = async (order) => {
       return;
   }
 
-  await order.save();
+  await Order.updateOne(
+    { _id: order._id, status: fromStatus }, // fails if it was cancelled meanwhile
+    {
+      $set: {
+        status: order.status,
+        "delivery.nextTransitionAt": order.delivery.nextTransitionAt,
+        "payment.status": order.payment.status,
+      },
+    },
+  );
+  await emitOrderStatusToCustomer(order);
 };
 
 // wait, so new tick don't process the same order

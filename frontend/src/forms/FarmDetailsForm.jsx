@@ -2,6 +2,7 @@ import { Formik, Form, Field, FieldArray, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import { FiX } from "react-icons/fi";
 import { createFarm, updateFarm } from "../api/farm";
+import DistrictSelect from "../components/DistrictSelect";
 
 const SIZE_UNITS = ["acre", "hectare", "decimal"];
 
@@ -67,7 +68,7 @@ export default function FarmDetailsForm({ mode = "create", farm, onSuccess }) {
       onSubmit={handleSubmit}
       enableReinitialize
     >
-      {({ values, isSubmitting, status }) => (
+      {({ values, isSubmitting, status, setFieldValue }) => (
         <Form className="flex flex-col gap-6">
           {status && (
             <p className="px-4 py-3 rounded-xl bg-error-soft text-error text-sm font-bold">
@@ -167,18 +168,19 @@ export default function FarmDetailsForm({ mode = "create", farm, onSuccess }) {
             <h2 className="text-lg font-bold mb-4">Location</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <label className="flex flex-col gap-2 text-sm font-semibold">
-                District *
-                <Field
+              <div className="flex flex-col gap-2">
+                <DistrictSelect
+                  label="District *"
                   name="location.district"
-                  className="w-full px-4 py-3 rounded-xl border border-theme bg-base-100 outline-none focus:border-primary"
+                  value={values.location.district}
+                  onChange={(e) => setFieldValue(e.target.name, e.target.value)}
                 />
                 <ErrorMessage
                   name="location.district"
                   component="p"
                   className="text-error text-xs"
                 />
-              </label>
+              </div>
 
               <label className="flex flex-col gap-2 text-sm font-semibold">
                 Upazila *

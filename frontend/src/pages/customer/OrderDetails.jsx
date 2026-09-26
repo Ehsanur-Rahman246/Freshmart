@@ -2,15 +2,29 @@ import { useParams, useNavigate } from "react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { FiArrowLeft } from "react-icons/fi";
-import { useOrderById } from "../../hooks/useOrders";
+import { useOrderById, useOrderGroup } from "../../hooks/useOrders";
 import { cancelOrder, confirmPayment } from "../../api/order";
 import OrderDetailContent from "../../components/OrderDetailContent";
+import { useEffect } from "react";
+
+const PRE_PAYMENT = ["pendingAcceptance", "orderPlaced", "paymentPending"];
 
 const OrderDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: order, isLoading, isError } = useOrderById(id);
+
+  const { data: group } = useOrderGroup(order?.orderGroup);
+  const groupPending = group?.some((o) => PRE_PAYMENT.includes(o.status));
+
+  useEffect(() => {
+    if (groupPending) {
+      navigate(`/customer/order-confirmation/${order.orderGroup}`, {
+        replace: true,
+      });
+    }
+  }, [groupPending, order, navigate]);
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["orders", "detail", id] });
@@ -52,7 +66,7 @@ const OrderDetails = () => {
         <p className="text-sm text-error">Could not load this order.</p>
       )}
 
-      {order && (
+      {order && group && !groupPending && (
         <OrderDetailContent
           order={order}
           onCancel={(orderId) => cancelMutation.mutate(orderId)}

@@ -8,9 +8,12 @@ export const getAllFarmers = () => api.get("/admin/farmers");
 export const getFarmerById = (farmerId) =>
   api.get(`/admin/farmers/${farmerId}`);
 export const getAllFarms = () => api.get("/admin/farms");
+export const getAllProductsAdmin = (status) =>
+  api.get("/admin/products", { params: status ? { status } : {} });
 export const toggleUserStatus = (userId) =>
   api.patch(`/admin/users/${userId}/status`);
-export const getCompanySaleQueue = () => api.get("/admin/company-sales");
+export const getCompanySaleQueue = (stage) =>
+  api.get("/admin/company-sales", { params: stage ? { stage } : {} });
 export const markCompanySalePickedUp = (productId) =>
   api.patch(`/admin/company-sales/${productId}/pickup`);
 export const finalizeCompanySale = (productId, company) =>

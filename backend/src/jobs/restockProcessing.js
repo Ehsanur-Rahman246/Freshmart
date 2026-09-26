@@ -1,7 +1,6 @@
 import cron from "node-cron";
 import Product from "../models/Product.js";
 import { CRON_INTERVAL } from "../config/time.js";
-import { processExpiredProduct } from "./demoFarmerAutomation.js";
 
 const applyMaturedRestocks = async () => {
   const now = new Date();
@@ -30,16 +29,14 @@ const applyMaturedRestocks = async () => {
     product.pendingRestocks = futureEntries;
 
     const isDemo = product.farmer?.isDemo === true;
-    const reactivatable = ["soldOut", "active", "soldToCompany"].includes(
-      product.status,
-    );
+    const reactivatable =
+      ["soldOut", "active"].includes(product.status) ||
+      (isDemo && product.status === "soldToCompany");
 
-    if (isDemo && reactivatable) {
-      if (product.expiresAt <= now) {
-        await processExpiredProduct(product); // saves internally
-        continue;
-      }
+    if (reactivatable) {
+      // expired ones are picked up by handleExpiredProducts on the next tick
       product.status = "active";
+      product.nextRestockAt = null;
     }
 
     await product.save();

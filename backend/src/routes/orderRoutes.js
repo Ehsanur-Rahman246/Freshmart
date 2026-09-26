@@ -15,6 +15,8 @@ import {
   getFarmOrders,
   getOrdersByFarm,
   getCheckoutPreview,
+  adminCancelNoDriver,
+  getOrderGroup,
 } from "../controllers/orderControllers.js";
 import userAuth from "../middlewares/userAuth.js";
 import roleAuth from "../middlewares/roleAuth.js";
@@ -36,6 +38,7 @@ orderRouter.patch(
   roleAuth("customer"),
   confirmPayment,
 );
+orderRouter.get("/group/:orderGroupId", userAuth, roleAuth("customer"), getOrderGroup);
 orderRouter.post(
   "/preview",
   userAuth,
@@ -89,6 +92,13 @@ orderRouter.get(
   userAuth,
   roleAuth("admin"),
   getOrdersByFarm,
+);
+
+orderRouter.patch(
+  "/:orderId/admin-cancel-no-driver",
+  userAuth,
+  roleAuth("admin"),
+  adminCancelNoDriver,
 );
 
 // ALL

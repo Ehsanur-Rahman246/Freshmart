@@ -16,6 +16,9 @@ import {
 } from "../../utils/productConstants";
 import { useState } from "react";
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getPricingRanges } from "../../api/pricing";
+import PriceRangeGauge from "../../components/PriceRangeGauge";
 
 // Reusable text input
 const TextInput = ({
@@ -123,6 +126,16 @@ export default function AddProduct() {
     discountPercentage: "0",
     listingDuration: "30",
   });
+
+  const { data: pricingRanges = [] } = useQuery({
+    queryKey: ["pricingRanges"],
+    queryFn: async () => (await getPricingRanges()).data.ranges,
+    staleTime: 1000 * 60,
+  });
+
+  const matchedRange = pricingRanges.find(
+    (r) => r.normalizedName === form.name.trim().toLowerCase(),
+  );
 
   useEffect(() => {
     getFarmById(farmId)
@@ -261,16 +274,25 @@ export default function AddProduct() {
               <h2 className="text-lg font-bold mb-4">Pricing</h2>
 
               <div className="grid grid-cols-2 gap-4 mb-4">
-                <TextInput
-                  label="Price *"
-                  type="number"
-                  name="price"
-                  value={form.price}
-                  onChange={handleChange}
-                  min="0"
-                  placeholder="120"
-                  required
-                />
+                <div>
+                  <TextInput
+                    label="Price *"
+                    type="number"
+                    name="price"
+                    value={form.price}
+                    onChange={handleChange}
+                    min="0"
+                    placeholder="120"
+                    required
+                  />
+                  {matchedRange && (
+                    <PriceRangeGauge
+                      min={matchedRange.min}
+                      max={matchedRange.max}
+                      value={form.price}
+                    />
+                  )}
+                </div>
                 <Dropdown
                   label="Unit *"
                   name="unit"

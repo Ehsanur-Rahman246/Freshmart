@@ -125,6 +125,11 @@ const productSchema = new mongoose.Schema(
   },
 );
 
+productSchema.index({ status: 1, expiresAt: 1 });
+productSchema.index({ farm: 1, status: 1 });
+productSchema.index({ companySaleStage: 1 });
+productSchema.index({ status: 1, nextRestockAt: 1 });
+
 const Product = mongoose.model("Product", productSchema);
 
 export default Product;

@@ -3,11 +3,15 @@ import Review from "../models/Review.js";
 import Customer from "../models/Customer.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
+import User from "../models/User.js";
 import Farm from "../models/Farm.js";
 import Farmer from "../models/Farmer.js";
-import createNotification from "../utils/createNotification.js";
 import notifyAdmin from "../utils/notifyAdmin.js";
 import { maybeAddFarmerReply } from "../utils/farmerAutoReply.js";
+import { notifyFarmer } from "../utils/notifyFarmer.js";
+
+const COMMENT_MAX = 1000;
+const REPLY_MAX = 500;
 
 const attachReplyProfiles = async (reviews) => {
   const farmerUserIds = new Set();
@@ -15,6 +19,7 @@ const attachReplyProfiles = async (reviews) => {
 
   for (const review of reviews) {
     for (const reply of review.replies) {
+      if (!reply.author) continue;
       if (reply.authorRole === "farmer")
         farmerUserIds.add(reply.author._id.toString());
       if (reply.authorRole === "customer")
@@ -40,6 +45,7 @@ const attachReplyProfiles = async (reviews) => {
 
   for (const review of reviews) {
     for (const reply of review.replies) {
+      if (!reply.author) continue;
       const uid = reply.author._id.toString();
       reply.authorProfileImage =
         reply.authorRole === "farmer"
@@ -82,6 +88,15 @@ export const createProductReview = async (req, res) => {
         success: false,
         message: "Rating must be a whole number between 1 and 5",
       });
+    }
+
+    if (comment !== undefined) {
+      if (String(comment ?? "").length > COMMENT_MAX) {
+        return res.status(400).json({
+          success: false,
+          message: `Comment cannot exceed ${COMMENT_MAX} characters`,
+        });
+      }
     }
 
     const customer = await Customer.findOne({
@@ -151,9 +166,7 @@ export const createProductReview = async (req, res) => {
 
     const farmer = await Farmer.findById(order.farmer);
     if (farmer) {
-      await createNotification({
-        recipient: farmer.user,
-        recipientRole: "farmer",
+      await notifyFarmer(product.farmer, {
         type: "reviewReceived",
         title: "New Product Review",
         message: `A customer left a ${rating}-star review for one of your products.`,
@@ -207,6 +220,15 @@ export const createFarmReview = async (req, res) => {
         success: false,
         message: "Rating must be a whole number between 1 and 5",
       });
+    }
+
+    if (comment !== undefined) {
+      if (String(comment ?? "").length > COMMENT_MAX) {
+        return res.status(400).json({
+          success: false,
+          message: `Comment cannot exceed ${COMMENT_MAX} characters`,
+        });
+      }
     }
 
     const customer = await Customer.findOne({
@@ -267,9 +289,7 @@ export const createFarmReview = async (req, res) => {
     const farmer = await Farmer.findById(order.farmer);
 
     if (farmer) {
-      await createNotification({
-        recipient: farmer.user,
-        recipientRole: "farmer",
+      await notifyFarmer(order.farmer, {
         type: "reviewReceived",
         title: "New Farm Review",
         message: `A customer left a ${rating}-star review for your farm.`,
@@ -309,14 +329,14 @@ export const getProductReviews = async (req, res) => {
     })
       .populate({
         path: "customer",
-        populate: {
-          path: "user",
-          select: "name",
-        },
+        select: "profileImage",
+        populate: { path: "user", select: "name" },
       })
-      .sort({
-        createdAt: -1,
-      });
+      .populate("replies.author", "name")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    await attachReplyProfiles(reviews);
 
     return res.status(200).json({
       success: true,
@@ -349,14 +369,14 @@ export const getFarmReviews = async (req, res) => {
     })
       .populate({
         path: "customer",
-        populate: {
-          path: "user",
-          select: "name",
-        },
+        select: "profileImage",
+        populate: { path: "user", select: "name" },
       })
-      .sort({
-        createdAt: -1,
-      });
+      .populate("replies.author", "name")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    await attachReplyProfiles(reviews);
 
     return res.status(200).json({
       success: true,
@@ -396,6 +416,15 @@ export const updateReview = async (req, res) => {
         success: false,
         message: "Rating must be a whole number between 1 and 5",
       });
+    }
+
+    if (comment !== undefined) {
+      if (String(comment ?? "").length > COMMENT_MAX) {
+        return res.status(400).json({
+          success: false,
+          message: `Comment cannot exceed ${COMMENT_MAX} characters`,
+        });
+      }
     }
 
     const customer = await Customer.findOne({
@@ -511,6 +540,13 @@ export const addReviewReply = async (req, res) => {
         .json({ success: false, message: "Reply message is required" });
     }
 
+    if (message.trim().length > REPLY_MAX) {
+      return res.status(400).json({
+        success: false,
+        message: `Reply cannot exceed ${REPLY_MAX} characters`,
+      });
+    }
+
     const review = await Review.findById(reviewId)
       .populate("product")
       .populate("farm");
@@ -585,18 +621,33 @@ export const reportReview = async (req, res) => {
         .json({ success: false, message: "A message is required to report" });
     }
 
-    const review = await Review.findById(reviewId);
+    const review = await Review.findById(reviewId)
+      .populate({
+        path: "customer",
+        populate: { path: "user", select: "name" },
+      })
+      .populate("product", "name")
+      .populate("farm", "name");
+
     if (!review) {
       return res
         .status(404)
         .json({ success: false, message: "Review not found" });
     }
 
+    const reporter = await User.findById(req.user.userId).select("name");
+    const target = review.product
+      ? `product "${review.product.name}"`
+      : `farm "${review.farm?.name}"`;
+
     await notifyAdmin({
       type: "reviewReported",
       title: "Review Reported",
-      message: message.trim(),
+      message: `${reporter?.name || "A user"} (${req.user.role}) reported ${
+        review.customer?.user?.name || "a customer"
+      }'s review of ${target}: ${message.trim().slice(0, 300)}`,
       relatedOrder: review.order,
+      relatedReview: review._id,
     });
 
     return res
@@ -659,6 +710,7 @@ export const getFarmerReviews = async (req, res) => {
     })
       .populate({
         path: "customer",
+        select: "profileImage",
         populate: { path: "user", select: "name" },
       })
       .populate("product", "name")
@@ -684,6 +736,7 @@ export const getAllReviewsAdmin = async (req, res) => {
     const reviews = await Review.find()
       .populate({
         path: "customer",
+        select: "profileImage",
         populate: { path: "user", select: "name" },
       })
       .populate("product", "name")
@@ -706,6 +759,12 @@ export const getAllReviewsAdmin = async (req, res) => {
 export const adminDeleteReview = async (req, res) => {
   try {
     const { reviewId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(reviewId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid review ID" });
+    }
     const review = await Review.findByIdAndDelete(reviewId);
     if (!review) {
       return res
@@ -724,6 +783,13 @@ export const adminDeleteReview = async (req, res) => {
 export const deleteReply = async (req, res) => {
   try {
     const { reviewId, replyId } = req.params;
+
+    if (
+      !mongoose.Types.ObjectId.isValid(reviewId) ||
+      !mongoose.Types.ObjectId.isValid(replyId)
+    ) {
+      return res.status(400).json({ success: false, message: "Invalid ID" });
+    }
 
     const review = await Review.findById(reviewId);
     if (!review) {

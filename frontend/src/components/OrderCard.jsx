@@ -2,9 +2,13 @@ import { FiMapPin, FiPackage } from "react-icons/fi";
 import { useNavigate } from "react-router";
 import { getStatusMeta } from "../utils/orderStatus";
 
-const PRE_PROCESSING_STATUSES = ["pendingAcceptance", "paymentPending"];
+const PRE_PROCESSING_STATUSES = [
+  "pendingAcceptance",
+  "orderPlaced",
+  "paymentPending",
+];
 
-const OrderCard = ({ order }) => {
+const OrderCard = ({ order, groupPending = false }) => {
   const navigate = useNavigate();
 
   const firstItem = order.items?.[0];
@@ -14,6 +18,9 @@ const OrderCard = ({ order }) => {
 
   const originLabel = `${order.farm?.location?.upazila}, ${order.farm?.location?.district}`;
   const destinationLabel = `${order.deliveryAddress?.upazila}, ${order.deliveryAddress?.district}`;
+
+  const goToGroup =
+    groupPending || PRE_PROCESSING_STATUSES.includes(order.status);
 
   return (
     <div className="bg-base-100 border border-theme-light rounded-box p-4 hover:shadow-md transition">
@@ -70,8 +77,8 @@ const OrderCard = ({ order }) => {
         <button
           onClick={() =>
             navigate(
-              PRE_PROCESSING_STATUSES.includes(order.status)
-                ? `/customer/order-confirmation/${order._id}`
+              goToGroup
+                ? `/customer/order-confirmation/${order.orderGroup}`
                 : `/customer/orders/${order._id}`,
             )
           }

@@ -1,5 +1,5 @@
-import ReviewsPage from "../../components/review/ReviewsPage";
-import RatingSummary from "../../components/review/RatingSummary";
+import ReviewsPage from "../../components/ReviewsPage";
+import RatingSummary from "../../components/RatingSummary";
 
 export default function FarmerReviews() {
   return (

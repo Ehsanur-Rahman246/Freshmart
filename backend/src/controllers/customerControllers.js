@@ -1,15 +1,22 @@
+import mongoose from "mongoose";
+import Product from "../models/Product.js";
 import Customer from "../models/Customer.js";
 import {
   uploadBufferToCloudinary,
   deleteFromCloudinary,
 } from "../utils/uploadToCloudinary.js";
+import { resolveDistrict } from "../utils/district.js";
+import { normalizePhone } from "../utils/phone.js";
+
+const SAFE_USER_FIELDS =
+  "-password -verificationOTP -verificationOTPExpireAt -passwordResetOTP -passwordResetOTPExpireAt";
 
 export const getCustomerProfile = async (req, res) => {
   try {
     const customer = await Customer.findOne({
       user: req.user.userId,
     })
-      .populate("user", "-password")
+      .populate("user", SAFE_USER_FIELDS)
       .populate({
         path: "wishlist",
         populate: { path: "farm", select: "name" },
@@ -148,22 +155,41 @@ export const addAddress = async (req, res) => {
       });
     }
 
-    if (isDefault || customer.addresses.length === 0) {
+    const isDefaultBool = isDefault === true || isDefault === "true";
+
+    if (isDefaultBool || customer.addresses.length === 0) {
       customer.addresses.forEach((item) => {
         item.isDefault = false;
+      });
+    }
+    const resolvedDistrict = await resolveDistrict(district);
+
+    if (!resolvedDistrict) {
+      return res.status(400).json({
+        success: false,
+        message: "We don't deliver to that district yet",
+      });
+    }
+
+    const phoneClean = normalizePhone(phone);
+
+    if (!phoneClean) {
+      return res.status(400).json({
+        success: false,
+        message: "Enter a valid Bangladeshi mobile number",
       });
     }
 
     customer.addresses.push({
       label,
-      recipientName,
-      phone,
+      recipientName: String(recipientName).trim(),
+      phone: phoneClean,
       division,
-      district,
+      district: resolvedDistrict,
       upazila,
       village,
       address,
-      isDefault: isDefault === true || customer.addresses.length === 0,
+      isDefault: isDefaultBool || customer.addresses.length === 0,
     });
 
     await customer.save();
@@ -221,14 +247,32 @@ export const updateAddress = async (req, res) => {
 
     if (label !== undefined) address.label = label;
     if (recipientName !== undefined) address.recipientName = recipientName;
-    if (phone !== undefined) address.phone = phone;
+    if (phone !== undefined) {
+      const phoneClean = normalizePhone(phone);
+      if (!phoneClean) {
+        return res.status(400).json({
+          success: false,
+          message: "Enter a valid Bangladeshi mobile number",
+        });
+      }
+      address.phone = phoneClean;
+    }
     if (division !== undefined) address.division = division;
-    if (district !== undefined) address.district = district;
+    if (district !== undefined) {
+      const resolvedDistrict = await resolveDistrict(district);
+      if (!resolvedDistrict) {
+        return res.status(400).json({
+          success: false,
+          message: "We don't deliver to that district yet",
+        });
+      }
+      address.district = resolvedDistrict;
+    }
     if (upazila !== undefined) address.upazila = upazila;
     if (village !== undefined) address.village = village;
     if (fullAddress !== undefined) address.address = fullAddress;
 
-    if (isDefault === true) {
+    if (isDefault === true || isDefault === "true") {
       customer.addresses.forEach((item) => {
         item.isDefault = item._id.toString() === addressId;
       });
@@ -377,9 +421,20 @@ export const addToWishlist = async (req, res) => {
   try {
     const { productId } = req.params;
 
-    const customer = await Customer.findOne({
-      user: req.user.userId,
-    });
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid product ID" });
+    }
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
+    }
+
+    const customer = await Customer.findOne({ user: req.user.userId });
 
     if (!customer) {
       return res.status(404).json({

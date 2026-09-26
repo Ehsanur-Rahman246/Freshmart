@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { checkAuth } from "../../api/auth";
-import PersonalInfoCard from "../../components/profile/shared/PersonalInfoCard";
-import EditInfoModal from "../../components/profile/shared/EditInfoModal";
-import ChangePasswordModal from "../../components/profile/shared/ChangePasswordModal";
+import PersonalInfoCard from "../../components/PersonalInfoCard";
+import EditInfoModal from "../../components/EditInfoModal";
+import ChangePasswordModal from "../../components/ChangePasswordModal";
 import Loader from "../../components/Loader";
 
 const queryKey = ["adminProfile"];

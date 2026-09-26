@@ -1,10 +1,10 @@
 import {
-  FiTrendingUp,
-  FiTrendingDown,
   FiPlus,
-  FiArrowUpRight,
   FiStar,
   FiChevronRight,
+  FiMessageSquare,
+  FiTrendingUp,
+  FiTrendingDown,
 } from "react-icons/fi";
 import { useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -13,15 +13,9 @@ import { getFarmerProfile } from "../../api/farmer";
 import { getFarmerReviews } from "../../api/review";
 import { useFarmerOrders } from "../../hooks/useOrders";
 import { getStatusMeta } from "../../utils/orderStatus";
-
-// Demo Data (ledger stays static)
-const crops = [
-  { name: "Tomato", unit: "kg", price: 62, delta: 8.4, up: true },
-  { name: "Spinach", unit: "bundle", price: 18, delta: 3.1, up: true },
-  { name: "Potato", unit: "kg", price: 24, delta: -2.5, up: false },
-  { name: "Mango", unit: "kg", price: 95, delta: 11.2, up: true },
-  { name: "Onion", unit: "kg", price: 31, delta: -1.1, up: false },
-];
+import { FaChartBar } from "react-icons/fa";
+import { getPriceLedger } from "../../api/pricing";
+import { getCategoryIcon } from "../../utils/categoryIcons";
 
 export default function FarmerDashboard() {
   const navigate = useNavigate();
@@ -40,8 +34,18 @@ export default function FarmerDashboard() {
   });
   const recentReviews = reviews.slice(0, 3);
 
+  const { data: priceLedger = [] } = useQuery({
+    queryKey: ["priceLedger"],
+    queryFn: async () => (await getPriceLedger()).data.entries,
+  });
+  const recentPriceChanges = priceLedger
+    .filter((entry) => entry.reason === "adminRangeClamp")
+    .slice(0, 4);
+
   const avgRating = reviews.length
-    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(
+        1,
+      )
     : null;
 
   const farmName = farmer?.farms?.[0]?.name || "Your Farm";
@@ -51,10 +55,8 @@ export default function FarmerDashboard() {
 
   return (
     <div className="min-h-screen bg-base-100 text-base-content">
-
       {/* Hero Section */}
       <section className="mx-auto max-w-7xl grid grid-cols-1 gap-10 px-6 py-14 lg:grid-cols-[1.1fr_0.9fr]">
-
         {/* Hero Left */}
         <div className="flex flex-col justify-center">
           <div className="mb-4 text-xs font-bold uppercase tracking-widest text-muted-light">
@@ -80,7 +82,11 @@ export default function FarmerDashboard() {
               <FiPlus size={17} />
               List a product
             </button>
-            <button type="button" className="btn btn-ghost text-base-content hover:bg-primary-soft">
+            <button
+              type="button"
+              onClick={() => navigate("/farmer/pricing-history")}
+              className="btn btn-ghost text-base-content hover:bg-primary-soft"
+            >
               View full price sheet
               <FiChevronRight size={16} />
             </button>
@@ -88,25 +94,61 @@ export default function FarmerDashboard() {
         </div>
 
         {/* Price Ledger */}
-        <div className="rounded-box border border-theme bg-base-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-extrabold">Price Ledger</h3>
-            <span className="text-xs font-bold tracking-wider text-muted-light">04 AUG</span>
+        <section className="mx-auto max-w-7xl px-6 py-8">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-2xl font-extrabold">Recent price changes</h2>
           </div>
-          <div className="my-4 border-t border-theme" />
 
-          {crops.map((crop) => (
-            <div key={crop.name} className="grid grid-cols-[1.3fr_0.8fr_0.9fr_1fr] items-center border-b border-theme-light py-3 last:border-b-0">
-              <strong className="text-sm">{crop.name}</strong>
-              <span className="text-xs text-muted-light">/{crop.unit}</span>
-              <strong className="text-right text-sm">৳{crop.price}</strong>
-              <span className={`flex items-center justify-end gap-1 text-xs font-bold ${crop.up ? "text-success" : "text-error"}`}>
-                {crop.up ? <FiTrendingUp size={13} /> : <FiTrendingDown size={13} />}
-                {crop.up ? "+" : ""}{crop.delta}%
-              </span>
+          {recentPriceChanges.length === 0 ? (
+            <p className="text-sm text-muted">No price changes yet.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-box border border-theme bg-base-200">
+              <table className="table">
+                <thead>
+                  <tr className="text-xs text-muted-light">
+                    <th></th>
+                    <th>Product</th>
+                    <th>Unit</th>
+                    <th>Price Change</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-theme-light">
+                  {recentPriceChanges.map((entry) => {
+                    const Icon = getCategoryIcon(entry.product?.category);
+                    const increased = entry.newPrice > entry.oldPrice;
+
+                    return (
+                      <tr key={entry._id}>
+                        <td className="w-12">
+                          <div className="w-9 h-9 rounded-full bg-primary-soft flex items-center justify-center">
+                            <Icon className="text-primary" size={16} />
+                          </div>
+                        </td>
+                        <td className="font-semibold truncate max-w-55">
+                          {entry.product?.name}
+                        </td>
+                        <td className="text-muted-light">
+                          {entry.product?.unit || "-"}
+                        </td>
+                        <td className="text-muted-light whitespace-nowrap">
+                          ৳{entry.oldPrice} → ৳{entry.newPrice}
+                        </td>
+                        <td className="w-10">
+                          {increased ? (
+                            <FiTrendingUp className="text-success" size={16} />
+                          ) : (
+                            <FiTrendingDown className="text-error" size={16} />
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          ))}
-        </div>
+          )}
+        </section>
       </section>
 
       {/* Quick Actions */}
@@ -116,10 +158,30 @@ export default function FarmerDashboard() {
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { icon: FiPlus, text: "List a product", sub: "Add stock, set your baseline-linked price", action: () => navigate("/farmer/listings") },
-            { icon: null, text: "Request payout", sub: "View your available revenue balance", action: () => navigate("/farmer/revenue") },
-            { icon: PiFarm, text: "Manage Your Farms", sub: "View your farms, manage it accrodingly", action: () => navigate("/farmer/farms") },
-            { icon: FiArrowUpRight, text: "Request price increase", sub: "Flag weather or yield conditions", action: () => navigate("/farmer/listings") },
+            {
+              icon: FiPlus,
+              text: "List a product",
+              sub: "Add stock, set your baseline-linked price",
+              action: () => navigate("/farmer/listings"),
+            },
+            {
+              icon: FaChartBar,
+              text: "Your Sales",
+              sub: "View your sales & revenue balance",
+              action: () => navigate("/farmer/revenue"),
+            },
+            {
+              icon: PiFarm,
+              text: "Manage Your Farms",
+              sub: "View your farms, manage it accrodingly",
+              action: () => navigate("/farmer/farms"),
+            },
+            {
+              icon: FiMessageSquare,
+              text: "Contact & Help",
+              sub: "Communicate with admin & customers. Get announcements",
+              action: () => navigate("/farmer/messages"),
+            },
           ].map((item, idx) => (
             <button
               key={idx}
@@ -127,7 +189,12 @@ export default function FarmerDashboard() {
               onClick={item.action}
               className="group rounded-box border border-theme bg-base-200 p-5 text-left transition hover:-translate-y-1 hover:border-primary hover:shadow-md"
             >
-              {item.icon && <item.icon size={21} className="text-primary transition group-hover:scale-110" />}
+              {item.icon && (
+                <item.icon
+                  size={21}
+                  className="text-primary transition group-hover:scale-110"
+                />
+              )}
               <div className="mt-4 text-base font-bold">{item.text}</div>
               <div className="mt-1 text-sm text-muted-light">{item.sub}</div>
             </button>
@@ -246,7 +313,6 @@ export default function FarmerDashboard() {
           </div>
         )}
       </section>
-
     </div>
   );
 }

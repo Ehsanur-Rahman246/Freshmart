@@ -101,6 +101,9 @@ reviewSchema.index(
   },
 );
 
+reviewSchema.index({ product: 1 });
+reviewSchema.index({ farm: 1 });
+
 const Review = mongoose.model("Review", reviewSchema);
 
 export default Review;

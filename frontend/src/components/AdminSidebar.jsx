@@ -12,24 +12,12 @@ import {
   FiVolume2,
   FiUser,
   FiLogOut,
-  FiSidebar,
 } from "react-icons/fi";
 import { PiFarmLight } from "react-icons/pi";
 import useLogout from "../hooks/useLogout";
-
-const menuItems = [
-  { name: "Home", path: "/admin", icon: FiHome, end: true },
-  { name: "Orders", path: "/admin/orders", icon: FiPackage },
-  { name: "Delivery", path: "/admin/live-deliveries", icon: FiTruck },
-  { name: "Market", path: "/admin/marketplace", icon: FiShoppingBag },
-  { name: "Customers", path: "/admin/customers", icon: FiUsers },
-  { name: "Farmers", path: "/admin/farmers", icon: FiUserCheck },
-  { name: "Farms", path: "/farms", icon: PiFarmLight },
-  { name: "Reviews", path: "/admin/reviews", icon: FiStar },
-  { name: "Notifications", path: "/admin/notifications", icon: FiBell },
-  { name: "Messages", path: "/admin/messages", icon: FiMessageSquare },
-  { name: "Announcements", path: "/admin/announcements", icon: FiVolume2 },
-];
+import { useNotifications } from "../hooks/useNotifications";
+import { useOrdersAwaitingAssignment } from "../hooks/useDelivery";
+import { useConversations } from "../hooks/useMessages";
 
 const NavItem = ({ item, collapsed, onNavigate }) => {
   const Icon = item.icon;
@@ -63,38 +51,60 @@ const NavItem = ({ item, collapsed, onNavigate }) => {
             <Icon size={19} strokeWidth={2} />
           </span>
           {!collapsed && <span className="flex-1 truncate">{item.name}</span>}
+          {!collapsed && item.badge > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-white">
+              {item.badge > 99 ? "99+" : item.badge}
+            </span>
+          )}
         </>
       )}
     </NavLink>
   );
 };
 
-const AdminSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }) => {
+const AdminSidebar = ({ collapsed, mobileOpen, setMobileOpen }) => {
   const handleLogout = useLogout();
+  const { data: notifications = [] } = useNotifications();
+  const { data: awaitingOrders = [] } = useOrdersAwaitingAssignment();
+  const { data: conversations = [] } = useConversations();
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const unreadMessages = conversations.reduce(
+    (sum, c) => sum + (c.unreadCount || 0),
+    0,
+  );
+
+  const menuItems = [
+    { name: "Home", path: "/admin", icon: FiHome, end: true },
+    { name: "Orders", path: "/admin/orders", icon: FiPackage },
+    {
+      name: "Delivery",
+      path: "/admin/live-deliveries",
+      icon: FiTruck,
+      badge: awaitingOrders.length,
+    },
+    { name: "Products", path: "/admin/products", icon: FiShoppingBag },
+    { name: "Customers", path: "/admin/customers", icon: FiUsers },
+    { name: "Farmers", path: "/admin/farmers", icon: FiUserCheck },
+    { name: "Farms", path: "/farms", icon: PiFarmLight },
+    { name: "Reviews", path: "/admin/reviews", icon: FiStar },
+    {
+      name: "Notifications",
+      path: "/admin/notifications",
+      icon: FiBell,
+      badge: unreadCount,
+    },
+    {
+      name: "Messages",
+      path: "/admin/messages",
+      icon: FiMessageSquare,
+      badge: unreadMessages,
+    },
+    { name: "Announcements", path: "/admin/announcements", icon: FiVolume2 },
+  ];
 
   const content = (collapsedState, onNavigate) => (
     <aside className="flex h-full flex-col">
-      {/* Logo + collapse toggle */}
-      <div
-        className={`flex items-center h-16 shrink-0 border-b border-theme-light px-4
-          ${collapsedState ? "justify-center" : "justify-between"}`}
-      >
-        {!collapsedState && (
-          <div className="flex items-center">
-            <img src="/logo.png" alt="Logo" className="w-7 h-7 mr-2" />
-            <div className="logo">FreshMart</div>
-          </div>
-        )}
-        <button
-          type="button"
-          onClick={() => setCollapsed((prev) => !prev)}
-          className="btn btn-ghost btn-sm btn-circle max-lg:hidden"
-          aria-label="Toggle sidebar"
-        >
-        <FiSidebar size={17}/>
-        </button>
-      </div>
-
       {/* Menu */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
         {menuItems.map((item) => (
@@ -136,23 +146,25 @@ const AdminSidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }) =>
     <>
       {/* Desktop persistent sidebar */}
       <div
-        className={`hidden lg:block fixed left-0 top-0 h-screen bg-base-100 border-r border-theme-light
-          transition-all duration-300 z-40
-          ${collapsed ? "w-20" : "w-64"}`}
+        className={`hidden lg:block fixed left-0 top-16 h-[calc(100vh-4rem)] bg-base-100 border-r border-theme-light
+                    transition-all duration-300 z-40
+                    ${collapsed ? "w-20" : "w-64"}`}
       >
         {content(collapsed, undefined)}
       </div>
 
-      {/* Mobile off-canvas drawer */}
+      {/* Mobile overlay backdrop */}
       <div
         onClick={() => setMobileOpen(false)}
         className={`fixed inset-0 z-40 bg-overlay transition-opacity duration-300 lg:hidden
-          ${mobileOpen ? "opacity-90" : "pointer-events-none opacity-0"}`}
+    ${mobileOpen ? "opacity-90" : "pointer-events-none opacity-0"}`}
       />
+
+      {/* Mobile off-canvas drawer */}
       <div
-        className={`fixed left-0 top-0 z-50 h-screen w-64 bg-base-100
-          transition-transform duration-300 lg:hidden
-          ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed left-0 top-16 z-50 h-[calc(100vh-4rem)] w-64 bg-base-100
+    transition-transform duration-300 lg:hidden
+    ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         {content(false, () => setMobileOpen(false))}
       </div>
