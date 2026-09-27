@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { connectDB } from "./config/db.js";
 import cors from "cors";
+import path from "path";
 import cookieParser from "cookie-parser";
 import authRouter from "./routes/authRoutes.js";
 import customerRouter from "./routes/customerRoutes.js";
@@ -31,17 +32,20 @@ import pricingRouter from "./routes/pricingRoutes.js";
 import promoCodeRouter from "./routes/promoCodeRoutes.js";
 
 const app = express();
+const __dirname = path.resolve();
 
 const PORT = process.env.PORT || 5000;
 const allowedOrigins = process.env.CLIENT_URL?.split(",") || [];
 
-app.set("trust proxy", 1); 
+app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(globalRateLimit);
 
-app.get("/", (_, res) => res.send("Server working"));
+if (process.env.NODE_ENV !== "production") {
+  app.get("/", (_, res) => res.send("Server working"));
+}
 
 app.use("/api/auth", authRouter);
 app.use("/api/customer", customerRouter);
@@ -58,7 +62,15 @@ app.use("/api/zones", zoneRouter);
 app.use("/api/messages", messageRouter);
 app.use("/api/announcements", announcementRouter);
 app.use("/api/pricing", pricingRouter);
-app.use("/api/promo-codes", promoCodeRouter);  
+app.use("/api/promo-codes", promoCodeRouter);
+
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "../frontend/dist")));
+
+  app.get("/{*splat}", (_, res) => {
+    res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
+  });
+}
 
 app.use((_, res) => {
   res.status(404).json({
