@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
-import Banner1 from "../assets/dash1.jpg"
-import Banner2 from "../assets/dash2.jpg"
-import Banner3 from "../assets/dash3.jpg"
-import Banner4 from "../assets/dash4.jpg"
+import Banner1 from "/dash1.jpg"
+import Banner2 from "/dash2.jpg"
+import Banner3 from "/dash3.jpg"
+import Banner4 from "/dash4.jpg"
 
 const HeroSlider = () => {
   const slides = [
@@ -58,6 +58,7 @@ const HeroSlider = () => {
     const interval = setInterval(nextSlide, 8000);
 
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

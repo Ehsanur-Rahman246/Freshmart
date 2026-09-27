@@ -169,8 +169,8 @@ const AdminFarmers = () => {
                         disabled={toggleMutation.isPending}
                         className={`btn btn-xs ${
                           farmer.user?.isActive
-                            ? "btn-outline text-error"
-                            : "bg-primary text-primary-content"
+                            ? "bg-error-soft text-error hover:bg-error hover:text-error-content"
+                            : "bg-primary-soft text-primary hover:bg-primary hover:text-primary-content"
                         }`}
                       >
                         {farmer.user?.isActive ? "Disable" : "Enable"}

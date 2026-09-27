@@ -27,3 +27,5 @@ dist-ssr
 update-files.bat
 selected-files/
 scripts/
+frontend/src/assets
+frontend/src/products

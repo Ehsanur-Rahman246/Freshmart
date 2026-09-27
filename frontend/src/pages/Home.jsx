@@ -3,9 +3,8 @@ import { Link } from "react-router";
 import { FaArrowRightLong } from "react-icons/fa6";
 import Footer from "../components/Footer";
 import HomeNavbar from "../components/HomeNavbar";
-import heroImage from "../assets/hero.png";
+import heroImage from "/hero.png";
 import About from "./About";
-import HeroScroll from "../components/HeroScroll";
 
 const ROTATING_WORDS = [
   { text: "priced fairly.", className: "text-primary" },
@@ -173,9 +172,6 @@ const Home = () => {
             <HeroSlogan />
           </div>
         </div>
-      </section>
-      <section>
-        <HeroScroll/>
       </section>
       <section>
         <About />
