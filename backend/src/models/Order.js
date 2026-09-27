@@ -18,10 +18,8 @@ const orderSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      index: true,
     },
 
-    // One order belongs to one farmer/farm origin
     farmer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Farmer",
@@ -42,36 +40,15 @@ const orderSchema = new mongoose.Schema(
             ref: "Product",
             required: true,
           },
-
-          name: {
-            type: String,
-            required: true,
-            trim: true,
-          },
-
-          price: {
-            type: Number,
-            required: true,
-            min: 0,
-          },
-
-          quantity: {
-            type: Number,
-            required: true,
-            min: 1,
-          },
-
+          name: { type: String, required: true, trim: true },
+          price: { type: Number, required: true, min: 0 },
+          quantity: { type: Number, required: true, min: 1 },
           unit: {
             type: String,
             required: true,
             enum: ["kg", "g", "L", "pc", "dozen", "mL"],
           },
-
-          subtotal: {
-            type: Number,
-            required: true,
-            min: 0,
-          },
+          subtotal: { type: Number, required: true, min: 0 },
         },
       ],
       required: true,
@@ -81,70 +58,30 @@ const orderSchema = new mongoose.Schema(
       },
     },
 
-    // Delivery address snapshot
     deliveryAddress: {
-      name: {
-        type: String,
-        required: true,
-        trim: true,
-      },
-
-      phone: {
-        type: String,
-        required: true,
-        trim: true,
-      },
-
-      district: {
-        type: String,
-        required: true,
-        trim: true,
-      },
-
-      upazila: {
-        type: String,
-        required: true,
-        trim: true,
-      },
-
-      village: {
-        type: String,
-        required: true,
-        trim: true,
-      },
-
-      address: {
-        type: String,
-        required: true,
-        trim: true,
-      },
+      name: { type: String, required: true, trim: true },
+      phone: { type: String, required: true, trim: true },
+      division: { type: String, trim: true, default: "" },
+      district: { type: String, required: true, trim: true },
+      upazila: { type: String, required: true, trim: true },
+      village: { type: String, required: true, trim: true },
+      address: { type: String, required: true, trim: true },
     },
 
     pricing: {
-      itemsTotal: {
-        type: Number,
-        required: true,
-        min: 0,
-      },
+      itemsTotal: { type: Number, required: true, min: 0 },
+      deliveryCharge: { type: Number, required: true, default: 0, min: 0 },
+      discount: { type: Number, default: 0, min: 0 },
+      pointsRedeemed: { type: Number, default: 0, min: 0 },
+      promoDiscount: { type: Number, default: 0, min: 0 },
+      debtSettled: { type: Number, default: 0, min: 0 },
+      total: { type: Number, required: true, min: 0 },
+    },
 
-      deliveryCharge: {
-        type: Number,
-        required: true,
-        default: 0,
-        min: 0,
-      },
-
-      discount: {
-        type: Number,
-        default: 0,
-        min: 0,
-      },
-
-      total: {
-        type: Number,
-        required: true,
-        min: 0,
-      },
+    promoCode: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "PromoCode",
+      default: null,
     },
 
     payment: {
@@ -153,17 +90,12 @@ const orderSchema = new mongoose.Schema(
         required: true,
         enum: ["cashOnDelivery", "online"],
       },
-
       status: {
         type: String,
         enum: ["pending", "paid", "failed", "refunded"],
         default: "pending",
       },
-
-      transactionId: {
-        type: String,
-        default: null,
-      },
+      transactionId: { type: String, default: null },
     },
 
     delivery: {
@@ -172,33 +104,29 @@ const orderSchema = new mongoose.Schema(
         ref: "Zone",
         required: true,
       },
-
       destinationZone: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Zone",
         required: true,
       },
-
-      estimatedHours: {
-        type: Number,
-        required: true,
-        min: 0,
-      },
-
-      estimatedDeliveryAt: {
-        type: Date,
-        required: true,
-      },
-
+      estimatedHours: { type: Number, required: true, min: 0 },
+      estimatedDeliveryAt: { type: Date, required: true },
       courier: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Courier",
         default: null,
       },
-
       driver: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Driver",
+        driverId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Driver",
+          default: null,
+        },
+        name: { type: String, default: null },
+        phone: { type: String, default: null },
+      },
+      nextTransitionAt: {
+        type: Date,
         default: null,
       },
     },
@@ -206,21 +134,59 @@ const orderSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: [
+        "pendingAcceptance",
+        "orderPlaced",
+        "paymentPending",
         "processing",
+        "rejected",
         "readyForPickup",
+        "pickedUp",
         "toOriginCenter",
         "inTransit",
+        "toDestinationCenter",
         "outForDelivery",
         "delivered",
         "cancelled",
       ],
-      default: "processing",
+      default: "pendingAcceptance",
+    },
+
+    refund: {
+      percentage: { type: Number, default: 0 },
+      amount: { type: Number, default: 0 },
+    },
+
+    cancelledAt: {
+      type: Date,
+      default: null,
+    },
+
+    // for demo farmer
+    isDemoOrder: {
+      type: Boolean,
+      default: false,
+    },
+
+    // for demo order
+    processingReadyAt: {
+      type: Date,
+      default: null,
+    },
+    paymentDueAt: {
+      type: Date,
+      default: null,
     },
   },
   {
     timestamps: true,
   },
 );
+
+orderSchema.index({ status: 1, "delivery.nextTransitionAt": 1 });
+orderSchema.index({ status: 1, processingReadyAt: 1 });
+orderSchema.index({ status: 1, paymentDueAt: 1 });
+orderSchema.index({ customer: 1, createdAt: -1 });
+orderSchema.index({ farmer: 1, createdAt: -1 });
 
 const Order = mongoose.model("Order", orderSchema);
 

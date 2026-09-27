@@ -14,21 +14,14 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
 
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    name: { type: String, required: true, trim: true },
 
-    description: {
-      type: String,
-      default: "",
-      trim: true,
-    },
+    description: { type: String, default: "", trim: true },
 
     images: [
       {
-        type: String,
+        url: { type: String, required: true },
+        publicId: { type: String, required: true },
       },
     ],
 
@@ -46,11 +39,7 @@ const productSchema = new mongoose.Schema(
       ],
     },
 
-    subCategory: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    subCategory: { type: String, required: true, trim: true },
 
     season: {
       type: String,
@@ -71,11 +60,7 @@ const productSchema = new mongoose.Schema(
       ],
     },
 
-    price: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
+    price: { type: Number, required: true, min: 0 },
 
     unit: {
       type: String,
@@ -83,29 +68,13 @@ const productSchema = new mongoose.Schema(
       enum: ["kg", "g", "L", "pc", "dozen", "mL"],
     },
 
-    stock: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
+    stock: { type: Number, required: true, min: 0 },
 
-    discountPercentage: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 100,
-    },
+    discountPercentage: { type: Number, default: 0, min: 0, max: 100 },
 
-    listingDuration: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
+    listingDuration: { type: Number, required: true, min: 1 },
 
-    expiresAt: {
-      type: Date,
-      required: true,
-    },
+    expiresAt: { type: Date, required: true },
 
     status: {
       type: String,
@@ -120,20 +89,46 @@ const productSchema = new mongoose.Schema(
       default: "active",
     },
 
-    company: {
+    company: { type: String, default: null },
+
+    soldToCompanyAt: { type: Date, default: null },
+
+    companySaleStage: {
       type: String,
-      default: null,
+      enum: [
+        "none",
+        "awaitingFarmerResponse",
+        "processing",
+        "readyForPickup",
+        "pickedUp",
+        "sold",
+        "rejected",
+      ],
+      default: "none",
     },
 
-    soldToCompanyAt: {
-      type: Date,
-      default: null,
-    },
+    companySalePrice: { type: Number, default: null },
+
+    companySaleRespondBy: { type: Date, default: null },
+
+    nextRestockAt: { type: Date, default: null },
+
+    pendingRestocks: [
+      {
+        quantity: { type: Number, required: true, min: 1 },
+        availableAt: { type: Date, required: true },
+      },
+    ],
   },
   {
     timestamps: true,
   },
 );
+
+productSchema.index({ status: 1, expiresAt: 1 });
+productSchema.index({ farm: 1, status: 1 });
+productSchema.index({ companySaleStage: 1 });
+productSchema.index({ status: 1, nextRestockAt: 1 });
 
 const Product = mongoose.model("Product", productSchema);
 

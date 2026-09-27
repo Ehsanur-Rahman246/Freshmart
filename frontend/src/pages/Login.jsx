@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   FiUser,
   FiLock,
@@ -7,9 +8,9 @@ import {
   FiEye,
   FiEyeOff,
   FiArrowRight,
+  FiArrowLeft,
 } from "react-icons/fi";
-import { login } from "../lib/auth";
-
+import { login } from "../api/auth";
 
 // Input component
 const Input = ({
@@ -35,6 +36,7 @@ const Input = ({
 
 export default function Login() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // State
   const [showPassword, setShowPassword] = useState(false);
@@ -71,6 +73,7 @@ export default function Login() {
 
       if (data.success) {
         const { user } = data;
+        await queryClient.invalidateQueries({ queryKey: ["viewer"] });
         goToPage(user);
       }
     } catch (error) {
@@ -101,6 +104,13 @@ export default function Login() {
             Login to your FreshMart account
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          className="text-sm text-muted hover:text-primary mb-3 inline-flex items-center gap-1"
+        >
+          <FiArrowLeft /> Back to Home
+        </button>
 
         {/* Login Form */}
         <form onSubmit={handleLogin} className="space-y-4">

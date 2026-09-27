@@ -1,11 +1,13 @@
 import express from "express";
 import userAuth from "../middlewares/userAuth.js";
 import roleAuth from "../middlewares/roleAuth.js";
+import { upload } from "../middlewares/multer.middleware.js";
 import {
   addAddress,
   addToWishlist,
   deleteAddress,
   getCustomerProfile,
+  getWallet,
   getWishlist,
   removeFromWishlist,
   setDefaultAddress,
@@ -15,49 +17,21 @@ import {
 
 const customerRouter = express.Router();
 
-customerRouter.get(
-  "/profile",
-  userAuth,
-  roleAuth("customer"),
-  getCustomerProfile,
-);
+customerRouter.use(userAuth, roleAuth("customer"));
+
+customerRouter.get("/profile", getCustomerProfile);
 customerRouter.patch(
   "/profile",
-  userAuth,
-  roleAuth("customer"),
+  upload.single("profileImage"),
   updateCustomerProfile,
 );
-customerRouter.post("/addresses", userAuth, roleAuth("customer"), addAddress);
-customerRouter.patch(
-  "/addresses/:addressId",
-  userAuth,
-  roleAuth("customer"),
-  updateAddress,
-);
-customerRouter.delete(
-  "/addresses/:addressId",
-  userAuth,
-  roleAuth("customer"),
-  deleteAddress,
-);
-customerRouter.patch(
-  "/addresses/:addressId/default",
-  userAuth,
-  roleAuth("customer"),
-  setDefaultAddress,
-);
-customerRouter.get("/wishlist", userAuth, roleAuth("customer"), getWishlist);
-customerRouter.post(
-  "/wishlist/:productId",
-  userAuth,
-  roleAuth("customer"),
-  addToWishlist,
-);
-customerRouter.delete(
-  "/wishlist/:productId",
-  userAuth,
-  roleAuth("customer"),
-  removeFromWishlist,
-);
+customerRouter.get("/wallet", getWallet);
+customerRouter.post("/addresses", addAddress);
+customerRouter.patch("/addresses/:addressId", updateAddress);
+customerRouter.delete("/addresses/:addressId", deleteAddress);
+customerRouter.patch("/addresses/:addressId/default", setDefaultAddress);
+customerRouter.get("/wishlist", getWishlist);
+customerRouter.post("/wishlist/:productId", addToWishlist);
+customerRouter.delete("/wishlist/:productId", removeFromWishlist);
 
 export default customerRouter;

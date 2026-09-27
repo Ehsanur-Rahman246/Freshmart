@@ -1,18 +1,13 @@
 import mongoose from "mongoose";
-
 import Notification from "../models/Notification.js";
-
-// ==========================================
-// GET MY NOTIFICATIONS
-// ==========================================
 
 export const getMyNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find({
       recipient: req.user.userId,
-    }).sort({
-      createdAt: -1,
-    });
+    })
+      .sort({ createdAt: -1 })
+      .limit(100);
 
     return res.status(200).json({
       success: true,
@@ -28,10 +23,6 @@ export const getMyNotifications = async (req, res) => {
     });
   }
 };
-
-// ==========================================
-// GET UNREAD NOTIFICATIONS
-// ==========================================
 
 export const getUnreadNotifications = async (req, res) => {
   try {
@@ -56,10 +47,6 @@ export const getUnreadNotifications = async (req, res) => {
     });
   }
 };
-
-// ==========================================
-// MARK ONE NOTIFICATION AS READ
-// ==========================================
 
 export const markNotificationAsRead = async (req, res) => {
   try {
@@ -103,10 +90,6 @@ export const markNotificationAsRead = async (req, res) => {
   }
 };
 
-// ==========================================
-// MARK ALL NOTIFICATIONS AS READ
-// ==========================================
-
 export const markAllNotificationsAsRead = async (req, res) => {
   try {
     const result = await Notification.updateMany(
@@ -136,10 +119,6 @@ export const markAllNotificationsAsRead = async (req, res) => {
   }
 };
 
-// ==========================================
-// DELETE NOTIFICATION
-// ==========================================
-
 export const deleteNotification = async (req, res) => {
   try {
     const { notificationId } = req.params;
@@ -166,6 +145,27 @@ export const deleteNotification = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Notification deleted successfully",
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const deleteAllNotifications = async (req, res) => {
+  try {
+    const result = await Notification.deleteMany({
+      recipient: req.user.userId,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "All notifications deleted successfully",
+      deletedCount: result.deletedCount,
     });
   } catch (error) {
     console.error(error);

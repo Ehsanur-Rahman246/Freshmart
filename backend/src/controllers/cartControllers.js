@@ -1,10 +1,7 @@
 import mongoose from "mongoose";
 import Customer from "../models/Customer.js";
 import Product from "../models/Product.js";
-
-// ==========================================
-// GET CART
-// ==========================================
+import Farm from "../models/Farm.js";
 
 export const getCart = async (req, res) => {
   try {
@@ -13,10 +10,10 @@ export const getCart = async (req, res) => {
     }).populate({
       path: "cart.product",
       select:
-        "name images price unit stock status farm farmer discountPercentage",
+        "name images price unit stock status farm farmer discountPercentage expiresAt",
       populate: {
         path: "farm",
-        select: "name",
+        select: "name isActive",
       },
     });
 
@@ -27,10 +24,21 @@ export const getCart = async (req, res) => {
       });
     }
 
+    const cart = customer.cart.map((item) => {
+      const product = item.product;
+      const isUnavailable =
+        !product ||
+        product.status !== "active" ||
+        (product.expiresAt && product.expiresAt <= new Date()) ||
+        product.farm?.isActive === false;
+
+      return { ...item.toObject(), isUnavailable };
+    });
+
     return res.status(200).json({
       success: true,
-      count: customer.cart.length,
-      cart: customer.cart,
+      count: cart.length,
+      cart,
     });
   } catch (error) {
     console.error(error);
@@ -41,10 +49,6 @@ export const getCart = async (req, res) => {
     });
   }
 };
-
-// ==========================================
-// ADD TO CART
-// ==========================================
 
 export const addToCart = async (req, res) => {
   try {
@@ -97,6 +101,15 @@ export const addToCart = async (req, res) => {
       });
     }
 
+    const productFarm = await Farm.findById(product.farm).select("isActive");
+
+    if (!productFarm || !productFarm.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: "This farm is not accepting orders right now",
+      });
+    }
+
     // Check available stock
     if (product.stock < quantityNumber) {
       return res.status(400).json({
@@ -144,10 +157,6 @@ export const addToCart = async (req, res) => {
     });
   }
 };
-
-// ==========================================
-// UPDATE CART ITEM
-// ==========================================
 
 export const updateCartItem = async (req, res) => {
   try {
@@ -198,6 +207,15 @@ export const updateCartItem = async (req, res) => {
       });
     }
 
+    const productFarm = await Farm.findById(product.farm).select("isActive");
+
+    if (!productFarm || !productFarm.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: "This farm is not accepting orders right now",
+      });
+    }
+
     // Check available stock
     if (quantityNumber > product.stock) {
       return res.status(400).json({
@@ -235,10 +253,6 @@ export const updateCartItem = async (req, res) => {
     });
   }
 };
-
-// ==========================================
-// REMOVE FROM CART
-// ==========================================
 
 export const removeFromCart = async (req, res) => {
   try {

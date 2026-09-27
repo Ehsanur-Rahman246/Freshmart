@@ -4,10 +4,13 @@ import { Routes, Route } from "react-router";
 import CustomerLayout from "./layouts/CustomerLayout";
 import FarmerLayout from "./layouts/FarmerLayout";
 import AdminLayout from "./layouts/AdminLayout";
+import PublicLayout from "./layouts/PublicLayout";
 
 // Protection
 import ProtectedRoute from "./components/ProtectedRoute";
 import GuestRoute from "./components/GuestRoute";
+import VerifyRoute from "./components/VerifyRoute";
+import VerifyAccount from "./pages/VerifyAccount";
 
 // Public Pages
 import Home from "./pages/Home";
@@ -31,8 +34,10 @@ import OrderConfirmation from "./pages/customer/OrderConfirmation";
 import CustomerOrders from "./pages/customer/Orders";
 import CustomerOrderDetails from "./pages/customer/OrderDetails";
 import CustomerReviews from "./pages/customer/Reviews";
+import Wishlist from "./pages/customer/Wishlist";
 import CustomerNotifications from "./pages/customer/Notifications";
 import CustomerProfile from "./pages/customer/Profile";
+import CustomerMessages from "./pages/customer/Messages";
 
 // Farmer Pages
 import FarmerDashboard from "./pages/farmer/Dashboard";
@@ -40,11 +45,15 @@ import Listings from "./pages/farmer/Listings";
 import AddProduct from "./pages/farmer/AddProduct";
 import EditProduct from "./pages/farmer/EditProduct";
 import FarmerOrders from "./pages/farmer/Orders";
-import FarmerOrderDetails from "./pages/farmer/OrderDetails";
+import PricingHistory from "./pages/farmer/PricingHistory";
 import RevenueBalance from "./pages/farmer/RevenueBalance";
 import FarmerReviews from "./pages/farmer/Reviews";
 import FarmerNotifications from "./pages/farmer/Notifications";
 import FarmerProfileSettings from "./pages/farmer/Profile";
+import Farms from "./pages/farmer/Farms";
+import FarmAdd from "./pages/farmer/FarmAdd";
+import FarmManage from "./pages/farmer/FarmManage";
+import FarmerMessages from "./pages/farmer/Messages";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -53,10 +62,11 @@ import Customers from "./pages/admin/Customers";
 import Products from "./pages/admin/Products";
 import Orders from "./pages/admin/Orders";
 import LiveDeliveries from "./pages/admin/LiveDeliveries";
-import Analytics from "./pages/admin/Analytics";
 import AdminReviews from "./pages/admin/Reviews";
 import AdminNotifications from "./pages/admin/Notifications";
 import AdminProfile from "./pages/admin/Profile";
+import AdminAnnouncements from "./pages/admin/Announcements";
+import AdminMessages from "./pages/admin/Messages";
 
 // Error Pages
 import Unauthorized from "./pages/Unauthorized";
@@ -65,194 +75,131 @@ import NotFound from "./pages/NotFound";
 const AppRoutes = () => {
   return (
     <Routes>
-
       {/* ================= PUBLIC ROUTES ================= */}
 
-      <Route path="/" element={<Home />} />
-      <Route path="/about" element={<About />} />
-      <Route path="/marketplace" element={<Marketplace />} />
-      <Route path="/products/:id" element={<ProductDetails />} />
-      <Route path="/farms" element={<FarmInfo/>} />
-      <Route path="/farms/:id" element={<FarmProfile />} />
-
-      <Route element={<GuestRoute/>}>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+      <Route element={<VerifyRoute />}>
+        <Route path="/verify-account" element={<VerifyAccount />} />
       </Route>
 
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route
-        path="/terms-and-conditions"
-        element={<TermsConditions />}
-      />
-      <Route
-        path="/privacy-policy"
-        element={<PrivacyPolicy />}
-      />
-
+      <Route element={<GuestRoute />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+      </Route>
+      <Route element={<PublicLayout />}>
+        <Route path="/about" element={<About />} />
+        <Route path="/marketplace" element={<Marketplace />} />
+        <Route path="/products/:productId" element={<ProductDetails />} />
+        <Route path="/farms" element={<FarmInfo />} />
+        <Route path="/farms/:id" element={<FarmProfile />} />
+        <Route path="/terms-and-conditions" element={<TermsConditions />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+      </Route>
 
       {/* ================= CUSTOMER ROUTES ================= */}
-       {/*  */}
 
       <Route element={<ProtectedRoute role="customer" />}>
         <Route path="/customer" element={<CustomerLayout />}>
-
           <Route index element={<CustomerDashboard />} />
 
-          <Route
-            path="marketplace"
-            element={<CustomerMarketplace />}
-          />
+          <Route path="marketplace" element={<CustomerMarketplace />} />
 
           <Route path="cart" element={<Cart />} />
 
           <Route path="checkout" element={<Checkout />} />
 
           <Route
-            path="order-confirmation"
+            path="order-confirmation/:id?"
             element={<OrderConfirmation />}
           />
 
           <Route path="orders">
             <Route index element={<CustomerOrders />} />
-            <Route
-              path=":id"
-              element={<CustomerOrderDetails />}
-            />
+            <Route path=":id" element={<CustomerOrderDetails />} />
           </Route>
 
-          <Route
-            path="reviews"
-            element={<CustomerReviews />}
-          />
+          <Route path="reviews" element={<CustomerReviews />} />
 
-          <Route
-            path="notifications"
-            element={<CustomerNotifications />}
-          />
+          <Route path="wishlist" element={<Wishlist />} />
 
-          <Route
-            path="profile"
-            element={<CustomerProfile />}
-          />
+          <Route path="notifications" element={<CustomerNotifications />} />
 
+          <Route path="messages" element={<CustomerMessages/>} />
+
+          <Route path="profile" element={<CustomerProfile />} />
         </Route>
       </Route>
-
 
       {/* ================= FARMER ROUTES ================= */}
 
       <Route element={<ProtectedRoute role="farmer" />}>
         <Route path="/farmer" element={<FarmerLayout />}>
-
           <Route index element={<FarmerDashboard />} />
+
+          <Route path="farms">
+            <Route index element={<Farms />} />
+            <Route path="new" element={<FarmAdd />} />
+            <Route path=":farmId" element={<FarmManage />} />
+          </Route>
 
           <Route path="listings">
             <Route index element={<Listings />} />
-            <Route path="add" element={<AddProduct />} />
+            <Route path="add/:farmId" element={<AddProduct />} />
             <Route path="edit/:id" element={<EditProduct />} />
           </Route>
 
           <Route path="orders">
             <Route index element={<FarmerOrders />} />
-            <Route
-              path=":id"
-              element={<FarmerOrderDetails />}
-            />
           </Route>
 
-          <Route
-            path="revenue"
-            element={<RevenueBalance />}
-          />
+          <Route path="pricing-history" element={<PricingHistory />} />
 
-          <Route
-            path="reviews"
-            element={<FarmerReviews />}
-          />
+          <Route path="revenue" element={<RevenueBalance />} />
 
-          <Route
-            path="notifications"
-            element={<FarmerNotifications />}
-          />
+          <Route path="reviews" element={<FarmerReviews />} />
 
-          <Route
-            path="profile"
-            element={<FarmerProfileSettings />}
-          />
+          <Route path="notifications" element={<FarmerNotifications />} />
 
+          <Route path="messages" element={<FarmerMessages />} />
+
+          <Route path="profile" element={<FarmerProfileSettings />} />
         </Route>
       </Route>
-
 
       {/* ================= ADMIN ROUTES ================= */}
 
       <Route element={<ProtectedRoute role="admin" />}>
         <Route path="/admin" element={<AdminLayout />}>
-
           <Route index element={<AdminDashboard />} />
 
-          <Route
-            path="farmers"
-            element={<Farmers />}
-          />
+          <Route path="farmers" element={<Farmers />} />
 
-          <Route
-            path="customers"
-            element={<Customers />}
-          />
+          <Route path="customers" element={<Customers />} />
 
-          <Route
-            path="products"
-            element={<Products />}
-          />
+          <Route path="products" element={<Products />} />
 
-          <Route
-            path="orders"
-            element={<Orders />}
-          />
+          <Route path="orders" element={<Orders />} />
 
-          <Route
-            path="live-deliveries"
-            element={<LiveDeliveries />}
-          />
+          <Route path="live-deliveries" element={<LiveDeliveries />} />
 
-          <Route
-            path="analytics"
-            element={<Analytics />}
-          />
+          <Route path="reviews" element={<AdminReviews />} />
 
-          <Route
-            path="reviews"
-            element={<AdminReviews />}
-          />
+          <Route path="notifications" element={<AdminNotifications />} />
 
-          <Route
-            path="notifications"
-            element={<AdminNotifications />}
-          />
+          <Route path="profile" element={<AdminProfile />} />
 
-          <Route
-            path="profile"
-            element={<AdminProfile />}
-          />
-
+          <Route path="messages" element={<AdminMessages/>} />
+          
+          <Route path="announcements" element={<AdminAnnouncements/>} />
         </Route>
       </Route>
 
-
       {/* ================= ERROR ROUTES ================= */}
 
-      <Route
-        path="/unauthorized"
-        element={<Unauthorized />}
-      />
+      <Route path="/unauthorized" element={<Unauthorized />} />
 
-      <Route
-        path="*"
-        element={<NotFound />}
-      />
-
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 };

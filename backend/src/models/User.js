@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 
-
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -61,6 +60,10 @@ const userSchema = new mongoose.Schema(
     },
 
     passwordResetOTPExpireAt: {
+      type: Date,
+      default: null,
+    },
+    passwordChangedAt: {
       type: Date,
       default: null,
     },

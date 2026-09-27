@@ -65,8 +65,19 @@ const customerSchema = new mongoose.Schema(
     },
 
     profileImage: {
-      type: String,
-      default: null,
+      url: { type: String, default: null },
+      publicId: { type: String, default: null },
+    },
+
+    pointsBalance: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    debtBalance: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
 
     addresses: {
@@ -97,6 +108,11 @@ const customerSchema = new mongoose.Schema(
         ref: "Product",
       },
     ],
+
+    isDemo: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

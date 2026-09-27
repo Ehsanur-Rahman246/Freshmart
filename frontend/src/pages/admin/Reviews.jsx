@@ -1,9 +1,5 @@
+import ReviewsPage from "../../components/ReviewsPage";
 
-
-const Reviews = () => {
-  return (
-    <div>Reviews</div>
-  )
+export default function AdminReviews() {
+  return <ReviewsPage title="All Reviews" emptyMessage="No reviews yet." />;
 }
-
-export default Reviews

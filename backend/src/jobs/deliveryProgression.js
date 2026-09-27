@@ -1,0 +1,411 @@
+import cron from "node-cron";
+import Order from "../models/Order.js";
+import Driver from "../models/Driver.js";
+import Customer from "../models/Customer.js";
+import Farmer from "../models/Farmer.js";
+import Zone from "../models/Zone.js";
+import createNotification from "../utils/createNotification.js";
+import { recordSaleRevenue } from "../utils/recordRevenue.js";
+import transporter from "../config/nodemailer.js";
+import notifyAdmin from "../utils/notifyAdmin.js";
+import Review from "../models/Review.js";
+import { maybeAddFarmerReply } from "../utils/farmerAutoReply.js";
+import { emitOrderStatusToCustomer } from "../utils/realtime.js";
+import {
+  HOUR_IN_MS,
+  CRON_INTERVAL,
+  DISPATCH_HOURS,
+  DESTINATION_PROCESSING_HOURS,
+  LOCAL_DELIVERY_HOURS,
+  SAME_ZONE_TRANSIT_HOURS,
+} from "../config/time.js";
+import { notifyCustomer } from "../utils/notifyCustomer.js";
+import { notifyFarmer } from "../utils/notifyFarmer.js";
+import { orderDeliveredEmail } from "../utils/emailTemplates.js";
+
+const ACTIVE_STATUSES = [
+  "pickedUp",
+  "toOriginCenter",
+  "inTransit",
+  "toDestinationCenter",
+  "outForDelivery",
+];
+
+const randomInRange = (min, max) => Math.random() * (max - min) + min;
+
+const PRODUCT_REVIEW_COMMENTS = {
+  3: [
+    "Decent quality, did the job.",
+    "Fresh enough, nothing special.",
+    "Average experience, would consider buying again.",
+  ],
+  4: [
+    "Really good quality, fresher than expected.",
+    "Happy with this purchase, will buy again.",
+    "Good value for the price.",
+  ],
+  5: [
+    "Excellent quality! Couldn't ask for better.",
+    "Absolutely fresh and delicious, highly recommend.",
+    "Perfect every time, this is my go-to.",
+  ],
+};
+
+const FARM_REVIEW_COMMENTS = {
+  3: [
+    "An okay experience overall, nothing stood out.",
+    "Products were fine, delivery was on time.",
+  ],
+  4: [
+    "Good farm, reliable quality across products.",
+    "Consistently good produce from this farm.",
+  ],
+  5: [
+    "Amazing farm, consistently top-notch produce!",
+    "One of the best farms I've ordered from.",
+  ],
+};
+
+const randomRating = () => Math.floor(Math.random() * 3) + 3; // 3, 4, or 5
+const pickComment = (pool, rating) =>
+  pool[rating][Math.floor(Math.random() * pool[rating].length)];
+
+// Demo customer -> auto-reviews
+const createDemoReviewsForOrder = async (order, customer, farmer) => {
+  try {
+    for (const item of order.items) {
+      const rating = randomRating();
+
+      const review = await Review.create({
+        customer: customer._id,
+        order: order._id,
+        product: item.product,
+        rating,
+        comment: pickComment(PRODUCT_REVIEW_COMMENTS, rating),
+      });
+
+      await maybeAddFarmerReply(review, farmer);
+    }
+
+    const farmRating = randomRating();
+
+    const farmReview = await Review.create({
+      customer: customer._id,
+      order: order._id,
+      farm: order.farm,
+      rating: farmRating,
+      comment: pickComment(FARM_REVIEW_COMMENTS, farmRating),
+    });
+
+    await maybeAddFarmerReply(farmReview, farmer);
+  } catch (error) {
+    console.error(`Demo review creation failed for order ${order._id}:`, error);
+  }
+};
+
+// commits status + nextTransitionAt early, before any side effects fire.
+// Returns false if the order was cancelled out from under this tick.
+const commitPartialTransition = async (order, fromStatus) => {
+  const result = await Order.updateOne(
+    { _id: order._id, status: fromStatus },
+    {
+      $set: {
+        status: order.status,
+        "delivery.nextTransitionAt": order.delivery.nextTransitionAt,
+      },
+    },
+  );
+  return result.modifiedCount === 1;
+};
+
+const advanceOrder = async (order) => {
+  const now = new Date();
+  const fromStatus = order.status;
+
+  const stillCurrent = await Order.exists({
+    _id: order._id,
+    status: fromStatus,
+  });
+  if (!stillCurrent) return;
+
+  switch (order.status) {
+    case "pickedUp": {
+      order.status = "toOriginCenter";
+      order.delivery.nextTransitionAt = new Date(
+        now.getTime() + DISPATCH_HOURS * HOUR_IN_MS,
+      );
+      if (order.delivery.driver?.driverId) {
+        const originZone = await Zone.findById(order.delivery.originZone);
+        if (originZone) {
+          await Driver.updateOne(
+            { _id: order.delivery.driver.driverId },
+            { $set: { currentZone: originZone.zoneId } },
+          );
+        }
+      }
+
+      break;
+    }
+
+    case "toOriginCenter": {
+      order.status = "inTransit";
+
+      const originZone = await Zone.findById(order.delivery.originZone);
+      const destinationZone = await Zone.findById(
+        order.delivery.destinationZone,
+      );
+
+      let hours;
+
+      if (
+        originZone &&
+        destinationZone &&
+        originZone._id.toString() === destinationZone._id.toString()
+      ) {
+        hours = randomInRange(
+          SAME_ZONE_TRANSIT_HOURS.min,
+          SAME_ZONE_TRANSIT_HOURS.max,
+        );
+      } else {
+        const route = originZone?.routes.find(
+          (r) => r.toZone === destinationZone?.zoneId,
+        );
+
+        hours = route
+          ? randomInRange(route.minHours, route.maxHours)
+          : randomInRange(
+              SAME_ZONE_TRANSIT_HOURS.min,
+              SAME_ZONE_TRANSIT_HOURS.max,
+            );
+      }
+
+      order.delivery.nextTransitionAt = new Date(
+        now.getTime() + hours * HOUR_IN_MS,
+      );
+
+      if (!(await commitPartialTransition(order, fromStatus))) return;
+
+      const customer = await Customer.findById(order.customer).populate("user");
+      if (customer) {
+        await notifyCustomer(order.customer, {
+          type: "inTransit",
+          title: "Order In Transit",
+          message: "Your order is now in transit to your delivery zone.",
+          relatedOrder: order._id,
+        });
+      }
+      await notifyAdmin({
+        type: "inTransit",
+        title: "Order In Transit",
+        message: `Order ${order.orderNumber} is now in transit.`,
+        relatedOrder: order._id,
+      });
+      break;
+    }
+
+    case "inTransit": {
+      order.status = "toDestinationCenter";
+      order.delivery.nextTransitionAt = new Date(
+        now.getTime() + DESTINATION_PROCESSING_HOURS * HOUR_IN_MS,
+      );
+
+      // Driver currect zone update
+      if (order.delivery.driver?.driverId) {
+        const destinationZone = await Zone.findById(
+          order.delivery.destinationZone,
+        );
+        if (destinationZone) {
+          await Driver.updateOne(
+            { _id: order.delivery.driver.driverId },
+            { $set: { currentZone: destinationZone.zoneId } },
+          );
+        }
+      }
+
+      if (!(await commitPartialTransition(order, fromStatus))) return;
+
+      const customer = await Customer.findById(order.customer).populate("user");
+      if (customer) {
+        await notifyCustomer(order.customer, {
+          type: "toDestinationCenter",
+          title: "Order Arrived at Destination Center",
+          message: "Your order has arrived at the destination zone center.",
+          relatedOrder: order._id,
+        });
+      }
+      break;
+    }
+
+    case "toDestinationCenter": {
+      order.status = "outForDelivery";
+      order.delivery.nextTransitionAt = new Date(
+        now.getTime() + LOCAL_DELIVERY_HOURS * HOUR_IN_MS,
+      );
+
+      if (!(await commitPartialTransition(order, fromStatus))) return;
+
+      const customer = await Customer.findById(order.customer).populate("user");
+      if (customer) {
+        await notifyCustomer(order.customer, {
+          type: "outForDelivery",
+          title: "Out for Delivery",
+          message: "Your order is out for delivery and will arrive soon.",
+          relatedOrder: order._id,
+        });
+      }
+      break;
+    }
+
+    case "outForDelivery": {
+      order.status = "delivered";
+      order.delivery.nextTransitionAt = null;
+
+      if (order.payment.method === "cashOnDelivery") {
+        order.payment.status = "paid";
+      }
+
+      if (order.delivery.driver?.driverId) {
+        await Driver.updateOne(
+          { _id: order.delivery.driver.driverId },
+          { $set: { isAvailable: true } },
+        );
+      }
+
+      if (!(await commitPartialTransition(order, fromStatus))) return;
+
+      const customer = await Customer.findById(order.customer).populate("user");
+      if (customer) {
+        await notifyCustomer(order.customer, {
+          type: "delivered",
+          title: "Order Delivered",
+          message: "Your order has been delivered successfully.",
+          relatedOrder: order._id,
+        });
+
+        if (!customer.isDemo && customer.user.email) {
+          try {
+            const emailOrder = await Order.findById(order._id)
+              .populate("items.product", "images")
+              .populate("farm", "name");
+
+            await transporter.sendMail({
+              from: process.env.EMAIL_USER,
+              to: customer.user.email,
+              subject: `Order Delivered — ${order.orderNumber}`,
+              html: orderDeliveredEmail({
+                order: emailOrder,
+                recipientName: customer.user.name,
+              }),
+            });
+          } catch (emailError) {
+            console.error(
+              "Failed to send order-delivered email (customer):",
+              emailError,
+            );
+          }
+        }
+      }
+
+      const farmer = await Farmer.findById(order.farmer).populate("user");
+      if (farmer) {
+        await notifyFarmer(order.farmer, {
+          type: "delivered",
+          title: "Order Delivered",
+          message:
+            "An order from your farm has been delivered to the customer.",
+          relatedOrder: order._id,
+        });
+
+        if (!farmer.isDemo && farmer.user.email) {
+          try {
+            const emailOrder = await Order.findById(order._id)
+              .populate("items.product", "images")
+              .populate("farm", "name");
+
+            await transporter.sendMail({
+              from: process.env.EMAIL_USER,
+              to: farmer.user.email,
+              subject: `Order Delivered — ${order.orderNumber}`,
+              html: orderDeliveredEmail({
+                order: emailOrder,
+                recipientName: farmer.user.name,
+                recipientRole: "farmer",
+              }),
+            });
+          } catch (emailError) {
+            console.error(
+              "Failed to send order-delivered email (farmer):",
+              emailError,
+            );
+          }
+        }
+      }
+
+      if (customer?.isDemo) {
+        await createDemoReviewsForOrder(order, customer, farmer);
+      }
+
+      await recordSaleRevenue(order);
+      await notifyAdmin({
+        type: "delivered",
+        title: "Order Delivered",
+        message: `Order ${order.orderNumber} has been delivered.`,
+        relatedOrder: order._id,
+      });
+
+      break;
+    }
+
+    default:
+      return;
+  }
+
+  await Order.updateOne(
+    { _id: order._id, status: fromStatus }, // fails if it was cancelled meanwhile
+    {
+      $set: {
+        status: order.status,
+        "delivery.nextTransitionAt": order.delivery.nextTransitionAt,
+        "payment.status": order.payment.status,
+      },
+    },
+  );
+  await emitOrderStatusToCustomer(order);
+};
+
+// wait, so new tick don't process the same order
+const CLAIM_LEASE_MS = 30 * 1000;
+
+const claimDueOrder = () =>
+  Order.findOneAndUpdate(
+    {
+      status: { $in: ACTIVE_STATUSES },
+      "delivery.nextTransitionAt": { $lte: new Date() },
+    },
+    {
+      $set: {
+        "delivery.nextTransitionAt": new Date(Date.now() + CLAIM_LEASE_MS),
+      },
+    },
+    { returnDocument: "after", sort: { "delivery.nextTransitionAt": 1 } },
+  );
+
+export const startDeliveryScheduler = () => {
+  cron.schedule(CRON_INTERVAL, async () => {
+    try {
+      let order;
+
+      while ((order = await claimDueOrder())) {
+        try {
+          await advanceOrder(order);
+        } catch (error) {
+          console.error(`advanceOrder failed for ${order._id}:`, error);
+        }
+      }
+    } catch (error) {
+      console.error("Delivery scheduler error:", error);
+    }
+  });
+
+  console.log("Delivery scheduler started");
+};

@@ -1,99 +1,107 @@
 import express from "express";
-
 import {
   createOrder,
   getMyOrders,
   getOrderById,
   cancelOrder,
+  confirmPayment,
   getFarmerOrders,
   updateOrderStatus,
   getAllOrders,
   getOrdersByCustomer,
   getOrdersByFarmer,
+  acceptOrder,
+  rejectOrder,
+  getFarmOrders,
+  getOrdersByFarm,
+  getCheckoutPreview,
+  adminCancelNoDriver,
+  getOrderGroup,
 } from "../controllers/orderControllers.js";
-
 import userAuth from "../middlewares/userAuth.js";
 import roleAuth from "../middlewares/roleAuth.js";
 
 const orderRouter = express.Router();
 
-
-// ==========================================
-// CUSTOMER ROUTES
-// ==========================================
-
-orderRouter.post(
-  "/",
-  userAuth,
-  roleAuth("customer"),
-  createOrder,
-);
-
-orderRouter.get(
-  "/my-orders",
-  userAuth,
-  roleAuth("customer"),
-  getMyOrders,
-);
-
+// CUSTOMER
+orderRouter.post("/", userAuth, roleAuth("customer"), createOrder);
+orderRouter.get("/my-orders", userAuth, roleAuth("customer"), getMyOrders);
 orderRouter.patch(
   "/:orderId/cancel",
   userAuth,
   roleAuth("customer"),
   cancelOrder,
 );
+orderRouter.patch(
+  "/group/:orderGroupId/confirm-payment",
+  userAuth,
+  roleAuth("customer"),
+  confirmPayment,
+);
+orderRouter.get("/group/:orderGroupId", userAuth, roleAuth("customer"), getOrderGroup);
+orderRouter.post(
+  "/preview",
+  userAuth,
+  roleAuth("customer"),
+  getCheckoutPreview,
+);
 
-
-// ==========================================
-// FARMER ROUTES
-// ==========================================
-
+// FARMER
 orderRouter.get(
   "/farmer/my-orders",
   userAuth,
   roleAuth("farmer"),
   getFarmerOrders,
 );
-
+orderRouter.get("/farm/:farmId", userAuth, roleAuth("farmer"), getFarmOrders);
 orderRouter.patch(
   "/:orderId/status",
   userAuth,
   roleAuth("farmer"),
   updateOrderStatus,
 );
-
-
-// ==========================================
-// ADMIN ROUTES
-// ==========================================
-
-orderRouter.get(
-  "/admin/all",
+orderRouter.patch(
+  "/:orderId/accept",
   userAuth,
-  roleAuth("admin"),
-  getAllOrders,
+  roleAuth("farmer"),
+  acceptOrder,
+);
+orderRouter.patch(
+  "/:orderId/reject",
+  userAuth,
+  roleAuth("farmer"),
+  rejectOrder,
 );
 
+// ADMIN
+orderRouter.get("/admin/all", userAuth, roleAuth("admin"), getAllOrders);
 orderRouter.get(
   "/admin/customer/:customerId",
   userAuth,
   roleAuth("admin"),
   getOrdersByCustomer,
 );
-
 orderRouter.get(
   "/admin/farmer/:farmerId",
   userAuth,
   roleAuth("admin"),
   getOrdersByFarmer,
 );
+orderRouter.get(
+  "/admin/farm/:farmId",
+  userAuth,
+  roleAuth("admin"),
+  getOrdersByFarm,
+);
 
+orderRouter.patch(
+  "/:orderId/admin-cancel-no-driver",
+  userAuth,
+  roleAuth("admin"),
+  adminCancelNoDriver,
+);
 
-// ==========================================
-// SINGLE ORDER
-// CUSTOMER / FARMER / ADMIN
-// ==========================================
-
+// ALL
 orderRouter.get(
   "/:orderId",
   userAuth,

@@ -1,9 +1,9 @@
+import Marketplace from "../Marketplace"
 
-
-const Marketplace = () => {
+const CustomerMarketplace = () => {
   return (
-    <div>Marketplace</div>
+    <Marketplace/>
   )
 }
 
-export default Marketplace
+export default CustomerMarketplace

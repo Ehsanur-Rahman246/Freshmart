@@ -1,17 +1,14 @@
-import OrderCounter from "../models/OrderCounter.js";
+import crypto from "crypto";
+import Order from "../models/Order.js";
 
 const generateOrderNumber = async () => {
-  const counter = await OrderCounter.findOneAndUpdate(
-    { name: "order" },
-    { $inc: { sequence: 1 } },
-    {
-      new: true,
-      upsert: true,
-      setDefaultsOnInsert: true,
-    }
-  );
+  let orderNumber;
 
-  return `FM-${String(counter.sequence).padStart(8, "0")}`;
+  do {
+    orderNumber = `FM-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+  } while (await Order.exists({ orderNumber }));
+
+  return orderNumber;
 };
 
 export default generateOrderNumber;
