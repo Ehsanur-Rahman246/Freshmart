@@ -1,11 +1,17 @@
-import { useQuery } from "@tanstack/react-query";
-import { getAllFarmers } from "../../api/admin";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getAllFarmers, toggleUserStatus } from "../../api/admin";
 import { getAllOrders } from "../../api/order";
 import { getAllReviewsAdmin } from "../../api/review";
 import Loader from "../../components/Loader";
+import toast from "react-hot-toast";
 
 const getInitials = (name = "") =>
-  name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
 const AdminFarmers = () => {
   const { data: farmers = [], isLoading: farmersLoading } = useQuery({
@@ -21,6 +27,18 @@ const AdminFarmers = () => {
   const { data: reviews = [], isLoading: reviewsLoading } = useQuery({
     queryKey: ["reviews", "admin"],
     queryFn: async () => (await getAllReviewsAdmin()).data.reviews,
+  });
+
+  const queryClient = useQueryClient();
+
+  const toggleMutation = useMutation({
+    mutationFn: (userId) => toggleUserStatus(userId),
+    onSuccess: (res) => {
+      toast.success(res.data.message);
+      queryClient.invalidateQueries({ queryKey: ["admin", "farmers"] });
+    },
+    onError: (error) =>
+      toast.error(error?.response?.data?.message || "Could not update status"),
   });
 
   if (farmersLoading || ordersLoading || reviewsLoading) {
@@ -40,7 +58,10 @@ const AdminFarmers = () => {
   for (const review of reviews) {
     const farmId = review.farm?._id;
     if (!farmId) continue;
-    reviewsCountByFarmId.set(farmId, (reviewsCountByFarmId.get(farmId) || 0) + 1);
+    reviewsCountByFarmId.set(
+      farmId,
+      (reviewsCountByFarmId.get(farmId) || 0) + 1,
+    );
   }
 
   return (
@@ -56,11 +77,12 @@ const AdminFarmers = () => {
         <div className="overflow-x-auto">
           <table className="w-full min-w-200 table-fixed">
             <colgroup>
-              <col className="w-[30%]" />
-              <col className="w-[20%]" />
-              <col className="w-[16%]" />
-              <col className="w-[17%]" />
-              <col className="w-[17%]" />
+              <col className="w-[26%]" />
+              <col className="w-[28%]" />
+              <col className="w-[14%]" />
+              <col className="w-[12%]" />
+              <col className="w-[10%]" />
+              <col className="w-[10%]" />
             </colgroup>
 
             <thead>
@@ -70,13 +92,17 @@ const AdminFarmers = () => {
                 <th className="text-center font-medium">Status</th>
                 <th className="text-center font-medium">Orders</th>
                 <th className="text-center font-medium">Reviews</th>
+                <th className="text-center font-medium">Action</th>
               </tr>
             </thead>
 
             <tbody>
               {farmers.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-sm text-muted-light">
+                  <td
+                    colSpan={6}
+                    className="p-8 text-center text-sm text-muted-light"
+                  >
                     No farmers yet.
                   </td>
                 </tr>
@@ -84,7 +110,8 @@ const AdminFarmers = () => {
 
               {farmers.map((farmer) => {
                 const reviewsCount = (farmer.farms || []).reduce(
-                  (sum, farm) => sum + (reviewsCountByFarmId.get(farm._id) || 0),
+                  (sum, farm) =>
+                    sum + (reviewsCountByFarmId.get(farm._id) || 0),
                   0,
                 );
 
@@ -133,6 +160,22 @@ const AdminFarmers = () => {
                     </td>
 
                     <td className="text-sm text-center">{reviewsCount}</td>
+
+                    <td className="text-center">
+                      <button
+                        onClick={() =>
+                          toggleMutation.mutate(farmer.user?._id)
+                        }
+                        disabled={toggleMutation.isPending}
+                        className={`btn btn-xs ${
+                          farmer.user?.isActive
+                            ? "btn-outline text-error"
+                            : "bg-primary text-primary-content"
+                        }`}
+                      >
+                        {farmer.user?.isActive ? "Disable" : "Enable"}
+                      </button>
+                    </td>
                   </tr>
                 );
               })}

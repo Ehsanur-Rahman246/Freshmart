@@ -8,6 +8,7 @@ import {
   FiEye,
   FiEyeOff,
   FiArrowRight,
+  FiArrowLeft,
 } from "react-icons/fi";
 import { login } from "../api/auth";
 
@@ -103,6 +104,13 @@ export default function Login() {
             Login to your FreshMart account
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          className="text-sm text-muted hover:text-primary mb-3 inline-flex items-center gap-1"
+        >
+          <FiArrowLeft /> Back to Home
+        </button>
 
         {/* Login Form */}
         <form onSubmit={handleLogin} className="space-y-4">

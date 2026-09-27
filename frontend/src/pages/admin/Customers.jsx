@@ -1,12 +1,18 @@
-import { useQuery } from "@tanstack/react-query";
-import { FiUser, FiMapPin } from "react-icons/fi";
-import { getAllCustomers } from "../../api/admin";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { FiMapPin } from "react-icons/fi";
+import { getAllCustomers, toggleUserStatus } from "../../api/admin";
 import { getAllOrders } from "../../api/order";
 import { getAllReviewsAdmin } from "../../api/review";
 import Loader from "../../components/Loader";
+import toast from "react-hot-toast";
 
 const getInitials = (name = "") =>
-  name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
 const AdminCustomers = () => {
   const { data: customers = [], isLoading: customersLoading } = useQuery({
@@ -22,6 +28,18 @@ const AdminCustomers = () => {
   const { data: reviews = [], isLoading: reviewsLoading } = useQuery({
     queryKey: ["reviews", "admin"],
     queryFn: async () => (await getAllReviewsAdmin()).data.reviews,
+  });
+
+  const queryClient = useQueryClient();
+
+  const toggleMutation = useMutation({
+    mutationFn: (userId) => toggleUserStatus(userId),
+    onSuccess: (res) => {
+      toast.success(res.data.message);
+      queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
+    },
+    onError: (error) =>
+      toast.error(error?.response?.data?.message || "Could not update status"),
   });
 
   if (customersLoading || ordersLoading || reviewsLoading) {
@@ -56,10 +74,11 @@ const AdminCustomers = () => {
           <table className="w-full min-w-200 table-fixed">
             <colgroup>
               <col className="w-[26%]" />
-              <col className="w-[30%]" />
-              <col className="w-[16%]" />
+              <col className="w-[28%]" />
               <col className="w-[14%]" />
-              <col className="w-[14%]" />
+              <col className="w-[12%]" />
+              <col className="w-[10%]" />
+              <col className="w-[10%]" />
             </colgroup>
 
             <thead>
@@ -69,13 +88,17 @@ const AdminCustomers = () => {
                 <th className="text-center font-medium">Status</th>
                 <th className="text-center font-medium">Orders</th>
                 <th className="text-center font-medium">Reviews</th>
+                <th className="text-center font-medium">Action</th>
               </tr>
             </thead>
 
             <tbody>
               {customers.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-sm text-muted-light">
+                  <td
+                    colSpan={6}
+                    className="p-8 text-center text-sm text-muted-light"
+                  >
                     No customers yet.
                   </td>
                 </tr>
@@ -91,7 +114,10 @@ const AdminCustomers = () => {
                   : "—";
 
                 return (
-                  <tr key={customer._id} className="border-t border-theme-light">
+                  <tr
+                    key={customer._id}
+                    className="border-t border-theme-light"
+                  >
                     <td className="p-4">
                       <div className="flex items-center gap-2">
                         <div className="w-9 h-9 rounded-full bg-base-200 flex items-center justify-center text-xs font-semibold shrink-0 overflow-hidden">
@@ -118,7 +144,10 @@ const AdminCustomers = () => {
 
                     <td>
                       <div className="flex items-center gap-1.5 text-sm">
-                        <FiMapPin className="shrink-0 text-muted-light" size={13} />
+                        <FiMapPin
+                          className="shrink-0 text-muted-light"
+                          size={13}
+                        />
                         <span className="truncate">{addressText}</span>
                       </div>
                     </td>
@@ -141,6 +170,22 @@ const AdminCustomers = () => {
 
                     <td className="text-sm text-center">
                       {reviewsCountByCustomer.get(customer._id) || 0}
+                    </td>
+
+                    <td className="text-center">
+                      <button
+                        onClick={() =>
+                          toggleMutation.mutate(customer.user?._id)
+                        }
+                        disabled={toggleMutation.isPending}
+                        className={`btn btn-xs ${
+                          customer.user?.isActive
+                            ? "btn-outline text-error"
+                            : "bg-primary text-primary-content"
+                        }`}
+                      >
+                        {customer.user?.isActive ? "Disable" : "Enable"}
+                      </button>
                     </td>
                   </tr>
                 );

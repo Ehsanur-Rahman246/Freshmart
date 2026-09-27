@@ -227,9 +227,9 @@ export const sendAdminEmail = async (req, res) => {
           .json({ success: false, message: "A valid recipient is required" });
       }
       const user = await User.findById(recipientUserId).select(
-        "email name isActive",
+        "email name",
       );
-      if (!user || !user.isActive) {
+      if (!user) {
         return res
           .status(404)
           .json({ success: false, message: "Recipient not found" });
