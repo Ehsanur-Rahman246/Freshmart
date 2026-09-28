@@ -94,7 +94,7 @@ const ProductCard = ({
     );
   }
 
-  const showCart = role !== "farmer" || "admin";
+  const showCart = role !== "farmer" && role !== "admin";
   const showHeart = role === "customer";
 
   return (
