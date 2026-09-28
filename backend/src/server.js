@@ -1,4 +1,5 @@
 import "dotenv/config";
+import dns from "dns";
 import express from "express";
 import { connectDB } from "./config/db.js";
 import cors from "cors";
@@ -30,6 +31,7 @@ import messageRouter from "./routes/messageRoutes.js";
 import announcementRouter from "./routes/announcementRoutes.js";
 import pricingRouter from "./routes/pricingRoutes.js";
 import promoCodeRouter from "./routes/promoCodeRoutes.js";
+dns.setDefaultResultOrder("ipv4first");
 
 const app = express();
 const __dirname = path.resolve();
