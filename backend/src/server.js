@@ -1,5 +1,4 @@
 import "dotenv/config";
-import dns from "dns";
 import express from "express";
 import { connectDB } from "./config/db.js";
 import cors from "cors";
@@ -31,10 +30,6 @@ import messageRouter from "./routes/messageRoutes.js";
 import announcementRouter from "./routes/announcementRoutes.js";
 import pricingRouter from "./routes/pricingRoutes.js";
 import promoCodeRouter from "./routes/promoCodeRoutes.js";
-
-dns.lookup("smtp.gmail.com", { all: true }, (err, addresses) => {
-  console.log("GMAIL DNS:", err || addresses);
-});
 
 const app = express();
 const __dirname = path.resolve();
