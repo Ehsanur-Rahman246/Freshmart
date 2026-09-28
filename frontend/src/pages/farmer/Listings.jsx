@@ -127,10 +127,16 @@ const MyListingsTab = ({ products, onAddNew }) => {
                     </span>
                     <button
                       type="button"
+                      disabled={[
+                        "awaitingFarmerResponse",
+                        "processing",
+                        "readyForPickup",
+                        "pickedUp",
+                      ].includes(product.companySaleStage)}
                       onClick={() =>
                         navigate(`/farmer/listings/edit/${product._id}`)
                       }
-                      className="btn btn-sm border-0 bg-primary-soft text-primary hover:bg-primary hover:text-primary-content"
+                      className="btn btn-sm border-0 bg-primary-soft text-primary hover:bg-primary hover:text-primary-content disabled:opacity-50"
                     >
                       Manage <FiChevronRight size={14} />
                     </button>

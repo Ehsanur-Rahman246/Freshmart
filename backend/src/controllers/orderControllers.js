@@ -25,6 +25,7 @@ import {
   claimPromoUsage,
   releasePromoUsage,
   recordPromoUsage,
+  releasePromoCustomerUsage,
 } from "../utils/promoCode.js";
 import { openGroupPaymentIfReady } from "../utils/groupPayment.js";
 import { round2 } from "../utils/money.js";
@@ -413,7 +414,10 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    const orderGroup = new mongoose.Types.ObjectId();
+
     // ---- 1.5) claim promo code usage atomically ----
+    // ---- 1.5) claim promo usage + per-customer slot atomically ----
     if (promo) {
       const claimed = await claimPromoUsage(promo._id, promo.usageLimit);
 
@@ -422,6 +426,32 @@ export const createOrder = async (req, res) => {
         return res.status(409).json({
           success: false,
           message: "This promo code just reached its usage limit",
+        });
+      }
+
+      try {
+        await recordPromoUsage({
+          promoId: promo._id,
+          customerId: customer._id,
+          orderGroup,
+          discountAmount: promoDiscountTotal,
+          oncePerCustomer: promo.oncePerCustomer,
+        });
+      } catch (usageError) {
+        await releasePromoUsage(promo._id);
+        await releaseStock(allItems);
+
+        if (usageError?.code === 11000) {
+          return res.status(409).json({
+            success: false,
+            message: "You have already used this promo code",
+          });
+        }
+
+        console.error("recordPromoUsage failed:", usageError);
+        return res.status(500).json({
+          success: false,
+          message: "Could not apply promo code. Please try again.",
         });
       }
     }
@@ -442,7 +472,13 @@ export const createOrder = async (req, res) => {
 
     if (debit.modifiedCount !== 1) {
       await releaseStock(allItems);
-      if (promo) await releasePromoUsage(promo._id);
+      if (promo) {
+        await releasePromoUsage(promo._id);
+        await releasePromoCustomerUsage({
+          promoId: promo._id,
+          customerId: customer._id,
+        });
+      }
       return res.status(409).json({
         success: false,
         message: "Your balance changed. Please review your checkout again.",
@@ -450,7 +486,6 @@ export const createOrder = async (req, res) => {
     }
 
     // ---- 3) create orders; compensate on any failure ----
-    const orderGroup = new mongoose.Types.ObjectId();
     const createdOrders = [];
 
     try {
@@ -549,29 +584,18 @@ export const createOrder = async (req, res) => {
           },
         },
       );
-      if (promo) await releasePromoUsage(promo._id);
+      if (promo) {
+        await releasePromoUsage(promo._id);
+        await releasePromoCustomerUsage({
+          promoId: promo._id,
+          customerId: customer._id,
+        });
+      }
 
       return res.status(500).json({
         success: false,
         message: "Could not place your order. Nothing was charged.",
       });
-    }
-
-    if (promo) {
-      try {
-        await recordPromoUsage({
-          promoId: promo._id,
-          customerId: customer._id,
-          orderGroup,
-          discountAmount: promoDiscountTotal,
-          oncePerCustomer: promo.oncePerCustomer,
-        });
-      } catch (usageError) {
-        console.error(
-          "recordPromoUsage failed (orders already created):",
-          usageError,
-        );
-      }
     }
 
     await Customer.updateOne({ _id: customer._id }, { $set: { cart: [] } });

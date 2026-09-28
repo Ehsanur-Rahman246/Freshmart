@@ -283,16 +283,6 @@ export const assignDriverToOrder = async (req, res) => {
       return res.status(exists ? 400 : 404).json({
         success: false,
         message: exists
-          ? "This driver is not available in the order's origin zone"
-          : "Driver not found",
-      });
-    }
-
-    if (!driver) {
-      const exists = await Driver.exists({ _id: driverId });
-      return res.status(exists ? 400 : 404).json({
-        success: false,
-        message: exists
           ? "This driver is not currently available"
           : "Driver not found",
       });
