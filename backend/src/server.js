@@ -22,6 +22,7 @@ import { multerErrorHandling } from "./middlewares/multerError.middleware.js";
 import { startRestockProcessingScheduler } from "./jobs/restockProcessing.js";
 import { startDriverShuffleScheduler } from "./jobs/driverShuffle.js";
 import { globalRateLimit } from "./middlewares/rateLimit.middleware.js";
+import { carbonMiddleware } from "./utils/carbonMiddleware.js";
 import { startPaymentExpiryScheduler } from "./jobs/paymentExpiry.js";
 import zoneRouter from "./routes/zoneRoutes.js";
 import { createServer } from "http";
@@ -42,6 +43,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(globalRateLimit);
+app.use(carbonMiddleware);
 
 if (process.env.NODE_ENV !== "production") {
   app.get("/", (_, res) => res.send("Server working"));
