@@ -79,3 +79,7 @@ export const recordPromoUsage = async ({
     discountAmount,
   });
 };
+
+export const releasePromoCustomerUsage = async ({ promoId, customerId }) => {
+  await PromoCodeUsage.deleteOne({ promoCode: promoId, customer: customerId });
+};

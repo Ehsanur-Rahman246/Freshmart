@@ -277,12 +277,6 @@ export const sendMessage = async (req, res) => {
 
     const textValue = String(text ?? "").trim();
 
-    if (!textValue) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Message text is required" });
-    }
-
     if (!text || !textValue) {
       return res
         .status(400)
