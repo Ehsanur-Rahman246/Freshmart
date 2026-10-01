@@ -26,6 +26,7 @@ dist-ssr
 .env
 update-files.bat
 selected-files/
+graphify-out/
 scripts/
 frontend/src/assets
 frontend/src/products
