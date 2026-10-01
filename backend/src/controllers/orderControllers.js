@@ -1963,20 +1963,34 @@ export const getCheckoutPreview = async (req, res) => {
     }
 
     const farmOrders = new Map();
+    const issues = [];
 
     for (const cartItem of customer.cart) {
       const product = cartItem.product;
 
-      if (!product || product.status !== "active") continue;
-      if (product.expiresAt && product.expiresAt <= new Date()) continue;
+      if (!product) {
+        issues.push("An item in your cart no longer exists");
+        continue;
+      }
+      if (product.status !== "active") {
+        issues.push(`${product.name} is currently unavailable`);
+        continue;
+      }
+      if (product.expiresAt && product.expiresAt <= new Date()) {
+        issues.push(`${product.name} has expired`);
+        continue;
+      }
+      if (product.stock < cartItem.quantity) {
+        issues.push(`Insufficient stock for ${product.name}`);
+        continue;
+      }
 
       const farmId = product.farm.toString();
-
       if (!farmOrders.has(farmId)) farmOrders.set(farmId, []);
 
       farmOrders.get(farmId).push({
         product,
-        quantity: Math.min(cartItem.quantity, product.stock),
+        quantity: cartItem.quantity,
       });
     }
 
@@ -1986,12 +2000,22 @@ export const getCheckoutPreview = async (req, res) => {
 
     for (const [farmId, items] of farmOrders.entries()) {
       const farm = await Farm.findById(farmId);
-      if (!farm || !farm.isActive) continue;
+      if (!farm) {
+        issues.push("A farm in your cart no longer exists");
+        continue;
+      }
+      if (!farm.isActive) {
+        issues.push(`${farm.name} is not accepting orders right now`);
+        continue;
+      }
 
       const originZone = await Zone.findOne({
         districts: farm.location.district,
       });
-      if (!originZone) continue;
+      if (!originZone) {
+        issues.push(`Delivery zone not found for ${farm.location.district}`);
+        continue;
+      }
 
       let farmItemsTotal = 0;
 
@@ -2066,6 +2090,8 @@ export const getCheckoutPreview = async (req, res) => {
         promoError,
         debtBalance,
         total,
+        issues,
+        canCheckout: issues.length === 0,
       },
     });
   } catch (error) {

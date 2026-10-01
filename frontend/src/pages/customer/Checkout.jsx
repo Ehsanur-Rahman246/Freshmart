@@ -72,6 +72,8 @@ const Checkout = () => {
   const promoDiscount = preview?.promoDiscount ?? 0;
   const promoError = preview?.promoError ?? null;
   const total = preview?.total ?? 0;
+  const previewIssues = preview?.issues ?? [];
+  const canCheckout = preview ? preview.canCheckout !== false : false;
 
   const visibleItems = cartItems.slice(0, 3);
   const remainingCount = cartItems.length - visibleItems.length;
@@ -525,6 +527,17 @@ const Checkout = () => {
                     )}
                   </div>
 
+                  {previewIssues.length > 0 && (
+                    <div className="mt-4 rounded-xl bg-error-soft p-3 text-sm text-error space-y-1">
+                      {previewIssues.map((msg, i) => (
+                        <p key={i}>{msg}</p>
+                      ))}
+                      <p className="font-bold">
+                        Fix these in your cart before placing the order.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="my-5 border-t border-theme" />
 
                   <div className="flex items-center justify-between">
@@ -537,11 +550,15 @@ const Checkout = () => {
 
                   <button
                     type="submit"
-                    disabled={!selectedAddressId || !preview}
+                    disabled={!selectedAddressId || !preview || !canCheckout}
                     className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3.5 font-extrabold text-white transition hover:bg-primary-hover active:bg-primary-active disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <FiLock size={17} />
-                    {preview ? `Place Order · ৳${total}` : "Calculating..."}
+                    {!preview
+                      ? "Calculating..."
+                      : !canCheckout
+                        ? "Resolve cart issues to continue"
+                        : `Place Order · ৳${total}`}
                   </button>
                 </section>
               </aside>
