@@ -611,12 +611,14 @@ export const sendResetPasswordOtp = async (req, res) => {
 
     await user.save();
 
+    console.log("ABOUT TO SEND EMAIL");
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: user.email,
       subject: "Reset your FreshMart password",
       html: resetPasswordOtpEmail({ name: user.name, otp, minutes: 10 }),
     });
+    console.log("EMAIL SENT:", info.messageId);
 
     return res.status(200).json({
       success: true,

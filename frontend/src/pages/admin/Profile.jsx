@@ -5,6 +5,7 @@ import PersonalInfoCard from "../../components/PersonalInfoCard";
 import EditInfoModal from "../../components/EditInfoModal";
 import ChangePasswordModal from "../../components/ChangePasswordModal";
 import Loader from "../../components/Loader";
+import CarbonFootprintDisplay from "../../components/CarbonFootprintDisplay";
 
 const queryKey = ["adminProfile"];
 
@@ -59,6 +60,7 @@ const AdminProfile = () => {
           onClose={() => setShowChangePassword(false)}
         />
       )}
+      <CarbonFootprintDisplay />
     </div>
   );
 };
