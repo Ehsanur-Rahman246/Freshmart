@@ -74,6 +74,13 @@ export const createProduct = async (req, res) => {
       });
     }
 
+    if (!farm.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: "This farm is inactive. Activate it before listing products",
+      });
+    }
+
     let images = [];
 
     if (req.files && req.files.length > 0) {
@@ -310,6 +317,14 @@ export const updateProduct = async (req, res) => {
       });
     }
 
+    if (ACTIVE_COMPANY_SALE_STAGES.includes(product.companySaleStage)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "This listing is part of a company sale in progress and can't be edited right now",
+      });
+    }
+
     const { farmId, removeImages } = req.body;
     const { error, value } = validateProductInput(req.body, { partial: true });
 
@@ -348,6 +363,12 @@ export const updateProduct = async (req, res) => {
       }
 
       if (farm._id.toString() !== oldFarmId) {
+        if (!farm.isActive) {
+          return res.status(400).json({
+            success: false,
+            message: "You can't move a listing to an inactive farm",
+          });
+        }
         newFarm = farm;
         product.farm = farm._id;
       }
@@ -636,7 +657,7 @@ export const searchProductNames = async (req, res) => {
           _id: { $toLower: "$name" },
           name: { $first: "$name" },
           category: { $first: "$category" },
-          unit: { $first: "$unit" },  
+          unit: { $first: "$unit" },
           min: { $min: "$price" },
           max: { $max: "$price" },
           count: { $sum: 1 },
